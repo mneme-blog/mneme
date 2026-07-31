@@ -119,6 +119,10 @@ the signature verifies) and every authenticated call `403`s until the operator a
 // 200 — challenge is single-use, expires in 2 minutes
 { "challenge": "<base64>", "expires_at": "RFC3339" }
 ```
+An **unknown** `device_id` also gets a `200` with a well-formed challenge — one that is never stored
+and therefore can never be consumed. A `404` here would be a "does this device exist on this relay"
+oracle, and `device_id` is a stable per-vault identifier. The failure surfaces at `verify` instead,
+indistinguishable from a bad signature.
 
 ### `POST /v1/auth/verify`
 ```jsonc
@@ -127,6 +131,8 @@ the signature verifies) and every authenticated call `403`s until the operator a
   "signature": "<base64 Ed25519 sig over challenge bytes>" }
 // 200 — token TTL defaults to 24h; server stores only sha256(token)
 { "token": "<opaque>", "owner_id": "<base64url>", "expires_at": "RFC3339" }
+// 401 { "error": "authentication failed" } — unknown device OR bad signature,
+//     deliberately indistinguishable
 ```
 
 ---

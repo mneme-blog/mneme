@@ -232,7 +232,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   text), inherent to the feature. Optionally delimit excerpts and instruct the model to treat them as
   data.
 
-- [ ] [#56](https://github.com/plasticparticle/mneme/issues/56) · **I4 — Device enumeration via distinct auth error codes.** `server/internal/api/auth.go:124,166`
+- [x] [#56](https://github.com/plasticparticle/mneme/issues/56) · **I4 — Device enumeration via distinct auth error codes.** `server/internal/api/auth.go:124,166`
   return 404 "unknown device" vs 401 "signature does not verify," letting an attacker distinguish
   existing `device_id`s. `device_id` is a pubkey hash and grants nothing without the key — noted for
   completeness.

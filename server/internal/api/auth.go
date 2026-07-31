@@ -171,15 +171,21 @@ func validApprovalHint(h string) bool {
 }
 
 // POST /v1/auth/challenge
+//
+// Answers identically for a known and an unknown device: a 404 here would let
+// anyone test whether a given device_id exists on this relay, and device_id is
+// a stable per-vault identifier, so that is a "does this person use this relay"
+// oracle. An unknown device gets a well-formed random challenge that is simply
+// never stored, so it can never be consumed — the caller learns nothing, and
+// the failure surfaces at verify exactly like a bad signature.
+//
+// Not storing it also keeps the auth_challenges table (which has a foreign key
+// to devices anyway) free of rows for devices that don't exist.
 func (s *Server) handleChallenge(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		DeviceID string `json:"device_id"`
 	}
 	if !decodeJSON(w, r, &req) {
-		return
-	}
-	if _, _, err := s.store.DevicePubkey(r.Context(), req.DeviceID); err != nil {
-		writeError(w, http.StatusNotFound, "unknown device")
 		return
 	}
 
@@ -189,10 +195,21 @@ func (s *Server) handleChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	expires := time.Now().Add(challengeTTL)
-	if err := s.store.SaveChallenge(r.Context(), req.DeviceID, nonce, expires); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not store challenge")
+
+	_, _, err := s.store.DevicePubkey(r.Context(), req.DeviceID)
+	switch {
+	case errors.Is(err, store.ErrNotFound):
+		// Decoy: shaped like a real challenge, deliberately not persisted.
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "could not issue challenge")
 		return
+	default:
+		if err := s.store.SaveChallenge(r.Context(), req.DeviceID, nonce, expires); err != nil {
+			writeError(w, http.StatusInternalServerError, "could not store challenge")
+			return
+		}
 	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
 		"challenge":  base64.StdEncoding.EncodeToString(nonce),
 		"expires_at": expires.UTC().Format(time.RFC3339),
@@ -220,13 +237,21 @@ func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// One response shape for "no such device" and "bad signature". Distinct
+	// codes here let a caller enumerate which device_ids exist on the relay;
+	// a device_id grants nothing without its key, but it is a stable per-vault
+	// identifier, so the distinction is free to remove and worth removing.
 	ownerID, pub, err := s.store.DevicePubkey(r.Context(), req.DeviceID)
+	if errors.Is(err, store.ErrNotFound) {
+		writeError(w, http.StatusUnauthorized, "authentication failed")
+		return
+	}
 	if err != nil {
-		writeError(w, http.StatusNotFound, "unknown device")
+		writeError(w, http.StatusInternalServerError, "device lookup failed")
 		return
 	}
 	if !ed25519.Verify(ed25519.PublicKey(pub), challenge, sig) {
-		writeError(w, http.StatusUnauthorized, "signature does not verify")
+		writeError(w, http.StatusUnauthorized, "authentication failed")
 		return
 	}
 	// Approval gate: don't mint a session for an owner the operator hasn't approved.
