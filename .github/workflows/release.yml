@@ -43,7 +43,16 @@ jobs:
             ghcr.io/plasticparticle/mneme-server:${{ github.ref_name }}
             ghcr.io/plasticparticle/mneme-server:latest
 
+      # Created with the preinstalled `gh` rather than a third-party action.
+      # This repository restricts Actions to GitHub-owned + verified creators
+      # (plus pnpm/action-setup), and softprops/action-gh-release is neither —
+      # which failed the whole workflow at startup, before any step ran. Using
+      # gh also keeps one less third-party action in a pipeline that holds
+      # `contents: write` and `packages: write`.
+      #
+      # --generate-notes fills in the commit/PR summary; a curated body can be
+      # added afterwards with `gh release edit --notes-file`.
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
