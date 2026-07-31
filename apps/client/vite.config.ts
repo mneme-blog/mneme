@@ -5,6 +5,8 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import pkg from './package.json';
+// @ts-expect-error — plain-JS module, shared with the Caddy snippet generator.
+import { policy as cspPolicy } from './csp.js';
 
 // Git-derived build identifier appended to the semver, e.g. "0.0.0+5c2fdd8"
 // ("-dirty" suffix on uncommitted trees). Falls back to the bare semver when
@@ -42,6 +44,52 @@ const useBasicSsl = httpsRequested && !hasCustomCert;
 // HTTPS "test the install" mode, where the whole point is to exercise the PWA.
 const pwaDevEnabled = httpsRequested;
 
+// --- Content-Security-Policy -------------------------------------------------
+// Injected as a <meta http-equiv> into the PRODUCTION build only. The dev server
+// serves inline scripts for HMR, which a `script-src 'self'` policy would kill,
+// and the point of the policy is to protect the shipped artifact. The hosting
+// layer should send the same policy as a response header (see deploy/web/
+// Caddyfile) — the meta tag is the fallback for hosts that don't.
+//
+// CSP_CONNECT_EXTRA (build-time, space- or comma-separated) adds connect-src
+// origins: needed when the relay is not same-origin, or for a non-loopback
+// Ollama. The default Caddy deploy proxies the relay under the app's own origin,
+// where 'self' already covers it.
+const connectExtra = (process.env.CSP_CONNECT_EXTRA ?? '')
+  .split(/[\s,]+/)
+  .filter(Boolean);
+
+// The relay the build points at, when it isn't same-origin. Without this a
+// split-host deploy (client on one origin, relay on another) would build a
+// policy that blocks its own sync with nothing but a console error to show for
+// it. A relay the *user* later re-points at a third origin still needs
+// CSP_CONNECT_EXTRA — that is the intended friction.
+const relayOrigin = (() => {
+  const url = process.env.VITE_RELAY_URL;
+  if (!url) return [];
+  try {
+    return [new URL(url).origin];
+  } catch {
+    return [];
+  }
+})();
+
+function cspMetaPlugin() {
+  const content = cspPolicy({ connectExtra: [...relayOrigin, ...connectExtra] }) as string;
+  return {
+    name: 'mneme-csp-meta',
+    apply: 'build' as const,
+    transformIndexHtml: {
+      order: 'post' as const,
+      handler: (html: string) =>
+        html.replace(
+          '<head>',
+          `<head>\n    <meta http-equiv="Content-Security-Policy" content="${content}" />`,
+        ),
+    },
+  };
+}
+
 // The single web codebase for the PWA and (later) the Tauri shells.
 export default defineConfig({
   plugins: [
@@ -70,6 +118,7 @@ export default defineConfig({
       },
     }),
     ...(useBasicSsl ? [basicSsl()] : []),
+    cspMetaPlugin(),
   ],
   // Build provenance, surfaced in src/buildinfo.ts (onboarding footer +
   // Preferences → Info). In dev the timestamp is the dev-server start.

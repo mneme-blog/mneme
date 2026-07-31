@@ -216,12 +216,33 @@ plaintext** the moment you unlock. End-to-end encryption can't protect you from 
   builds; a strict CSP. **None are in place yet.** For now, run the relay and the app from sources you
   control.
 
-### 6.2 XSS / supply-chain in the client — 🔧 Open
+### 6.2 XSS / supply-chain in the client — ⚠️ Reduced
 Keys live in RAM while unlocked, so any script injection (an XSS hole, a hostile npm dependency) can
-read them.
-- **Mitigations:** strict **Content-Security-Policy** (not yet configured), auto-lock on inactivity
-  (not yet), keys never written to the DOM or logs (followed), pinned dependencies + lockfile +
+read them — and with them every plaintext entry, unrecoverably.
+- **Mitigations:** a strict **Content-Security-Policy** ✅ (see below), auto-lock on inactivity ✅
+  (15 min + manual lock), keys never written to the DOM or logs ✅, pinned dependencies + lockfile +
   `pnpm audit` (lockfile committed; audit not yet in CI), minimal vetted crypto deps (`@noble`).
+
+**The CSP** is defined once in `apps/client/csp.js` and shipped twice: as a response header from the
+hosting layer (`deploy/web/Caddyfile` — authoritative, and the only place `frame-ancestors` counts)
+and as a `<meta http-equiv>` injected into the production build (the fallback for any other host).
+`pnpm --filter client csp` prints the current string; keep the two in sync, because browsers
+*intersect* multiple policies and a drifted pair silently over-restricts.
+
+`script-src` is `'self' 'wasm-unsafe-eval'` — no `'unsafe-inline'`, no `'unsafe-eval'`. The wasm token
+is required by wa-sqlite and permits WebAssembly compilation only, not `eval`. `style-src` does carry
+`'unsafe-inline'`: the UI styles via inline attributes and KaTeX emits inline styles, so this is a
+known, scoped concession that weakens CSS-injection defence but not script execution.
+
+Egress is enumerated rather than open: `connect-src` allows the app's own origin, `api.anthropic.com`
+(BYO-key AI), `nominatim.openstreetmap.org` (address search), and loopback Ollama; tiles are
+`img-src` only. A relay or Ollama on another origin must be added explicitly via `CSP_CONNECT_EXTRA`
+(build- or deploy-time) — the friction is the point. Alongside it the hosting layer sends
+`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and a
+`Permissions-Policy` that keeps camera/microphone/geolocation to `self` and denies the rest.
+
+Residual risk: this does not defend against a **compromised server serving malicious app code**
+(§6.1) — that server also controls the policy.
 
 ### 6.3 Server reads content — ✅ Mitigated
 The server stores opaque `BYTEA` and compares only integers. It holds no keys and does no decryption.
@@ -326,12 +347,12 @@ In rough priority order:
 
 1. 🔧 **Ship a tamper-resistant client** (Tauri, signed) and/or serve the PWA separately from the relay
    with SRI + strict CSP — closes §6.1, the most fundamental gap for browser E2EE.
-2. 🔧 **Content-Security-Policy** in the client (auto-lock is ✅ in) — reduces §6.2. Any future CSP
-   needs `connect-src` for the relay origin plus, for the AI assistant, `https://api.anthropic.com`
-   and the user's Ollama origin (default `http://localhost:11434`).
+2. ✅ **Content-Security-Policy** — shipped as a Caddy response header + a `<meta>` fallback in the
+   build, from one definition in `apps/client/csp.js` (§6.2). A relay or Ollama that isn't
+   same-origin/loopback needs `CSP_CONNECT_EXTRA`.
 3. 🔧 **At-rest key protection, Tauri half** (OS keychain) — the PWA's Argon2id seal is ✅ in — §4, §6.11.
-4. 🔧 **Harden device registration** (prove seed possession; existing-device approval) + **rate limiting**
-   — §6.5.
+4. ✅ **Harden device registration** (owner-key signature proves seed possession) — §6.5. 🔧 **rate
+   limiting** still open.
 5. 🔧 **HLC/Lamport `lww_clock`** to stop leaking real edit times — §6.9.
 6. 🔧 **Production deployment guide**: enforce TLS, set `CORS_ORIGINS` to the real client origin, rotate
    the MinIO/Postgres dev credentials.
@@ -353,7 +374,7 @@ Severities reflect impact **within the stated threat model** (the relay operator
 | # | Sev | Finding | Status | Tracked in |
 |---|-----|---------|--------|-----------|
 | 1 | High | AEAD does not authenticate `entry_id` / `deleted` / `lww_clock` — a hostile relay can relabel, resurrect, or pin entries (media chunks *do* bind AAD; entry bodies don't) | 🔧 Open | §6.1, [ENCRYPTION.md §3](./ENCRYPTION.md) |
-| 2 | High | No Content-Security-Policy — the design's primary mitigation for in-memory keys is absent | 🔧 Open | §6.2, §7.2 |
+| 2 | High | No Content-Security-Policy — the design's primary mitigation for in-memory keys is absent | ✅ **Fixed** — strict CSP + security headers ([#41](https://github.com/plasticparticle/mneme/issues/41)) | §6.2, §7.2 |
 | 3 | High | Owner binding at `/v1/register` is unauthenticated (anyone with the owner pubkey can attach a device → write/DoS) | ✅ **Fixed** — registration requires an owner-identity-key signature ([#40](https://github.com/plasticparticle/mneme/issues/40)) | §6.5 |
 | 4 | Med | No auto-lock / key-lifetime limit | ✅ **Fixed** — 15-min inactivity auto-lock + manual lock (§4, §6.11) | §4 |
 | 5 | Med | `lww_clock` is attacker-controllable client wall-clock (future-dated writes pin an entry) | 🔧 Open | §6.9 |

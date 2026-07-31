@@ -73,8 +73,11 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   **owner identity key** over the new device pubkey, or an existing device session must approve it.
   First-device (new-owner) registration can remain TOFU.
 
-- [ ] [#41](https://github.com/plasticparticle/mneme/issues/41) · **H2 — No Content-Security-Policy or security headers anywhere — the threat model's primary XSS
-  mitigation is missing.**
+- [x] [#41](https://github.com/plasticparticle/mneme/issues/41) · **H2 — No Content-Security-Policy or security headers anywhere — the threat model's primary XSS
+  mitigation is missing.** — **Fixed:** one policy in `apps/client/csp.js`, shipped as a Caddy
+  response header and a `<meta>` fallback in the build, plus nosniff / frame-ancestors /
+  Referrer-Policy / Permissions-Policy. Verified end-to-end in Chrome (wasm, OPFS worker, KaTeX,
+  fonts, editor — no violations).
   `apps/client/index.html` (no CSP `<meta>`), `deploy/web/Caddyfile` (no `header` for CSP /
   X-Frame-Options / X-Content-Type-Options / Referrer-Policy / Permissions-Policy), `vite.config.ts`
   (no headers).

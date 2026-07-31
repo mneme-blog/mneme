@@ -9,7 +9,8 @@
     "dev:https": "DEV_HTTPS=1 vite --host",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "csp": "node -e \"import('./csp.js').then(m=>console.log(m.policy({frameAncestors:true})))\""
   },
   "dependencies": {
     "@fontsource-variable/hanken-grotesk": "^5.2.8",

@@ -83,6 +83,18 @@ project. Scaffolded so far:
   `internal/backup/backup_test.go` (fakes, no DB) + `e2e/backup_e2e_test.go` (real Postgres round-trip).
   docs/API.md "Backups & disaster recovery", docs/SECURITY.md §6.14.
 - **Infra** — `docker-compose.yml` (Postgres + MinIO + server, `backups` volume), `server/Dockerfile`, `.devcontainer/`.
+- **Content-Security-Policy** (§6's named XSS mitigation; audit finding H2, issue #41) — defined ONCE in
+  `apps/client/csp.js` (plain JS) and shipped twice: `vite.config.ts` injects it as a `<meta http-equiv>`
+  into the **production build only** (dev needs inline scripts for HMR), and `deploy/web/Caddyfile` sends
+  the same string as a response header — authoritative, and the only place `frame-ancestors` is honoured.
+  Browsers **intersect** multiple policies, so a drifted pair silently over-restricts: regenerate with
+  `pnpm --filter client csp` when changing either. `script-src 'self' 'wasm-unsafe-eval'` (the wasm token
+  is required by wa-sqlite; it permits WebAssembly compilation, not `eval`); `style-src` keeps
+  `'unsafe-inline'` (inline style attributes + KaTeX). Egress is enumerated: `connect-src` = self +
+  `api.anthropic.com` + `nominatim.openstreetmap.org` + loopback Ollama, tiles are `img-src` only. The
+  build-time `VITE_RELAY_URL` origin is added automatically; anything else (split-host relay, non-loopback
+  Ollama) needs `CSP_CONNECT_EXTRA`. Caddy also sends nosniff / `X-Frame-Options: DENY` / `Referrer-Policy:
+  no-referrer` / `Permissions-Policy` (camera+mic+geolocation `self`, rest denied) and strips `Server`.
 
 Media (§10 step 5) is in for **video, audio, images, and file attachments**: video/audio record via
 `getUserMedia`+MediaRecorder in the editor (`ui/VideoCapture.tsx`, `ui/AudioCapture.tsx`, inserted via the `/` slash menu; `addMedia`
