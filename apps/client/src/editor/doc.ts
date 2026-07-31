@@ -13,6 +13,7 @@ import type { Extensions, JSONContent } from '@tiptap/core';
 import type { Block } from '../data/sample';
 import { mathExtension, type MathHandle } from './math';
 import { wikiLinkNode, type WikiLinkHandlers } from './wikilink';
+import { ALLOWED_LINK_PROTOCOLS, isSafeHref } from './url';
 
 // lowlight's "common" grammar set (~35 languages); unset code blocks auto-detect.
 const lowlight = createLowlight(common);
@@ -27,6 +28,21 @@ export function buildExtensions(placeholder: string, math?: MathHandle, wiki?: W
     StarterKit.configure({
       heading: { levels: [1, 2, 3] },
       codeBlock: false, // replaced by the lowlight-highlighted code block
+      // StarterKit bundles the Link mark, which renders <a href>. Its default
+      // URL check is sound today, but an XSS-critical control must not depend
+      // on an upstream default staying that way: pin the protocol allowlist to
+      // ours and validate every URL through the same predicate the Markdown
+      // parsers use (./url.ts).
+      link: {
+        protocols: [...ALLOWED_LINK_PROTOCOLS],
+        // Both hooks: `isAllowedUri` gates rendering/commands, `validate`
+        // gates autolinking and paste.
+        isAllowedUri: (url: string) => isSafeHref(url),
+        validate: (url: string) => isSafeHref(url),
+        // Nothing in an entry should be able to open a tab with a live
+        // `window.opener` handle back into the unlocked app.
+        HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: null },
+      },
     }),
     CodeBlockLowlight.configure({ lowlight }),
     TableKit.configure({ table: { resizable: true } }),

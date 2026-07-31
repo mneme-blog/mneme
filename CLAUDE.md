@@ -308,6 +308,15 @@ keys in all 12 locales) tells iPhone/iPad users that iOS clears offline storage 
 never shown on Android/desktop or in the Tauri shell; force-preview via
 `localStorage['mneme.iosNotice.force']='1'`.
 
+**Link-href allowlisting** (audit finding M1, issue #42): `editor/url.ts` (`isSafeHref`/`safeHref`,
+protocols http/https/mailto/tel, relative+fragment OK, browser-ignorable code points stripped before
+the scheme check) is the single allowlist, applied in **four** places — the Day One import parser
+(`import/markdown.ts`, the untrusted vector), the editor's Markdown parser AND serializer
+(`editor/markdown.ts`, so a bad href stored by an older build can't round-trip back), and pinned into
+StarterKit's Link mark config (`editor/doc.ts`: `protocols`, `isAllowedUri`, `validate`, plus
+`rel="noopener noreferrer nofollow"`). Deliberately not relying on the upstream default. Regression
+check: `pnpm --filter client exec tsx scripts/link-safety.ts`.
+
 Not yet: FTS5 (blocked on a custom wa-sqlite wasm build), push transport + reminders UI (step 6),
 export + non-Day-One import (step 7), Tauri shells (step 8) and their OS-keychain at-rest storage (§6).
 

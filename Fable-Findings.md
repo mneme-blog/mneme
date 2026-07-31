@@ -97,8 +97,9 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
 
 ### 🟠 Medium
 
-- [ ] [#42](https://github.com/plasticparticle/mneme/issues/42) · **M1 — Untrusted Markdown produces link marks with an unvalidated `href` (`javascript:` /
-  `data:` stored XSS).**
+- [x] [#42](https://github.com/plasticparticle/mneme/issues/42) · **M1 — Untrusted Markdown produces link marks with an unvalidated `href` (`javascript:` /
+  `data:` stored XSS).** — **Fixed:** one allowlist (`editor/url.ts`) applied in both parsers, on
+  serialize, and pinned into the Link extension config; regression script `scripts/link-safety.ts`.
   `apps/client/src/import/markdown.ts:54-57` (Day One import — the untrusted vector),
   `apps/client/src/editor/markdown.ts:443` (and `:170` on serialize).
   **Problem:** Both Markdown parsers build a TipTap `link` mark straight from the parsed URL with no

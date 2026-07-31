@@ -8,6 +8,7 @@
 // Output nodes match the editor schema in `editor/doc.ts`; media refs are emitted
 // as `__dayoneMedia` placeholder nodes carrying the moment identifier + kind.
 import type { JSONContent } from '@tiptap/core';
+import { safeHref } from '../editor/url';
 import type { MomentKind } from './dayone';
 
 /** Placeholder node type for an unresolved Day One media reference. */
@@ -54,7 +55,13 @@ function inline(s: string, marks: JSONContent['marks'] = []): InlineResult {
       const m = s.slice(i).match(/^\[([^\]]*)\]\(([^)]+)\)/);
       if (m) {
         flush();
-        const inner = inline(m[1], withMark({ type: 'link', attrs: { href: m[2] } }));
+        // A Day One export is untrusted input: only allowlisted protocols
+        // become a link mark, everything else keeps its text and loses the
+        // link (see editor/url.ts).
+        const href = safeHref(m[2]);
+        const inner = href === null
+          ? inline(m[1], marks)
+          : inline(m[1], withMark({ type: 'link', attrs: { href } }));
         nodes.push(...inner.nodes); media.push(...inner.media);
         i += m[0].length; continue;
       }

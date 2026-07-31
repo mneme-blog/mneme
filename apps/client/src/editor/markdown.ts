@@ -16,6 +16,7 @@
 // when the source is untouched (see screens/Editor.tsx), so an unedited toggle is
 // always an exact restore regardless of what this module can or can't represent.
 import type { JSONContent } from '@tiptap/core';
+import { safeHref } from './url';
 
 const FENCE_MEDIA = 'mneme:media';
 const FENCE_GALLERY = 'mneme:gallery';
@@ -167,7 +168,11 @@ function applyMarks(text: string, marks: JSONContent['marks']): string {
   else if (names.has('bold')) s = `**${s}**`;
   else if (names.has('italic')) s = `*${s}*`;
   const link = (marks ?? []).find((m) => m.type === 'link');
-  if (link && typeof link.attrs?.href === 'string') s = `[${s}](${link.attrs.href})`;
+  // Allowlisted on the way out as well as in, so a bad href stored by an older
+  // build (or reached by some path this file doesn't know about) can't
+  // round-trip back into a live link mark.
+  const href = safeHref(link?.attrs?.href);
+  if (href !== null) s = `[${s}](${href})`;
   return s;
 }
 
@@ -439,8 +444,16 @@ function nextToken(s: string): Token | null {
     { re: /`([^`]+)`/, make: (m) => (marks) => [markedText(m[1], [...marks, { type: 'code' }])] },
     // Inline math $…$ (no surrounding $$, handled as block).
     { re: /\$([^$\n]+)\$/, make: (m) => () => [{ type: 'inlineMath', attrs: { latex: m[1] } }] },
-    // Link [text](href).
-    { re: /\[([^\]]+)\]\(([^)]+)\)/, make: (m) => (marks) => parseInline(m[1], [...marks, { type: 'link', attrs: { href: m[2] } }]) },
+    // Link [text](href). A disallowed protocol drops the mark, not the text —
+    // the Markdown pane accepts hand-typed and pasted source, so it is an
+    // untrusted path too (see ./url.ts).
+    {
+      re: /\[([^\]]+)\]\(([^)]+)\)/,
+      make: (m) => (marks) => {
+        const href = safeHref(m[2]);
+        return parseInline(m[1], href === null ? marks : [...marks, { type: 'link', attrs: { href } }]);
+      },
+    },
     // Combined bold+italic, then bold, then italic (longest delimiter first so
     // `***` isn't mistaken for `**` + `*`).
     { re: /\*\*\*([^*]+)\*\*\*/, make: (m) => (marks) => parseInline(m[1], [...marks, { type: 'bold' }, { type: 'italic' }]) },
