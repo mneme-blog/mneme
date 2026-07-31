@@ -81,6 +81,13 @@ func (s *Server) handlePutMediaChunk(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	// Checked before reading the body so an over-quota owner can't stream 2 MiB
+	// per rejected request. Charged against finalized usage: chunks in flight
+	// aren't counted yet, so a single upload can overshoot by its own size —
+	// acceptable for a bound on runaway growth.
+	if s.quotaExceeded(w, r.Context(), owner, maxChunkBytes) {
+		return
+	}
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxChunkBytes))
 	if err != nil {
 		writeError(w, http.StatusRequestEntityTooLarge, "chunk too large")

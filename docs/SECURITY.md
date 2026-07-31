@@ -270,6 +270,15 @@ device keys are seed-derived, so an honest client always has one and an attacker
 public key does not. See docs/API.md `POST /v1/register`; regression test
 `server/e2e/binding_e2e_test.go`.
 
+**Abuse controls.** The three unauthenticated endpoints are throttled per client IP (token bucket,
+in-process; `RATE_LIMIT_AUTH_PER_MINUTE` / `RATE_LIMIT_AUTH_BURST`, `0` disables), which bounds
+anonymous owner creation and `auth_challenges` flooding. A per-owner storage quota
+(`QUOTA_BYTES_PER_OWNER`, unlimited by default) bounds what a single authenticated owner can consume;
+tombstones are exempt so an over-quota vault can still delete. Both are best-effort backstops sized
+for the intended homelab scale (§7) — a distributed attacker belongs at the reverse proxy, and the
+quota is a pre-flight check rather than a transactional reservation, so a concurrent burst can
+overshoot by about one batch.
+
 ### 6.6 Replay — ✅ Mitigated
 Challenges are single-use and expire (2 min); sessions expire. Replaying a `sync/push` is harmless —
 LWW makes it idempotent (a non-newer clock is ignored).
@@ -351,8 +360,8 @@ In rough priority order:
    build, from one definition in `apps/client/csp.js` (§6.2). A relay or Ollama that isn't
    same-origin/loopback needs `CSP_CONNECT_EXTRA`.
 3. 🔧 **At-rest key protection, Tauri half** (OS keychain) — the PWA's Argon2id seal is ✅ in — §4, §6.11.
-4. ✅ **Harden device registration** (owner-key signature proves seed possession) — §6.5. 🔧 **rate
-   limiting** still open.
+4. ✅ **Harden device registration** (owner-key signature proves seed possession) and ✅ **rate
+   limiting + per-owner storage quota** (`RATE_LIMIT_AUTH_*`, `QUOTA_BYTES_PER_OWNER`) — §6.5.
 5. 🔧 **HLC/Lamport `lww_clock`** to stop leaking real edit times — §6.9.
 6. 🔧 **Production deployment guide**: enforce TLS, set `CORS_ORIGINS` to the real client origin, rotate
    the MinIO/Postgres dev credentials.
@@ -378,7 +387,7 @@ Severities reflect impact **within the stated threat model** (the relay operator
 | 3 | High | Owner binding at `/v1/register` is unauthenticated (anyone with the owner pubkey can attach a device → write/DoS) | ✅ **Fixed** — registration requires an owner-identity-key signature ([#40](https://github.com/plasticparticle/mneme/issues/40)) | §6.5 |
 | 4 | Med | No auto-lock / key-lifetime limit | ✅ **Fixed** — 15-min inactivity auto-lock + manual lock (§4, §6.11) | §4 |
 | 5 | Med | `lww_clock` is attacker-controllable client wall-clock (future-dated writes pin an entry) | 🔧 Open | §6.9 |
-| 6 | Med | No rate limiting / abuse controls on any endpoint | 🔧 Open | §6.5, §7.4 |
+| 6 | Med | No rate limiting / abuse controls on any endpoint | ✅ **Fixed** — per-IP throttle on the auth endpoints + per-owner storage quota ([#44](https://github.com/plasticparticle/mneme/issues/44)) | §6.5, §7.4 |
 | 7 | Med | Relay can silently roll back / drop / reorder the record set (no freshness proof) | 🔧 Open | §6.7 |
 | 8 | Low | Recovery phrase can be copied to the system clipboard | ⚠️ Accepted (UI-nudged; convenience vs. exposure) | §6.11 |
 | 9 | Low | External Google Fonts (privacy leak, no SRI, weakens CSP story) | ✅ **Fixed** — fonts self-hosted via `@fontsource-variable` | — |

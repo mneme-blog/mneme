@@ -22,6 +22,9 @@ type Server struct {
 	metrics *metrics
 	backup  *backup.Service
 	updates *updateChecker
+	// authLimiter throttles the unauthenticated endpoints — the only way into
+	// the relay, and so the only place an anonymous caller can cost anything.
+	authLimiter *rateLimiter
 }
 
 func New(st *store.Store, bl blobs.Store, cfg config.Config) *Server {
@@ -29,12 +32,13 @@ func New(st *store.Store, bl blobs.Store, cfg config.Config) *Server {
 		bl = blobs.Disabled{}
 	}
 	return &Server{
-		store:   st,
-		blobs:   bl,
-		cfg:     cfg,
-		metrics: newMetrics(),
-		backup:  backup.NewService(cfg.Backup.Dir, cfg.Backup.Keep, st, bl),
-		updates: newUpdateChecker(cfg.Version, cfg.UpdateCheck),
+		store:       st,
+		blobs:       bl,
+		cfg:         cfg,
+		metrics:     newMetrics(),
+		backup:      backup.NewService(cfg.Backup.Dir, cfg.Backup.Keep, st, bl),
+		updates:     newUpdateChecker(cfg.Version, cfg.UpdateCheck),
+		authLimiter: newRateLimiter(cfg.RateLimit.AuthPerMinute, cfg.RateLimit.AuthBurst),
 	}
 }
 
@@ -49,12 +53,15 @@ func (s *Server) RunBackups(ctx context.Context) {
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 
-	// Public
+	// Public. The three auth endpoints are rate-limited per client IP: they are
+	// unauthenticated, and without a limit an anonymous caller can create
+	// unlimited owners, push unlimited blobs, and flood auth_challenges.
+	// Health probes stay unthrottled so a monitoring loop can't lock itself out.
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 	mux.HandleFunc("GET /readyz", s.handleReady)
-	mux.HandleFunc("POST /v1/register", s.handleRegister)
-	mux.HandleFunc("POST /v1/auth/challenge", s.handleChallenge)
-	mux.HandleFunc("POST /v1/auth/verify", s.handleVerify)
+	mux.Handle("POST /v1/register", s.limit(http.HandlerFunc(s.handleRegister)))
+	mux.Handle("POST /v1/auth/challenge", s.limit(http.HandlerFunc(s.handleChallenge)))
+	mux.Handle("POST /v1/auth/verify", s.limit(http.HandlerFunc(s.handleVerify)))
 
 	// Authenticated (owner-scoped)
 	mux.Handle("POST /v1/sync/push", s.auth(http.HandlerFunc(s.handlePush)))

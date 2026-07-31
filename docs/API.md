@@ -45,6 +45,29 @@ the auth model.
 Errors are `{ "error": "message" }` with an appropriate status (400/401/404/500). CORS preflight
 (`OPTIONS`) is answered for configured origins (`CORS_ORIGINS`).
 
+### Limits
+
+| Limit | Default | Env | Applies to |
+|---|---|---|---|
+| Auth rate limit | 30/min per IP, burst 15 | `RATE_LIMIT_AUTH_PER_MINUTE`, `RATE_LIMIT_AUTH_BURST` | `/v1/register`, `/v1/auth/*` → `429` |
+| Per-owner storage | unlimited | `QUOTA_BYTES_PER_OWNER` | `sync/push`, media chunk upload → `413` |
+| Push batch | 500 entries | – | `/v1/sync/push` → `413` |
+| Request body | 32 MiB | – | any JSON endpoint |
+| Media chunk | 2 MiB | – | `PUT /v1/media/{id}/chunks/{n}` |
+
+The three auth endpoints are unauthenticated and are the only way in, so they are throttled per
+client IP (token bucket, in-process — a distributed attacker is the reverse proxy's job). A normal
+sign-in is three calls, so the defaults are invisible in use; set either value to `0` to disable.
+Health probes are never throttled.
+
+`X-Forwarded-For` is read only when `TRUST_PROXY_HEADERS=true`, and then the **right-most** entry is
+used: proxies append rather than replace, so the left-most entry is whatever the caller sent. This
+assumes exactly one trusted hop.
+
+The storage quota counts entry ciphertext plus finalized media bytes. It is unlimited by default —
+right for a single-tenant/family relay, wrong for anything internet-facing. Tombstones are exempt, so
+an over-quota vault can always delete its way back down.
+
 ---
 
 ## Auth

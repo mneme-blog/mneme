@@ -56,7 +56,15 @@ project. Scaffolded so far:
   (`ui/PendingApproval.tsx`, `pending.*` i18n in all 12 locales) quoting it, with a Check-again retry
   (`PendingApprovalError` → `pendingApproval` in `state/data.tsx`). This is the intended way to run a
   single-tenant/family relay — the mnemonic-is-the-account model has no signup to gate otherwise (e2e
-  `TestApprovalFlow`; docs/API.md "Admin", docs/SECURITY.md §6.8). Reminders CRUD + scheduler (logs, no push transport yet). Media is **implemented
+  `TestApprovalFlow`; docs/API.md "Admin", docs/SECURITY.md §6.8). **Abuse controls** (audit finding M3, issue #44): a per-client-IP token bucket
+  (`internal/api/ratelimit.go`, `RATE_LIMIT_AUTH_PER_MINUTE`/`RATE_LIMIT_AUTH_BURST`, 0 disables) on the
+  three unauthenticated endpoints — health probes stay unthrottled. `TRUST_PROXY_HEADERS` opts into
+  reading `X-Forwarded-For`, and the **right-most** entry is used because proxies append rather than
+  replace (the left-most is caller-controlled) — assumes one trusted hop. Plus a per-owner storage quota
+  (`internal/api/quota.go`, `QUOTA_BYTES_PER_OWNER`, **unlimited by default**) enforced on `sync/push`
+  and media chunk PUTs; tombstones are exempt so an over-quota vault can delete its way back down. It's
+  a pre-flight check, not a transactional reservation — a concurrent burst can overshoot by ~one batch,
+  deliberately. Reminders CRUD + scheduler (logs, no push transport yet). Media is **implemented
   server-relayed** (§12 resolved): `internal/blobs` streams client-encrypted ~1 MiB chunks to S3/MinIO
   (minio-go, bucket auto-provisioned) under `/v1/media/*`; `503` when `S3_ENDPOINT` is unset. Chunk
   **cleanup is prefix-driven, not index-driven** (audit finding M2, issue #43): `blobs.Store.DeletePrefix`

@@ -37,6 +37,19 @@ func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Pre-flight quota check. Tombstones are exempt: refusing a deletion would
+	// leave an over-quota vault unable to free space, which is the one thing it
+	// has to be able to do.
+	var incoming int64
+	for _, e := range req.Entries {
+		if !e.Deleted {
+			incoming += int64(len(e.Ciphertext))
+		}
+	}
+	if incoming > 0 && s.quotaExceeded(w, r.Context(), owner, incoming) {
+		return
+	}
+
 	type result struct {
 		EntryID string `json:"entry_id"`
 		Applied bool   `json:"applied"`

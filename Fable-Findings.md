@@ -134,7 +134,9 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   prefix directly (not just indexed chunks); and/or reject chunk PUTs for a `mediaID` that was not
   pre-registered, plus an expiry sweep for un-finalized uploads.
 
-- [ ] [#44](https://github.com/plasticparticle/mneme/issues/44) · **M3 — No rate limiting on the public auth/register endpoints; no per-owner storage quota.**
+- [x] [#44](https://github.com/plasticparticle/mneme/issues/44) · **M3 — No rate limiting on the public auth/register endpoints; no per-owner storage quota.**
+  — **Fixed:** per-IP token bucket on the three auth endpoints (`RATE_LIMIT_AUTH_*`) plus a
+  per-owner storage quota (`QUOTA_BYTES_PER_OWNER`, unlimited by default).
   `server/internal/api/server.go:55-57`, `server/internal/api/auth.go` (all three handlers),
   `server/internal/api/media.go`.
   **Problem:** `/v1/register`, `/v1/auth/challenge`, `/v1/auth/verify` are unauthenticated and

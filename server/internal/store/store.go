@@ -321,6 +321,19 @@ func (s *Store) PullEntries(ctx context.Context, ownerID string, since int64, li
 	return out, rows.Err()
 }
 
+// OwnerStorageBytes is the total ciphertext an owner currently occupies: entry
+// blobs plus finalized media. Backs the per-owner quota (QUOTA_BYTES_PER_OWNER).
+// Chunks from uploads that were never completed are not counted — they are
+// bounded by maxChunkBytes per PUT and swept by the deletion paths.
+func (s *Store) OwnerStorageBytes(ctx context.Context, ownerID string) (int64, error) {
+	var total int64
+	err := s.pool.QueryRow(ctx, `
+		SELECT COALESCE((SELECT sum(length(ciphertext)) FROM entry_blobs WHERE owner_id = $1), 0)
+		     + COALESCE((SELECT sum(bytes)              FROM media_blobs WHERE owner_id = $1), 0)`,
+		ownerID).Scan(&total)
+	return total, err
+}
+
 // ── Media ───────────────────────────────────────────────────────────────────
 
 // MediaBlob indexes one chunked, client-encrypted media object in object storage.
