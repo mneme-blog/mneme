@@ -1,0 +1,139 @@
+# Manual "cut a release" button.
+#
+#   Actions → "Bump version and release" → Run workflow → pick patch/minor/major
+#
+# Bumps the version in both package.json files, commits that to main, creates an
+# annotated tag, and starts the release workflow — which builds and publishes the
+# relay image and creates the GitHub Release.
+#
+# Why it hands off rather than pushing the tag and letting `on: push: tags` fire:
+# GitHub deliberately does NOT start a workflow from an event produced by
+# GITHUB_TOKEN, to stop workflows triggering themselves forever. A tag pushed
+# from here would therefore be silent — the release would simply never build.
+# workflow_dispatch is one of the two documented exceptions to that rule, so the
+# handoff is explicit: this job dispatches release.yml against the new tag.
+name: Bump version and release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Which part of the version to increment"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+        required: true
+      version:
+        description: "Exact version instead, without the leading v (e.g. 1.0.0). Overrides the choice above."
+        type: string
+        required: false
+      dry_run:
+        description: "Work out the next version and stop — no commit, no tag, no release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # commit the bump and push the tag
+  actions: write # dispatch release.yml
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The tag is created from what we just committed, so we need real
+          # history rather than the default shallow clone.
+          fetch-depth: 0
+
+      # Refuse to cut a release from anywhere but the default branch. The tag
+      # would otherwise point at a commit that is not on main, and the version
+      # bump commit would strand on whatever branch was dispatched.
+      - name: Guard — must run on main
+        run: |
+          if [ "$GITHUB_REF_NAME" != "main" ]; then
+            echo "::error::Run this from main (got '$GITHUB_REF_NAME')." && exit 1
+          fi
+
+      - name: Work out the next version
+        id: next
+        env:
+          BUMP: ${{ inputs.bump }}
+          EXPLICIT: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          CURRENT=$(node -p "require('./package.json').version")
+          export CURRENT
+          if [ -n "$EXPLICIT" ]; then
+            NEXT="$EXPLICIT"
+          else
+            NEXT=$(node -e '
+              const [maj, min, pat] = process.env.CURRENT.split(".").map(Number);
+              const b = process.env.BUMP;
+              console.log(
+                b === "major" ? `${maj + 1}.0.0`
+                : b === "minor" ? `${maj}.${min + 1}.0`
+                : `${maj}.${min}.${pat + 1}`
+              );
+            ')
+          fi
+          # Reject anything that isn't a plain semver triple: it becomes a git
+          # tag and a container tag, and a malformed one is tedious to undo.
+          if ! printf '%s' "$NEXT" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::'$NEXT' is not a MAJOR.MINOR.PATCH version." && exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/v$NEXT" >/dev/null; then
+            echo "::error::Tag v$NEXT already exists." && exit 1
+          fi
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "tag=v$NEXT" >> "$GITHUB_OUTPUT"
+          echo "### $CURRENT → **$NEXT**" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Stop here (dry run)
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "Dry run: would tag ${{ steps.next.outputs.tag }}. Nothing was changed."
+          echo "Dry run — nothing was changed." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Bump, commit, tag
+        if: ${{ !inputs.dry_run }}
+        env:
+          NEXT: ${{ steps.next.outputs.next }}
+          TAG: ${{ steps.next.outputs.tag }}
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          # Both files carry the version: the root one is the project's, and the
+          # client's is what vite stamps into the UI's build-info footer.
+          for f in package.json apps/client/package.json; do
+            node -e '
+              const fs = require("fs");
+              const f = process.argv[1];
+              const pkg = JSON.parse(fs.readFileSync(f, "utf8"));
+              pkg.version = process.env.NEXT;
+              fs.writeFileSync(f, JSON.stringify(pkg, null, 2) + "\n");
+            ' "$f"
+          done
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json apps/client/package.json
+          git commit -m "Bump version to $NEXT"
+          # Annotated, so `git describe` (which vite uses without --tags) finds
+          # it and the client footer reads e.g. "1.0.0+v1.0.0".
+          git tag -a "$TAG" -m "$TAG"
+          git push origin HEAD:main
+          git push origin "$TAG"
+
+      - name: Start the release build
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.next.outputs.tag }}
+        run: |
+          gh workflow run release.yml --ref "$TAG"
+          echo "Dispatched release.yml against $TAG." >> "$GITHUB_STEP_SUMMARY"
+          echo "Release notes are auto-generated; edit them afterwards with:" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "gh release edit $TAG --notes-file notes.md" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
