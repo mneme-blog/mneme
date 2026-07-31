@@ -15,9 +15,16 @@ on:
   # from GITHUB_TOKEN-generated events. workflow_dispatch is one of the two
   # documented exceptions.
   #
-  # Run it from Actions → release → Run workflow, and set the branch/tag
-  # selector to the TAG you want published, not to main.
+  # Actions → release → Run workflow, then TYPE THE TAG in the box. The ref
+  # dropdown next to it can stay on main: it defaults there and lists branches
+  # before tags, so relying on it is a reliable way to get this wrong. The tag
+  # you type is what gets checked out, built, and published.
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish, e.g. v0.3.0 (leave empty only if the ref dropdown is already set to a tag)"
+        type: string
+        required: false
 
 permissions:
   contents: write # create the GitHub Release
@@ -27,17 +34,32 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      # GITHUB_REF_NAME becomes the image tag, the git tag to release, and the
-      # version stamped into the binary. Dispatched against a branch it would be
-      # "main" — publishing an image tagged `main` and trying to create a
-      # release named `main`. Fail before any of that happens.
-      - name: Guard — must be a version tag
+      # Settle on one tag for the whole job: it becomes the ref that gets checked
+      # out, the image tag, the version compiled into the binary, and the release
+      # to create. The typed input wins; otherwise fall back to the ref the run
+      # started on, which is what the `push` trigger and the bump workflow's
+      # handoff both rely on.
+      #
+      # Still guarded, because a bare dispatch with an empty box lands here as
+      # "main" — which would publish an image tagged `main` and try to create a
+      # release called `main`. Fail before anything is checked out.
+      - name: Resolve the tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
-          if [ "$GITHUB_REF_TYPE" != "tag" ] || ! printf '%s' "$GITHUB_REF_NAME" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
-            echo "::error::Run this against a version tag (got $GITHUB_REF_TYPE '$GITHUB_REF_NAME')." && exit 1
+          TAG="${INPUT_TAG:-$GITHUB_REF_NAME}"
+          if ! printf '%s' "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
+            echo "::error::'$TAG' is not a version tag. Type the tag (e.g. v0.3.0) into the 'tag' box when running this workflow." && exit 1
           fi
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "Publishing **$TAG**" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/checkout@v7
+        with:
+          # Check out the resolved tag, not the dispatch ref — otherwise typing
+          # a tag while the dropdown says main would build main's code under
+          # that tag's name.
+          ref: ${{ env.TAG }}
 
       - uses: docker/setup-qemu-action@v4 # emulation for the arm64 leg
       - uses: docker/setup-buildx-action@v4
@@ -57,9 +79,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           build-args: |
-            VERSION=${{ github.ref_name }}
+            VERSION=${{ env.TAG }}
           tags: |
-            ghcr.io/plasticparticle/mneme-server:${{ github.ref_name }}
+            ghcr.io/plasticparticle/mneme-server:${{ env.TAG }}
             ghcr.io/plasticparticle/mneme-server:latest
 
       # Created with the preinstalled `gh` rather than a third-party action.
@@ -83,8 +105,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            echo "Release $GITHUB_REF_NAME already exists — keeping its notes."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — keeping its notes."
           else
-            gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
+            gh release create "$TAG" --verify-tag --generate-notes
           fi
