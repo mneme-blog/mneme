@@ -10,6 +10,7 @@ import { Btn } from './primitives';
 import { t } from '../i18n';
 import { useAppData } from '../state/data';
 import { makeProvider } from '../ai/provider';
+import { ollamaHostLabel, ollamaScope } from '../ai/ollamaUrl';
 import { toAiError, defaultAiSettings, ANTHROPIC_MODELS, type AiSettings, type AiBackend } from '../ai/types';
 
 const pStyle: JSX.CSSProperties = { fontFamily: 'var(--ui)', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)', margin: 0 };
@@ -38,6 +39,13 @@ function cloudPrivacy(): VNode {
 export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () => void }): VNode {
   const { aiSettings, saveAiSettings } = useAppData();
   const [form, setForm] = useState<AiSettings>(() => aiSettings ?? defaultAiSettings());
+  // Where the Ollama backend actually points. Recomputed as the field is typed,
+  // so the badge and the copy can never claim "on this device" for a URL that
+  // isn't (audit finding L4, issue #49).
+  // 'invalid' counts as local: makeProvider falls back to the loopback default
+  // rather than using an unusable string, so nothing leaves the device.
+  const ollamaScopeNow = ollamaScope(form.ollama.baseUrl);
+  const ollamaLocal = ollamaScopeNow === 'loopback' || ollamaScopeNow === 'invalid';
   const [test, setTest] = useState<TestState>({ state: 'idle' });
   const [models, setModels] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -141,12 +149,30 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
           {card(
             'ollama',
             'Ollama',
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--accent-ink)', background: 'var(--accent-soft)', border: '1px solid var(--accent-line)', borderRadius: 6, padding: '2px 7px' }}>{t('assistant.badge.local')}</span>,
+            ollamaLocal
+              ? <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--accent-ink)', background: 'var(--accent-soft)', border: '1px solid var(--accent-line)', borderRadius: 6, padding: '2px 7px' }}>{t('assistant.badge.local')}</span>
+              : <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--ink-3)', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 6, padding: '2px 7px' }}>{t('assistant.badge.network')}</span>,
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <p style={pStyle}>{t('assistant.settings.ollamaHint')}</p>
               <div>
                 <span style={labelStyle}>{t('assistant.settings.serverUrl')}</span>
                 <input style={inputStyle} value={form.ollama.baseUrl} onInput={(e) => patch({ ollama: { ...form.ollama, baseUrl: (e.target as HTMLInputElement).value } })} placeholder="http://localhost:11434" />
+                {/* The effective destination, always. This setting syncs across
+                    the vault's devices, so a value typed on one decides where
+                    another ships decrypted entries — it must not be implicit. */}
+                <p style={{ ...pStyle, fontSize: 11.5, marginTop: 6, color: ollamaLocal ? 'var(--ink-3)' : 'var(--accent-ink)' }}>
+                  {t('assistant.settings.ollamaEffective', { host: ollamaHostLabel(form.ollama.baseUrl) })}
+                </p>
+                {ollamaScopeNow === 'invalid' && (
+                  <p style={{ ...pStyle, fontSize: 11.5, marginTop: 4, color: 'var(--ink-3)' }}>
+                    {t('assistant.settings.ollamaInvalidUrl', { host: ollamaHostLabel(form.ollama.baseUrl) })}
+                  </p>
+                )}
+                {!ollamaLocal && (
+                  <p style={{ ...pStyle, fontSize: 11.5, marginTop: 4, color: 'var(--accent-ink)' }}>
+                    {t('assistant.settings.ollamaNotLocal')}
+                  </p>
+                )}
               </div>
               <div>
                 <span style={labelStyle}>{t('assistant.settings.model')}</span>

@@ -6,6 +6,9 @@
 export const assistant = {
   // ── shared chrome ──
   'assistant.badge.local': 'stays on this device',
+  // Shown instead of badge.local when the Ollama URL points somewhere other
+  // than loopback — the "stays on this device" claim would be false.
+  'assistant.badge.network': 'leaves this device',
   'assistant.badge.cloud': 'cloud',
   'assistant.badge.onDevice': 'on this device',
   'assistant.badge.sentToAnthropic': 'sent to Anthropic',
@@ -33,6 +36,13 @@ export const assistant = {
   'assistant.settings.ollamaHint':
     'Your entries are processed by a model running on your own machine. Nothing leaves this device.',
   'assistant.settings.ollamaModelPlaceholder': 'llama3.2 — or Test connection to list',
+  // Always shown, so the destination is never implicit — this setting syncs
+  // between your devices, and a value typed on one governs all of them.
+  'assistant.settings.ollamaEffective': 'Requests go to {host}',
+  'assistant.settings.ollamaNotLocal':
+    'That address is not this device. Entries used as context will leave this device to reach it — on a plain HTTP address they travel your network unencrypted.',
+  'assistant.settings.ollamaInvalidUrl':
+    'Not a usable http:// or https:// address — {host} will be used instead.',
   'assistant.settings.ollamaOriginsNote':
     'Accessing Ollama from a non-localhost origin needs OLLAMA_ORIGINS set on the Ollama side; Safari may block localhost from an https page.',
   // {decrypted} is replaced by the bold 'assistant.settings.cloudPrivacyDecrypted'.

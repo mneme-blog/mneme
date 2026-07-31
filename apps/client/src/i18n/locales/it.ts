@@ -351,6 +351,7 @@ const it: Partial<Record<MessageKey, string>> = {
     'La ricerca dell’indirizzo e il rendering una tantum della mappa contattano OpenStreetMap. La mappa viene poi congelata nella tua voce cifrata — aprendola in seguito non vengono effettuate ulteriori richieste, e il server di sincronizzazione non vede mai il luogo.',
   'media.location.insert': 'Inserisci luogo',
   'assistant.badge.local': 'resta su questo dispositivo',
+  'assistant.badge.network': 'esce da questo dispositivo',
   'assistant.badge.cloud': 'cloud',
   'assistant.badge.onDevice': 'su questo dispositivo',
   'assistant.badge.sentToAnthropic': 'inviato ad Anthropic',
@@ -378,6 +379,11 @@ const it: Partial<Record<MessageKey, string>> = {
     'Le tue voci vengono elaborate da un modello in esecuzione sulla tua stessa macchina. Niente lascia questo dispositivo.',
   'assistant.settings.ollamaModelPlaceholder':
     'llama3.2 — oppure Testa la connessione per elencarli',
+  'assistant.settings.ollamaEffective': 'Le richieste vanno a {host}',
+  'assistant.settings.ollamaNotLocal':
+    'Quell’indirizzo non è questo dispositivo. Le voci usate come contesto usciranno da questo dispositivo per raggiungerlo — su un indirizzo HTTP semplice viaggiano in chiaro sulla tua rete.',
+  'assistant.settings.ollamaInvalidUrl':
+    'Non è un indirizzo http:// o https:// utilizzabile — verrà usato {host}.',
   'assistant.settings.ollamaOriginsNote':
     'Accedere a Ollama da un’origine diversa da localhost richiede OLLAMA_ORIGINS impostato lato Ollama; Safari potrebbe bloccare localhost da una pagina https.',
   'assistant.settings.cloudPrivacy':

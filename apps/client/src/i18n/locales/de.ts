@@ -350,6 +350,7 @@ const de: Partial<Record<MessageKey, string>> = {
     'Die Adresssuche und das einmalige Rendern der Karte kontaktieren OpenStreetMap. Die Karte wird dann in deinen verschlüsselten Eintrag eingefroren — sie später zu öffnen löst keine weiteren Anfragen aus, und der Sync-Server sieht den Ort nie.',
   'media.location.insert': 'Ort einfügen',
   'assistant.badge.local': 'bleibt auf diesem Gerät',
+  'assistant.badge.network': 'verlässt dieses Gerät',
   'assistant.badge.cloud': 'Cloud',
   'assistant.badge.onDevice': 'auf diesem Gerät',
   'assistant.badge.sentToAnthropic': 'an Anthropic gesendet',
@@ -375,6 +376,11 @@ const de: Partial<Record<MessageKey, string>> = {
   'assistant.settings.ollamaHint':
     'Deine Einträge werden von einem Modell auf deinem eigenen Rechner verarbeitet. Nichts verlässt dieses Gerät.',
   'assistant.settings.ollamaModelPlaceholder': 'llama3.2 — oder Verbindung testen zum Auflisten',
+  'assistant.settings.ollamaEffective': 'Anfragen gehen an {host}',
+  'assistant.settings.ollamaNotLocal':
+    'Diese Adresse ist nicht dieses Gerät. Als Kontext verwendete Einträge verlassen dieses Gerät, um sie zu erreichen — über eine reine HTTP-Adresse unverschlüsselt durch dein Netzwerk.',
+  'assistant.settings.ollamaInvalidUrl':
+    'Keine nutzbare http://- oder https://-Adresse — stattdessen wird {host} verwendet.',
   'assistant.settings.ollamaOriginsNote':
     'Der Zugriff auf Ollama von einem Nicht-localhost-Ursprung benötigt OLLAMA_ORIGINS auf der Ollama-Seite; Safari blockiert localhost von einer https-Seite möglicherweise.',
   'assistant.settings.cloudPrivacy':

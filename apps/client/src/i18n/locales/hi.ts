@@ -349,6 +349,7 @@ const hi: Partial<Record<MessageKey, string>> = {
     'पता खोज और एक-बार का मैप रेंडर OpenStreetMap से संपर्क करता है। इसके बाद मैप आपकी एन्क्रिप्टेड प्रविष्टि में स्थिर हो जाता है — बाद में इसे खोलने पर कोई और अनुरोध नहीं होता, और सिंक सर्वर कभी स्थान नहीं देखता।',
   'media.location.insert': 'स्थान सम्मिलित करें',
   'assistant.badge.local': 'इस डिवाइस पर ही रहता है',
+  'assistant.badge.network': 'इस डिवाइस से बाहर जाता है',
   'assistant.badge.cloud': 'क्लाउड',
   'assistant.badge.onDevice': 'इस डिवाइस पर',
   'assistant.badge.sentToAnthropic': 'Anthropic को भेजा गया',
@@ -372,6 +373,11 @@ const hi: Partial<Record<MessageKey, string>> = {
   'assistant.settings.ollamaHint':
     'आपकी प्रविष्टियाँ आपकी अपनी मशीन पर चल रहे एक मॉडल द्वारा संसाधित होती हैं। कुछ भी इस डिवाइस से बाहर नहीं जाता।',
   'assistant.settings.ollamaModelPlaceholder': 'llama3.2 — या सूची के लिए कनेक्शन जाँचें',
+  'assistant.settings.ollamaEffective': 'अनुरोध {host} पर जाते हैं',
+  'assistant.settings.ollamaNotLocal':
+    'वह पता यह डिवाइस नहीं है। संदर्भ के रूप में उपयोग की गई प्रविष्टियाँ वहाँ पहुँचने के लिए इस डिवाइस से बाहर जाएँगी — सादे HTTP पते पर वे आपके नेटवर्क में बिना एन्क्रिप्शन के यात्रा करती हैं।',
+  'assistant.settings.ollamaInvalidUrl':
+    'यह उपयोग योग्य http:// या https:// पता नहीं है — इसके बजाय {host} का उपयोग होगा।',
   'assistant.settings.ollamaOriginsNote':
     'गैर-localhost मूल से Ollama तक पहुँचने के लिए Ollama की ओर OLLAMA_ORIGINS सेट होना आवश्यक है; Safari किसी https पृष्ठ से localhost को अवरुद्ध कर सकता है।',
   'assistant.settings.cloudPrivacy':

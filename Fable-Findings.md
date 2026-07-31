@@ -186,7 +186,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   (amplified by H2). **Fix:** pass explicit hardening —
   `{ throwOnError:false, trust:false, strict:'ignore', maxExpand:1000, maxSize:500 }`.
 
-- [ ] [#49](https://github.com/plasticparticle/mneme/issues/49) · **L4 — Ollama `baseUrl` is used verbatim while badged "on device / nothing leaves the device."**
+- [x] [#49](https://github.com/plasticparticle/mneme/issues/49) · **L4 — Ollama `baseUrl` is used verbatim while badged "on device / nothing leaves the device."**
   `apps/client/src/ai/ollama.ts:24,76`. Decrypted journal excerpts are POSTed to `${baseUrl}/api/chat`
   with no validation that `baseUrl` is loopback/LAN, and AI settings **sync across the vault's
   devices** — so a value set/mistyped on one device silently governs where another ships plaintext,

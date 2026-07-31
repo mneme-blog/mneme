@@ -348,6 +348,7 @@ const ja: Partial<Record<MessageKey, string>> = {
     '住所検索と一度きりの地図描画は OpenStreetMap に接続します。地図はその後、暗号化されたエントリーに固定され、後で開いても追加のリクエストは発生せず、同期サーバーが位置情報を見ることは決してありません。',
   'media.location.insert': '位置情報を挿入',
   'assistant.badge.local': 'この端末にとどまります',
+  'assistant.badge.network': 'この端末から出ます',
   'assistant.badge.cloud': 'クラウド',
   'assistant.badge.onDevice': 'この端末上',
   'assistant.badge.sentToAnthropic': 'Anthropic へ送信',
@@ -372,6 +373,11 @@ const ja: Partial<Record<MessageKey, string>> = {
   'assistant.settings.ollamaHint':
     'あなたのエントリーは、自分のマシンで動くモデルによって処理されます。この端末から何も出ていきません。',
   'assistant.settings.ollamaModelPlaceholder': 'llama3.2 — または接続テストで一覧を取得',
+  'assistant.settings.ollamaEffective': 'リクエストの送信先は {host} です',
+  'assistant.settings.ollamaNotLocal':
+    'そのアドレスはこの端末ではありません。文脈として使われるエントリーは、そこへ届くためにこの端末から出ていきます。平文の HTTP アドレスでは、ネットワーク上を暗号化されずに流れます。',
+  'assistant.settings.ollamaInvalidUrl':
+    '使用できる http:// または https:// のアドレスではありません — 代わりに {host} を使用します。',
   'assistant.settings.ollamaOriginsNote':
     'localhost 以外のオリジンから Ollama にアクセスするには、Ollama 側で OLLAMA_ORIGINS の設定が必要です。Safari は https ページからの localhost をブロックすることがあります。',
   'assistant.settings.cloudPrivacy':

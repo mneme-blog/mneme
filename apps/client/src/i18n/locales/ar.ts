@@ -349,6 +349,7 @@ const ar: Partial<Record<MessageKey, string>> = {
     'البحث عن العنوان ورسم الخريطة لمرة واحدة يتّصلان بـ OpenStreetMap. تُجمَّد الخريطة بعد ذلك داخل مدخلك المشفّر — فتحها لاحقًا لا يُجري أي طلبات إضافية، وخادم المزامنة لا يرى الموقع أبدًا.',
   'media.location.insert': 'أدرج الموقع',
   'assistant.badge.local': 'يبقى على هذا الجهاز',
+  'assistant.badge.network': 'يغادر هذا الجهاز',
   'assistant.badge.cloud': 'سحابة',
   'assistant.badge.onDevice': 'على هذا الجهاز',
   'assistant.badge.sentToAnthropic': 'مُرسَل إلى Anthropic',
@@ -374,6 +375,11 @@ const ar: Partial<Record<MessageKey, string>> = {
   'assistant.settings.ollamaHint':
     'تُعالَج مدخلاتك بنموذج يعمل على جهازك الخاص. لا شيء يغادر هذا الجهاز.',
   'assistant.settings.ollamaModelPlaceholder': 'llama3.2 — أو اختبر الاتصال لعرض القائمة',
+  'assistant.settings.ollamaEffective': 'تُرسَل الطلبات إلى {host}',
+  'assistant.settings.ollamaNotLocal':
+    'هذا العنوان ليس هذا الجهاز. المدخلات المستخدمة كسياق ستغادر هذا الجهاز للوصول إليه — وعبر عنوان HTTP عادي تنتقل عبر شبكتك دون تشفير.',
+  'assistant.settings.ollamaInvalidUrl':
+    'ليس عنوان http:// أو https:// صالحًا للاستخدام — سيُستخدم {host} بدلًا منه.',
   'assistant.settings.ollamaOriginsNote':
     'الوصول إلى Ollama من أصل غير localhost يتطلب ضبط OLLAMA_ORIGINS على جانب Ollama؛ وقد يحجب Safari الوصول إلى localhost من صفحة https.',
   'assistant.settings.cloudPrivacy':

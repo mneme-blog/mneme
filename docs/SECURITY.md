@@ -78,7 +78,11 @@ key), the entries selected as context for a question are sent, **decrypted, over
 provider**. That is a voluntary extension of the user's trust boundary to a provider of their
 choice — not a weakening of the relay threat model. Guardrails: the feature is opt-in with the
 consequence spelled out in the settings UI; a fully local backend (Ollama) is offered where nothing
-leaves the device; the API key is stored sealed (XChaCha20 under an HKDF key derived from the vault
+leaves the device — and the settings sheet always shows the **effective destination** of that
+backend, because `baseUrl` is free text that syncs across the vault's devices, so a value typed on
+one device would otherwise silently govern where another ships plaintext under an "on this device"
+badge. A non-loopback address swaps the badge and adds a warning; an unusable one falls back to
+`127.0.0.1:11434` rather than being used verbatim (`ai/ollamaUrl.ts`); the API key is stored sealed (XChaCha20 under an HKDF key derived from the vault
 seed, `ai/settings.ts` — only openable while unlocked, re-sealed on phrase rotation, cleared on
 vault deletion); chat transcripts are memory-only and never persisted or synced. The settings
 themselves (API key included) sync to the vault's other devices as an encrypted oplog record —

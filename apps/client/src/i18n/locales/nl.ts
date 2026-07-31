@@ -348,6 +348,7 @@ const nl: Partial<Record<MessageKey, string>> = {
     'Adres zoeken en het eenmalig renderen van de kaart nemen contact op met OpenStreetMap. De kaart wordt daarna in je versleutelde notitie bevroren — hem later openen doet geen verdere verzoeken, en de synchronisatieserver ziet de locatie nooit.',
   'media.location.insert': 'Locatie invoegen',
   'assistant.badge.local': 'blijft op dit apparaat',
+  'assistant.badge.network': 'verlaat dit apparaat',
   'assistant.badge.cloud': 'cloud',
   'assistant.badge.onDevice': 'op dit apparaat',
   'assistant.badge.sentToAnthropic': 'verzonden naar Anthropic',
@@ -371,6 +372,11 @@ const nl: Partial<Record<MessageKey, string>> = {
   'assistant.settings.ollamaHint':
     'Je notities worden verwerkt door een model dat op je eigen machine draait. Er verlaat niets dit apparaat.',
   'assistant.settings.ollamaModelPlaceholder': 'llama3.2 — of Test verbinding om te tonen',
+  'assistant.settings.ollamaEffective': 'Verzoeken gaan naar {host}',
+  'assistant.settings.ollamaNotLocal':
+    'Dat adres is niet dit apparaat. Notities die als context worden gebruikt verlaten dit apparaat om het te bereiken — via een gewoon HTTP-adres reizen ze onversleuteld over je netwerk.',
+  'assistant.settings.ollamaInvalidUrl':
+    'Geen bruikbaar http://- of https://-adres — {host} wordt in plaats daarvan gebruikt.',
   'assistant.settings.ollamaOriginsNote':
     'Ollama benaderen vanaf een niet-localhost-oorsprong vereist dat OLLAMA_ORIGINS aan de Ollama-kant is ingesteld; Safari kan localhost blokkeren vanaf een https-pagina.',
   'assistant.settings.cloudPrivacy':

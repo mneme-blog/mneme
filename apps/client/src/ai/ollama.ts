@@ -10,13 +10,23 @@ interface OllamaChunk {
 
 export class OllamaProvider implements AiProvider {
   readonly id = 'ollama' as const;
-  readonly label = 'Ollama (on this device)';
-  readonly local = true;
+  readonly label: string;
+  /**
+   * Whether requests really stay on this device. Not a constant: `baseUrl` is
+   * user-supplied and syncs between the vault's devices, so a value pointing at
+   * another machine means journal text does leave — and `local` has to say so
+   * rather than assert the happy case. Set by makeProvider from ollamaScope().
+   */
+  readonly local: boolean;
 
   constructor(
     private readonly baseUrl: string,
     private readonly model: string,
-  ) {}
+    local = true,
+  ) {
+    this.local = local;
+    this.label = local ? 'Ollama (on this device)' : `Ollama (${baseUrl})`;
+  }
 
   async chat(params: ChatParams): Promise<string> {
     let res: Response;

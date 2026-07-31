@@ -349,6 +349,7 @@ const fi: Partial<Record<MessageKey, string>> = {
     'Osoitehaku ja kertaluontoinen kartan piirto ottavat yhteyden OpenStreetMapiin. Kartta jäädytetään sen jälkeen salattuun merkintääsi — sen avaaminen myöhemmin ei tee enää pyyntöjä, eikä synkronointipalvelin näe sijaintia koskaan.',
   'media.location.insert': 'Lisää sijainti',
   'assistant.badge.local': 'pysyy tällä laitteella',
+  'assistant.badge.network': 'poistuu tältä laitteelta',
   'assistant.badge.cloud': 'pilvi',
   'assistant.badge.onDevice': 'tällä laitteella',
   'assistant.badge.sentToAnthropic': 'lähetetään Anthropicille',
@@ -373,6 +374,11 @@ const fi: Partial<Record<MessageKey, string>> = {
   'assistant.settings.ollamaHint':
     'Merkintäsi käsittelee omalla koneellasi toimiva malli. Mitään ei lähde tältä laitteelta.',
   'assistant.settings.ollamaModelPlaceholder': 'llama3.2 — tai Testaa yhteys listataksesi',
+  'assistant.settings.ollamaEffective': 'Pyynnöt menevät osoitteeseen {host}',
+  'assistant.settings.ollamaNotLocal':
+    'Tuo osoite ei ole tämä laite. Kontekstina käytetyt merkinnät poistuvat tältä laitteelta päästäkseen sinne — pelkässä HTTP-osoitteessa ne kulkevat verkossasi salaamattomina.',
+  'assistant.settings.ollamaInvalidUrl':
+    'Ei käyttökelpoinen http://- tai https://-osoite — käytetään sen sijaan osoitetta {host}.',
   'assistant.settings.ollamaOriginsNote':
     'Ollaman käyttö muualta kuin localhostista vaatii OLLAMA_ORIGINS-asetuksen Ollaman puolella; Safari saattaa estää localhostin https-sivulta.',
   'assistant.settings.cloudPrivacy':

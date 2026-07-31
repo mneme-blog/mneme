@@ -327,6 +327,7 @@ const ko: Partial<Record<MessageKey, string>> = {
   'media.location.privacy': '주소 검색과 일회성 지도 렌더링은 OpenStreetMap에 연결됩니다. 그 후 지도는 암호화된 항목 안에 고정되어 — 나중에 열어도 추가 요청이 없으며, 동기화 서버는 위치를 절대 보지 못합니다.',
   'media.location.insert': '위치 삽입',
   'assistant.badge.local': '이 기기에 남아 있음',
+  'assistant.badge.network': '이 기기를 벗어남',
   'assistant.badge.cloud': '클라우드',
   'assistant.badge.onDevice': '이 기기에서',
   'assistant.badge.sentToAnthropic': 'Anthropic으로 전송됨',
@@ -349,6 +350,11 @@ const ko: Partial<Record<MessageKey, string>> = {
   'assistant.settings.apiKey': 'API 키',
   'assistant.settings.ollamaHint': '항목은 사용자 본인의 컴퓨터에서 실행되는 모델이 처리합니다. 이 기기를 떠나는 것은 없습니다.',
   'assistant.settings.ollamaModelPlaceholder': 'llama3.2 — 또는 연결 테스트로 목록 보기',
+  'assistant.settings.ollamaEffective': '요청은 {host} 으로 전송됩니다',
+  'assistant.settings.ollamaNotLocal':
+    '그 주소는 이 기기가 아닙니다. 맥락으로 사용된 항목은 그곳에 도달하기 위해 이 기기를 벗어납니다 — 일반 HTTP 주소에서는 네트워크를 암호화되지 않은 채로 이동합니다.',
+  'assistant.settings.ollamaInvalidUrl':
+    '사용할 수 있는 http:// 또는 https:// 주소가 아닙니다 — 대신 {host} 을(를) 사용합니다.',
   'assistant.settings.ollamaOriginsNote': 'localhost가 아닌 출처에서 Ollama에 접근하려면 Ollama 측에 OLLAMA_ORIGINS가 설정되어야 합니다. Safari는 https 페이지에서 localhost를 차단할 수 있습니다.',
   'assistant.settings.cloudPrivacy': 'AI 기능을 사용하면, 맥락으로 쓰이는 항목이 {decrypted} 상태로 HTTPS를 통해 Anthropic에 전송됩니다 — 그 요청에 한해 Mneme의 종단 간 암호화를 벗어납니다. 릴레이는 이를 절대 보지 못합니다. Anthropic의 API 약관이 적용됩니다.',
   'assistant.settings.cloudPrivacyDecrypted': '복호화된',

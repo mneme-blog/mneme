@@ -327,6 +327,7 @@ const zh: Partial<Record<MessageKey, string>> = {
   'media.location.privacy': '地址搜索和一次性地图渲染会联系 OpenStreetMap。地图随后会冻结进你的加密记录——之后再打开不会发起任何请求，同步服务器也永远看不到该位置。',
   'media.location.insert': '插入位置',
   'assistant.badge.local': '仅留在这台设备',
+  'assistant.badge.network': '会离开这台设备',
   'assistant.badge.cloud': '云端',
   'assistant.badge.onDevice': '在这台设备上',
   'assistant.badge.sentToAnthropic': '发送给 Anthropic',
@@ -349,6 +350,11 @@ const zh: Partial<Record<MessageKey, string>> = {
   'assistant.settings.apiKey': 'API 密钥',
   'assistant.settings.ollamaHint': '你的记录由运行在你自己机器上的模型处理。没有任何内容离开这台设备。',
   'assistant.settings.ollamaModelPlaceholder': 'llama3.2 —— 或点“测试连接”以列出',
+  'assistant.settings.ollamaEffective': '请求将发送到 {host}',
+  'assistant.settings.ollamaNotLocal':
+    '该地址不是这台设备。用作上下文的条目会离开本机前往该地址——若使用普通 HTTP 地址，它们将以明文在你的网络中传输。',
+  'assistant.settings.ollamaInvalidUrl':
+    '不是可用的 http:// 或 https:// 地址——将改用 {host}。',
   'assistant.settings.ollamaOriginsNote': '从非 localhost 来源访问 Ollama 需要在 Ollama 端设置 OLLAMA_ORIGINS；Safari 可能会阻止 https 页面访问 localhost。',
   'assistant.settings.cloudPrivacy': '当你使用 AI 功能时，用作上下文的记录会以{decrypted}状态经 HTTPS 发送给 Anthropic——该请求会脱离 Mneme 的端到端加密。你的中继永远看不到它们。适用 Anthropic 的 API 条款。',
   'assistant.settings.cloudPrivacyDecrypted': '已解密',
