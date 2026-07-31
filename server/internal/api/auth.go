@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -96,8 +97,8 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Owner authorization material is optional on the wire only so a client that
-	// predates this change keeps working against its own already-bound device;
-	// authorizeBinding rejects every other use of the empty case.
+	// predates this change keeps working against its own already-bound device.
+	// RegisterOwnerDevice rejects every other use of the empty case.
 	var ownerSignPub, ownerSig []byte
 	if req.OwnerSignPubkey != "" || req.OwnerSignature != "" {
 		ownerSignPub, err = base64.StdEncoding.DecodeString(req.OwnerSignPubkey)
@@ -232,7 +233,19 @@ func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 	// Checked only after the signature verifies, so it never reveals an owner's
 	// status to a caller that doesn't hold the device key. The client turns this
 	// 403 into a "pending approval" screen rather than a hard error.
-	if status, err := s.store.OwnerStatus(r.Context(), ownerID); err == nil && status != store.OwnerStatusApproved {
+	//
+	// Fails CLOSED on a lookup error, mirroring the auth middleware: this used to
+	// skip the guard when OwnerStatus errored, which minted a session for a
+	// possibly pending or rejected owner. The middleware caught it on the next
+	// request, so the window was narrow — but "unknown status" must never read as
+	// "approved".
+	status, err := s.store.OwnerStatus(r.Context(), ownerID)
+	if err != nil {
+		log.Printf("owner status lookup failed for %s: %v", ownerID, err)
+		writeError(w, http.StatusInternalServerError, "could not verify vault status")
+		return
+	}
+	if status != store.OwnerStatusApproved {
 		writeError(w, http.StatusForbidden, "vault is pending operator approval")
 		return
 	}

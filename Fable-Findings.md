@@ -166,7 +166,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
 
 ### 🟡 Low
 
-- [ ] [#46](https://github.com/plasticparticle/mneme/issues/46) · **L1 — The approval gate in `handleVerify` fails open on a store error.**
+- [x] [#46](https://github.com/plasticparticle/mneme/issues/46) · **L1 — The approval gate in `handleVerify` fails open on a store error.**
   `server/internal/api/auth.go:179`: `if status, err := s.store.OwnerStatus(...); err == nil && status
   != approved`. If `OwnerStatus` errors, the guard is skipped and a session is minted for a possibly
   pending/rejected owner. The `auth` middleware is a fail-closed backstop on subsequent requests, so
