@@ -37,7 +37,8 @@ export function createMathHandle(): MathHandle {
 /** The configured Mathematics extension; clicking a node opens the dialog. */
 export function mathExtension(handle?: MathHandle): AnyExtension {
   return Mathematics.configure({
-    katexOptions: { throwOnError: false },
+    // Same hardening for the extension's own in-editor rendering path.
+    katexOptions: KATEX_OPTIONS,
     inlineOptions: {
       onClick: (node, pos) =>
         handle?.listener?.({ kind: 'inline', latex: String(node.attrs.latex ?? ''), pos }),
@@ -49,9 +50,32 @@ export function mathExtension(handle?: MathHandle): AnyExtension {
   });
 }
 
+/**
+ * KaTeX options, spelled out rather than inherited.
+ *
+ * Rendered output goes through `dangerouslySetInnerHTML`, so the only thing
+ * standing between stored LaTeX and stored XSS is `trust`. KaTeX defaults it
+ * to false, which disables `\href`, `\url`, `\includegraphics` and the `\html*`
+ * family — but leaning on an upstream default for an XSS-critical control is
+ * precisely the fragility this pins down. Set it here, where a reviewer reading
+ * the render path can see it.
+ *
+ * The rest bound the work a single formula can cost: `maxExpand` caps macro
+ * expansion (the classic billion-laughs shape), `maxSize` caps user-specified
+ * dimensions, and `strict: 'ignore'` keeps unusual-but-harmless input rendering
+ * instead of erroring — content already in someone's journal must keep opening.
+ */
+const KATEX_OPTIONS = {
+  throwOnError: false,
+  trust: false,
+  strict: 'ignore',
+  maxExpand: 1000,
+  maxSize: 500,
+} as const;
+
 /** LaTeX → HTML. Never throws; KaTeX renders bad input in its error color. */
 export function renderLatex(latex: string, kind: MathKind): string {
-  return katex.renderToString(latex, { throwOnError: false, displayMode: kind === 'block' });
+  return katex.renderToString(latex, { ...KATEX_OPTIONS, displayMode: kind === 'block' });
 }
 
 /** The in-dialog LaTeX cheatsheet: each snippet is KaTeX-rendered as its own

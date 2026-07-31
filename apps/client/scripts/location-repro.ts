@@ -12,7 +12,14 @@ const dom = new JSDOM('<!doctype html><html><body><div id="mount"></div></body><
 const g = globalThis as Record<string, unknown>;
 g.window = dom.window;
 g.document = dom.window.document;
-g.navigator = dom.window.navigator;
+// Node 22 defines `navigator` as a getter-only global, so a plain assignment
+// throws. defineProperty replaces it outright — jsdom's navigator is what the
+// editor stack probes for platform detection.
+Object.defineProperty(globalThis, 'navigator', {
+  value: dom.window.navigator,
+  configurable: true,
+  writable: true,
+});
 g.MutationObserver = dom.window.MutationObserver;
 g.Element = dom.window.Element;
 g.HTMLElement = dom.window.HTMLElement;

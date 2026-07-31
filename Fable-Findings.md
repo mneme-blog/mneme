@@ -178,7 +178,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   (32 MiB) but not *duration*, so a client can trickle a body or hold idle keep-alives to exhaust
   connections. **Fix:** set `ReadTimeout`, `WriteTimeout`, `IdleTimeout`.
 
-- [ ] [#48](https://github.com/plasticparticle/mneme/issues/48) · **L3 — `dangerouslySetInnerHTML` on KaTeX output is only implicitly safe.**
+- [x] [#48](https://github.com/plasticparticle/mneme/issues/48) · **L3 — `dangerouslySetInnerHTML` on KaTeX output is only implicitly safe.**
   `apps/client/src/editor/math.tsx:54,195,226`, `apps/client/src/editor/DocPreview.tsx:88,90`.
   `renderLatex` = `katex.renderToString(latex, { throwOnError: false, displayMode })` injected as raw
   HTML. Safe **only** because KaTeX defaults `trust:false` (disabling `\href`/`\includegraphics`/
