@@ -115,8 +115,12 @@ func (s *Server) handleAdminRestoreBackup(w http.ResponseWriter, r *http.Request
 			writeBackupErr(w, err)
 			return
 		}
+		// Already logged with full detail above; the response stays generic.
+		// Admin-gated, so the exposure is small — but a raw error string here
+		// can carry filesystem paths and driver internals, and there is no
+		// reason for the dashboard to need them when the log has them.
 		log.Printf("admin: restore from %s failed: %v", name, err)
-		writeError(w, http.StatusInternalServerError, "restore failed: "+err.Error())
+		writeError(w, http.StatusInternalServerError, "restore failed — see the server log")
 		return
 	}
 	log.Printf("admin: restored from %s (%d entries, %d media across %d vaults)",

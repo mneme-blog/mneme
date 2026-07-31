@@ -201,7 +201,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   `Allow-Credentials`. **Fix:** default to an explicit allowlist in production; document the invariant
   "never reflect origin with credentials."
 
-- [ ] [#51](https://github.com/plasticparticle/mneme/issues/51) · **L6 — Error messages echo internal parser/DB detail to clients.**
+- [x] [#51](https://github.com/plasticparticle/mneme/issues/51) · **L6 — Error messages echo internal parser/DB detail to clients.**
   `server/internal/api/respond.go:27` returns raw JSON decode errors to unauthenticated callers
   (leaks expected field names via `DisallowUnknownFields`, offsets); `server/internal/api/backup.go:119`
   returns raw internal error strings (admin-gated). Minor info disclosure. **Fix:** generic client
