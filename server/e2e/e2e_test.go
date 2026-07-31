@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -142,6 +143,22 @@ func TestFullFlow(t *testing.T) {
 	c.post("/v1/sync/pull", map[string]any{"since": pull.Cursor}, http.StatusOK, &pull2)
 	if len(pull2.Entries) != 0 {
 		t.Fatalf("expected caught-up pull, got %d entries", len(pull2.Entries))
+	}
+
+	// The push batch is capped by COUNT, not just by body size: 501 tiny entries
+	// fit well inside the 32 MiB body cap but would be 501 sequential writes in
+	// a loop (audit finding L7, issue #52). 500 is fine, 501 is not. Run after
+	// the pull assertions above so the bulk rows don't perturb them.
+	oversized := make([]map[string]any, 0, 501)
+	for i := 0; i < 501; i++ {
+		oversized = append(oversized, map[string]any{
+			"entry_id": "bulk-" + strconv.Itoa(i), "lww_clock": 1, "ciphertext": b64(blob), "deleted": false,
+		})
+	}
+	c.post("/v1/sync/push", map[string]any{"entries": oversized}, http.StatusRequestEntityTooLarge, nil)
+	c.post("/v1/sync/push", map[string]any{"entries": oversized[:500]}, http.StatusOK, &pr)
+	if len(pr.Results) != 500 {
+		t.Fatalf("a 500-entry batch should be accepted, got %d results", len(pr.Results))
 	}
 
 	// 6. Reminders: put → list → delete.

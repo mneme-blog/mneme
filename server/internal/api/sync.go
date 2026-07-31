@@ -9,6 +9,12 @@ import (
 
 const maxPullLimit = 500
 
+// maxPushEntries bounds one push batch. The body is size-capped at 32 MiB, but
+// a 32 MiB batch of tiny entries is thousands of individual round-trips in a
+// loop — capping the count mirrors maxPullLimit and keeps one request from
+// turning into an unbounded burst of sequential writes.
+const maxPushEntries = 500
+
 // POST /v1/sync/push — upload encrypted entry blobs. Last-write-wins per entry on
 // lww_clock. The server treats ciphertext as opaque bytes.
 func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
@@ -23,6 +29,11 @@ func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
 		} `json:"entries"`
 	}
 	if !decodeJSON(w, r, &req) {
+		return
+	}
+
+	if len(req.Entries) > maxPushEntries {
+		writeError(w, http.StatusRequestEntityTooLarge, "too many entries in one push")
 		return
 	}
 

@@ -121,7 +121,11 @@ Last-write-wins per entry on `lww_clock`. The server treats `ciphertext` as opaq
 ] }
 // 200 — applied=false means a not-newer clock was ignored
 { "results": [ { "entry_id": "...", "applied": true } ] }
+// 413 — more than 500 entries in one batch
 ```
+At most **500 entries per request** (mirroring `pull`'s limit). The 32 MiB body cap alone doesn't
+bound the count, and each entry is a separate round-trip in a loop, so a batch of tiny entries would
+otherwise become an unbounded burst of sequential writes. Clients split larger batches.
 
 ### `POST /v1/sync/pull`
 ```jsonc

@@ -202,7 +202,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   returns raw internal error strings (admin-gated). Minor info disclosure. **Fix:** generic client
   messages, details to server logs only.
 
-- [ ] [#52](https://github.com/plasticparticle/mneme/issues/52) · **L7 — `handlePush` processes an unbounded number of entries per request.**
+- [x] [#52](https://github.com/plasticparticle/mneme/issues/52) · **L7 — `handlePush` processes an unbounded number of entries per request.**
   `server/internal/api/sync.go:14-78`. Body is size-capped (32 MiB) but the `entries` array length is
   not, and each element is an individual `PushEntry` round-trip in a loop — a 32 MiB batch of tiny
   entries becomes a large burst of sequential writes. **Fix:** cap `len(req.Entries)` (mirror

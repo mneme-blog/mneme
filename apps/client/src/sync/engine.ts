@@ -192,6 +192,32 @@ export function toPushEntry(dataKey: Uint8Array, e: JournalEntry): PushEntry {
 }
 
 /**
+ * The relay caps one push at 500 records (docs/API.md; server maxPushEntries),
+ * so every push path chunks here rather than each caller remembering to. The
+ * outbox flush pushes its whole pending set, a Day One import can queue
+ * thousands at once, and phrase rotation re-pushes an entire vault — all of
+ * which would otherwise 413 on a large journal.
+ *
+ * Chunks are sequential on purpose: a partial failure must leave the un-pushed
+ * remainder dirty in the outbox, and the caller retires exactly the ids that
+ * came back acknowledged.
+ */
+const PUSH_LIMIT = 500;
+
+async function pushInChunks(
+  relay: RelayClient,
+  token: string,
+  records: PushEntry[],
+): Promise<Set<string>> {
+  const acked = new Set<string>();
+  for (let i = 0; i < records.length; i += PUSH_LIMIT) {
+    const resp = await relay.push(token, records.slice(i, i + PUSH_LIMIT));
+    for (const r of resp.results) acked.add(r.entry_id);
+  }
+  return acked;
+}
+
+/**
  * Push entries; returns the set of entry ids the relay acknowledged. An
  * acknowledgment is any per-record result — applied, or rejected because the
  * stored lww_clock is already >= ours (a retry after a lost ack, or a newer
@@ -207,8 +233,7 @@ export async function pushEntries(
   entries: JournalEntry[],
 ): Promise<Set<string>> {
   if (entries.length === 0) return new Set();
-  const resp = await relay.push(token, entries.map((e) => toPushEntry(dataKey, e)));
-  return new Set(resp.results.map((r) => r.entry_id));
+  return pushInChunks(relay, token, entries.map((e) => toPushEntry(dataKey, e)));
 }
 
 export function toPushTemplate(dataKey: Uint8Array, t: TemplateRecord): PushEntry {
@@ -237,8 +262,7 @@ export async function pushTemplates(
   templates: TemplateRecord[],
 ): Promise<Set<string>> {
   if (templates.length === 0) return new Set();
-  const resp = await relay.push(token, templates.map((t) => toPushTemplate(dataKey, t)));
-  return new Set(resp.results.map((r) => r.entry_id));
+  return pushInChunks(relay, token, templates.map((t) => toPushTemplate(dataKey, t)));
 }
 
 export function toPushInterviewType(dataKey: Uint8Array, t: InterviewType): PushEntry {
@@ -267,8 +291,7 @@ export async function pushInterviewTypes(
   types: InterviewType[],
 ): Promise<Set<string>> {
   if (types.length === 0) return new Set();
-  const resp = await relay.push(token, types.map((t) => toPushInterviewType(dataKey, t)));
-  return new Set(resp.results.map((r) => r.entry_id));
+  return pushInChunks(relay, token, types.map((t) => toPushInterviewType(dataKey, t)));
 }
 
 export function toPushJournal(dataKey: Uint8Array, j: JournalRecord): PushEntry {
@@ -299,8 +322,7 @@ export async function pushJournals(
   journals: JournalRecord[],
 ): Promise<Set<string>> {
   if (journals.length === 0) return new Set();
-  const resp = await relay.push(token, journals.map((j) => toPushJournal(dataKey, j)));
-  return new Set(resp.results.map((r) => r.entry_id));
+  return pushInChunks(relay, token, journals.map((j) => toPushJournal(dataKey, j)));
 }
 
 export function toPushAiSettings(dataKey: Uint8Array, rec: AiSettingsRecord): PushEntry {
