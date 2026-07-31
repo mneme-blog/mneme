@@ -237,7 +237,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   existing `device_id`s. `device_id` is a pubkey hash and grants nothing without the key — noted for
   completeness.
 
-- [ ] [#57](https://github.com/plasticparticle/mneme/issues/57) · **I5 — AI cloud path deliberately crosses the E2EE boundary.** By design and disclosed
+- [x] [#57](https://github.com/plasticparticle/mneme/issues/57) · **I5 — AI cloud path deliberately crosses the E2EE boundary.** By design and disclosed
   (opt-in, off by default, per-request privacy copy). Not a vuln — a documented tradeoff. Worth
   keeping the disclosure prominent.
 

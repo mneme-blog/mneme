@@ -16,6 +16,7 @@ import { Icon } from './Icon';
 import { Btn } from './primitives';
 import { useVisualViewport } from '../hooks/useVisualViewport';
 import { t } from '../i18n';
+import { ProviderBadge } from './ProviderBadge';
 import { useAppData } from '../state/data';
 import type { InterviewType } from '../sync/engine';
 import { makeProvider } from '../ai/provider';
@@ -250,9 +251,7 @@ export function GuidedInterviewSheet({
       <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
         <Icon name="mic" size={17} color="var(--accent)" />
         <h3 style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 500, color: 'var(--ink)', margin: 0, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h3>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase', color: provider.local ? 'var(--accent-ink)' : 'var(--ink-3)', background: provider.local ? 'var(--accent-soft)' : 'var(--paper)', border: `1px solid ${provider.local ? 'var(--accent-line)' : 'var(--line)'}`, borderRadius: 6, padding: '2px 7px' }}>
-          {provider.local ? t('assistant.badge.onDevice') : t('assistant.badge.sentToAnthropic')}
-        </span>
+        <ProviderBadge provider={provider} />
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--ink-3)' }} aria-label={t('common.close')}>
           <Icon name="x" size={16} />
         </button>

@@ -153,7 +153,10 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
               ? <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--accent-ink)', background: 'var(--accent-soft)', border: '1px solid var(--accent-line)', borderRadius: 6, padding: '2px 7px' }}>{t('assistant.badge.local')}</span>
               : <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--ink-3)', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 6, padding: '2px 7px' }}>{t('assistant.badge.network')}</span>,
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <p style={pStyle}>{t('assistant.settings.ollamaHint')}</p>
+              {/* Only while the address really is loopback — this string says
+                  "Nothing leaves this device", which the effective-host line
+                  below would otherwise directly contradict. */}
+              {ollamaLocal && <p style={pStyle}>{t('assistant.settings.ollamaHint')}</p>}
               <div>
                 <span style={labelStyle}>{t('assistant.settings.serverUrl')}</span>
                 <input style={inputStyle} value={form.ollama.baseUrl} onInput={(e) => patch({ ollama: { ...form.ollama, baseUrl: (e.target as HTMLInputElement).value } })} placeholder="http://localhost:11434" />

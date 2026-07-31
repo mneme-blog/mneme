@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
 import { t, type MessageKey } from '../i18n';
+import { ProviderBadge } from './ProviderBadge';
 import { makeProvider } from '../ai/provider';
 import { editorSystemPrompt, editorUserMessage, type AiEditorAction } from '../ai/prompts';
 import { toAiError, type AiSettings } from '../ai/types';
@@ -88,9 +89,7 @@ export function AiActionDialog({ action, entryTitle, entryText, settings, onInse
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <Icon name="feather" size={16} color="var(--accent)" />
           <h3 style={{ fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 500, color: 'var(--ink)', margin: 0, flex: 1 }}>{t(TITLE_KEYS[action])}</h3>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase', color: provider.local ? 'var(--accent-ink)' : 'var(--ink-3)', background: provider.local ? 'var(--accent-soft)' : 'var(--paper)', border: `1px solid ${provider.local ? 'var(--accent-line)' : 'var(--line)'}`, borderRadius: 6, padding: '2px 7px' }}>
-            {provider.local ? t('assistant.badge.onDevice') : t('assistant.badge.sentToAnthropic')}
-          </span>
+          <ProviderBadge provider={provider} />
         </div>
 
         {error ? (

@@ -77,7 +77,10 @@ new visibility whatsoever**. But when the user enables the *cloud* backend (thei
 key), the entries selected as context for a question are sent, **decrypted, over HTTPS to the model
 provider**. That is a voluntary extension of the user's trust boundary to a provider of their
 choice — not a weakening of the relay threat model. Guardrails: the feature is opt-in with the
-consequence spelled out in the settings UI; a fully local backend (Ollama) is offered where nothing
+consequence spelled out in the settings UI **and repeated on every surface that uses it** — a badge
+on "Ask my journal", the editor action dialog, and the guided interview states where the text goes
+each time, so the disclosure is not something you saw once during setup (`ui/ProviderBadge.tsx`,
+deliberately one component so the three surfaces cannot drift apart); a fully local backend (Ollama) is offered where nothing
 leaves the device — and the settings sheet always shows the **effective destination** of that
 backend, because `baseUrl` is free text that syncs across the vault's devices, so a value typed on
 one device would otherwise silently govern where another ships plaintext under an "on this device"
