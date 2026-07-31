@@ -10,7 +10,43 @@ trust boundary; client XSS/SSRF/exfiltration surface).
 
 ---
 
-## Overall security rating
+## Status: all 18 findings resolved (2026-07-31)
+
+Every item below is checked off and its issue closed. The original assessment and each finding are
+kept verbatim for the record — what changed is appended to each item in bold. Summary of the work:
+
+| | Finding | Resolution |
+|---|---|---|
+| H1 | Unauthorized device→owner binding | Registration requires an owner-identity-key signature; the relay pins it per owner (migration 0004) |
+| H2 | No CSP or security headers | One policy in `apps/client/csp.js`, shipped as a Caddy header + `<meta>` fallback; verified in Chrome |
+| M1 | Unvalidated link `href` | `editor/url.ts` allowlist in both parsers, on serialize, and in the Link extension config |
+| M2 | Orphaned media chunks | Cleanup sweeps the object-storage prefix instead of the media index |
+| M3 | No rate limiting / quota | Per-IP token bucket on the auth endpoints + `QUOTA_BYTES_PER_OWNER` |
+| M4 | Weak Argon2id cost | 64 MiB/t=3 → 128 MiB/t=2; residual risk and the PRF preference documented |
+| L1 | Fail-open approval gate | Lookup errors now 500 instead of falling through |
+| L2 | No HTTP timeouts | Read/Write/Idle set |
+| L3 | Implicit KaTeX safety | `trust:false`, `maxExpand`, `maxSize`, `strict` passed explicitly |
+| L4 | Unvalidated Ollama URL | `ai/ollamaUrl.ts` classifies the address; badge and copy reflect where text actually goes |
+| L5 | Permissive CORS default | `CORS_ORIGINS=""` now means an empty allowlist (it silently meant `"*"`); startup warning |
+| L6 | Error-detail leakage | Generic client messages, detail to the log |
+| L7 | Unbounded push batch | 500-entry cap; the client chunks to match |
+| I1 | Same-origin co-hosting | SECURITY.md §6.15 + a warning in the Caddyfile |
+| I2 | Rollback / withhold | SECURITY.md §6.7 rewritten around the missing freshness guarantee |
+| I3 | Prompt injection | Random-token fencing around all journal content in prompts (`ai/fence.ts`) |
+| I4 | Device enumeration | Challenge and verify answer uniformly |
+| I5 | AI cloud disclosure | Consolidated into `ui/ProviderBadge.tsx`; fixed a wrong-recipient label |
+
+Two bugs were found while fixing these and are noted in the relevant commits: `CORS_ORIGINS: ""` in
+`docker-compose.prod.yml` resolved to `"*"`, and the L4 change briefly made a LAN Ollama report "sent
+to Anthropic" until I5 consolidated the badge.
+
+Not re-verified here: the Go `e2e` suite and the relay-dependent client scripts, which need Postgres
+and a running relay (unavailable in the environment the fixes were made in). They compile and vet
+clean; run them before release.
+
+---
+
+## Overall security rating (as audited, 2026-07-13)
 
 **B — Strong architecture, several hardening gaps. Two High-priority items to close before any
 internet-exposed deployment.** (≈ 7 / 10)
