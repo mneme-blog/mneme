@@ -173,7 +173,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   the window is narrow, but the pattern is fail-open. **Fix:** deny (500/403) on error rather than
   fall through — mirror the middleware at `server.go:116-127`.
 
-- [ ] [#47](https://github.com/plasticparticle/mneme/issues/47) · **L2 — No `ReadTimeout` / `WriteTimeout` / `IdleTimeout` on the HTTP server (slowloris).**
+- [x] [#47](https://github.com/plasticparticle/mneme/issues/47) · **L2 — No `ReadTimeout` / `WriteTimeout` / `IdleTimeout` on the HTTP server (slowloris).**
   `server/cmd/journald/main.go:137-141` sets only `ReadHeaderTimeout`. `decodeJSON` caps body *size*
   (32 MiB) but not *duration*, so a client can trickle a body or hold idle keep-alives to exhaust
   connections. **Fix:** set `ReadTimeout`, `WriteTimeout`, `IdleTimeout`.

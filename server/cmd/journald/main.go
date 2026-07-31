@@ -134,10 +134,20 @@ func runServer() error {
 		log.Printf("scheduled backups disabled (BACKUP_DIR not set)")
 	}
 
+	// Timeouts, all of them. decodeJSON caps body SIZE (32 MiB) but not
+	// duration, so without these a client can trickle a body forever or park
+	// idle keep-alives and exhaust connections (slowloris).
+	//
+	// The read/write budgets are generous on purpose: a 32 MiB blob batch or a
+	// backup archive download over a slow link is legitimate traffic, and a
+	// timeout that cuts those off is a bug, not a defence.
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
 		Handler:           apiSrv.Routes(),
 		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       2 * time.Minute,
+		WriteTimeout:      5 * time.Minute,
+		IdleTimeout:       2 * time.Minute,
 	}
 
 	// Serve until a signal arrives, then drain gracefully.
