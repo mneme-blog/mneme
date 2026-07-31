@@ -12,7 +12,13 @@ type Config struct {
 	DatabaseURL string
 	ListenAddr  string
 	SessionTTL  time.Duration
-	CORSOrigins string // comma-separated allowed origins, or "*" to reflect any
+	// CORSOrigins is a comma-separated allowlist, or "*" to reflect any origin.
+	// An explicitly EMPTY value means "allow no cross-origin caller", which is
+	// correct for a same-origin deployment behind a reverse proxy — so it is
+	// read with LookupEnv, not the empty-means-unset env() helper. Setting
+	// CORS_ORIGINS="" used to fall through to the "*" default and quietly give
+	// a production relay reflect-any-origin.
+	CORSOrigins string
 	AdminToken  string // bearer token for /admin; empty disables the admin surface entirely
 	Version     string // build identifier, set by main (not from the environment)
 	UpdateCheck bool   // whether the admin surface may query GitHub for a newer release
@@ -79,7 +85,7 @@ func Load() Config {
 		DatabaseURL: env("DATABASE_URL", "postgres://journal:journal_dev@localhost:5432/journal?sslmode=disable"),
 		ListenAddr:  env("LISTEN_ADDR", ":8080"),
 		SessionTTL:  envDuration("SESSION_TTL", 24*time.Hour),
-		CORSOrigins: env("CORS_ORIGINS", "*"),
+		CORSOrigins: envAllowEmpty("CORS_ORIGINS", "*"),
 		AdminToken:  env("ADMIN_TOKEN", ""),
 		// Version is stamped in by main via -ldflags; not an env value.
 		UpdateCheck:       envBool("UPDATE_CHECK", true),
@@ -110,6 +116,16 @@ func Load() Config {
 
 func env(key, def string) string {
 	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
+// envAllowEmpty distinguishes "unset" from "set to the empty string". For most
+// settings those mean the same thing; for an allowlist they are opposites —
+// unset means "no preference, use the default", empty means "allow nothing".
+func envAllowEmpty(key, def string) string {
+	if v, ok := os.LookupEnv(key); ok {
 		return v
 	}
 	return def

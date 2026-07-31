@@ -194,7 +194,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   be wrong. **Fix:** validate/normalize to a local default (`127.0.0.1:11434`), warn on non-local
   hosts, and surface the effective host in settings.
 
-- [ ] [#50](https://github.com/plasticparticle/mneme/issues/50) · **L5 — Default `CORS_ORIGINS="*"` reflects any Origin.**
+- [x] [#50](https://github.com/plasticparticle/mneme/issues/50) · **L5 — Default `CORS_ORIGINS="*"` reflects any Origin.**
   `server/internal/api/cors.go:22-30`, `server/internal/config/config.go:54`. Genuinely safe *today*
   (auth is a `Bearer` header, `Access-Control-Allow-Credentials` is never set), but it is maximally
   permissive by default and would become an account-takeover CORS bug the day anyone adds cookies or

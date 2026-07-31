@@ -54,7 +54,9 @@ services:
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       S3_BUCKET: journal-media
       LISTEN_ADDR: ":8080"
-      # Everything is same-origin behind Caddy — no cross-origin callers exist.
+      # Everything is same-origin behind Caddy — no cross-origin callers exist,
+      # so the allowlist is deliberately EMPTY (not unset: unset would fall back
+      # to the dev default "*" and reflect any origin).
       CORS_ORIGINS: ""
       # Operator dashboard at /admin; unset to disable it entirely.
       ADMIN_TOKEN: ${ADMIN_TOKEN:-}

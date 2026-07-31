@@ -5,9 +5,20 @@ import (
 	"strings"
 )
 
-// cors wraps the handler with permissive-by-config CORS and answers preflight
-// OPTIONS. No cookies are used (auth is a Bearer header), so reflecting the
-// origin is safe. Configure allowed origins via CORS_ORIGINS ("*" reflects any).
+// cors wraps the handler with by-config CORS and answers preflight OPTIONS.
+//
+// THE INVARIANT: never reflect an arbitrary origin while also sending
+// Access-Control-Allow-Credentials. Reflecting is safe here only because auth
+// is a Bearer header and no cookie is ever set, so a cross-origin page gets a
+// response it cannot read and cannot authenticate. The day anything adds
+// cookies or `Allow-Credentials`, `CORS_ORIGINS="*"` becomes an
+// account-takeover bug — so if you add credentials, you must also drop the
+// reflect-any mode, not just "configure it properly in production".
+//
+// Configure allowed origins via CORS_ORIGINS. "*" reflects any origin and is
+// the dev default; production images (docker-compose.prod.yml) set an explicit
+// allowlist instead, and the relay logs a warning at startup when it is left
+// wide open — see config.CORSOrigins.
 func (s *Server) cors(next http.Handler) http.Handler {
 	allowAny := strings.TrimSpace(s.cfg.CORSOrigins) == "*"
 	allowed := map[string]bool{}

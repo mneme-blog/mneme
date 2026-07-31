@@ -133,6 +133,14 @@ func runServer() error {
 	if cfg.Backup.Dir == "" {
 		log.Printf("scheduled backups disabled (BACKUP_DIR not set)")
 	}
+	// Safe today — auth is a Bearer header and no cookie is ever set, so a
+	// reflected origin buys a cross-origin page nothing. Still worth saying out
+	// loud: it is the most permissive setting there is, and it is only one
+	// future `Allow-Credentials` away from being an account-takeover bug.
+	if strings.TrimSpace(cfg.CORSOrigins) == "*" {
+		log.Printf("WARNING: CORS_ORIGINS is \"*\" — any origin is reflected. " +
+			"Set it to your client origin(s), or \"\" for a same-origin deployment.")
+	}
 
 	// Timeouts, all of them. decodeJSON caps body SIZE (32 MiB) but not
 	// duration, so without these a client can trickle a body forever or park
