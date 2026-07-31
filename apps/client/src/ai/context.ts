@@ -6,6 +6,10 @@
 import type { JournalEntry } from '../sync/engine';
 import { search } from '../search/core';
 import { parseBody, docToText } from '../editor/doc';
+import { fenced, newFenceToken } from './fence';
+
+/** The fence kind used for journal excerpts (see ai/fence.ts). */
+export const JOURNAL_FENCE_KIND = 'journal';
 
 // Per-backend budgets: cloud models have a huge window, the budget mainly
 // bounds per-question cost; local models commonly run an 8k context, so leave
@@ -19,6 +23,12 @@ export interface JournalContext {
   entryCount: number;
   /** True when entries (or entry tails) were dropped to fit the budget. */
   truncated: boolean;
+  /**
+   * Per-request token delimiting the excerpts. The system prompt names it when
+   * declaring that fenced content is data, so entry text can't impersonate an
+   * instruction — see ai/fence.ts.
+   */
+  fenceToken: string;
 }
 
 function isoDate(ts: number): string {
@@ -27,20 +37,24 @@ function isoDate(ts: number): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-function entryBlock(e: JournalEntry): string {
+function entryBlock(e: JournalEntry, token: string): string {
   let text: string;
   try {
     text = docToText(parseBody(e.bodyJson, e.bodyText)).trim();
   } catch {
     text = e.bodyText;
   }
-  let cut = false;
   if (text.length > ENTRY_CAP_CHARS) {
     text = `${text.slice(0, ENTRY_CAP_CHARS)}\n[… entry truncated]`;
-    cut = true;
   }
   const labels = e.labels.length ? `\nLabels: ${e.labels.join(', ')}` : '';
-  return `### ${e.title || 'Untitled'}\nDate: ${isoDate(e.createdAt)}${labels}\n\n${text}\n${cut ? '' : ''}`;
+  // Title and labels are user content too, so they go inside the fence with the
+  // body rather than sitting outside it as trusted-looking prompt structure.
+  return fenced(
+    token,
+    JOURNAL_FENCE_KIND,
+    `### ${e.title || 'Untitled'}\nDate: ${isoDate(e.createdAt)}${labels}\n\n${text}`,
+  );
 }
 
 /**
@@ -48,7 +62,13 @@ function entryBlock(e: JournalEntry): string {
  * date-spelling haystack makes "what did I write in June?" work), then the
  * most recent entries that still fit.
  */
-export function buildJournalContext(entries: JournalEntry[], query: string, budgetChars: number): JournalContext {
+export function buildJournalContext(
+  entries: JournalEntry[],
+  query: string,
+  budgetChars: number,
+  // Injectable so tests can pin it; production always gets a fresh random one.
+  fenceToken: string = newFenceToken(),
+): JournalContext {
   const live = entries.filter((e) => !e.deleted);
   const picked: JournalEntry[] = [];
   const seen = new Set<string>();
@@ -64,7 +84,7 @@ export function buildJournalContext(entries: JournalEntry[], query: string, budg
   let used = 0;
   let truncated = false;
   for (const e of picked) {
-    const block = entryBlock(e);
+    const block = entryBlock(e, fenceToken);
     if (used + block.length > budgetChars) {
       truncated = true;
       // Keep trying smaller entries only if there's meaningful room left.
@@ -74,5 +94,5 @@ export function buildJournalContext(entries: JournalEntry[], query: string, budg
     blocks.push(block);
     used += block.length;
   }
-  return { text: blocks.join('\n---\n\n'), entryCount: blocks.length, truncated };
+  return { text: blocks.join('\n\n'), entryCount: blocks.length, truncated, fenceToken };
 }

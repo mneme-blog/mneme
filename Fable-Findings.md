@@ -226,7 +226,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   can serve a stale ciphertext or silently omit the newest one. This is an accepted property of the
   design (E2EE protects content, not availability/freshness), worth stating explicitly in the docs.
 
-- [ ] [#55](https://github.com/plasticparticle/mneme/issues/55) · **I3 — Prompt-injection surface in the AI assistant.** `apps/client/src/ai/prompts.ts`,
+- [x] [#55](https://github.com/plasticparticle/mneme/issues/55) · **I3 — Prompt-injection surface in the AI assistant.** `apps/client/src/ai/prompts.ts`,
   `ai/context.ts`. Decrypted entry text is interpolated into system prompts; adversarial/imported
   entry text can attempt to steer the model. Contained (output is user-reviewed and inserted as plain
   text), inherent to the feature. Optionally delimit excerpts and instruct the model to treat them as

@@ -379,6 +379,27 @@ compromised server does (§6.1).
 else is served from the same host.** A path prefix on a shared origin is fine only when you control
 every other app on that origin and trust it as much as you trust Mneme.
 
+### 6.16 Prompt injection in the AI assistant — ⚠️ Accepted (contained)
+Every AI surface interpolates decrypted entry text into a prompt, and that text is **not necessarily
+something the user wrote**: a Day One import carries whatever was in the archive, and entries quote
+emails, web pages, and anything else that gets pasted. So `IGNORE THE ABOVE…` inside an entry is a
+plausible accident as much as an attack — and with nothing marking where data ends, it reads to the
+model exactly like an instruction from the app.
+
+**Mitigation** (`ai/fence.ts`): journal content is wrapped in a fence whose markers carry a **random
+per-request token** (`<journal:9f3a21c4>` … `</journal:9f3a21c4>`). An entry can contain the literal
+string `</journal>`, but not a marker bearing a token generated after it was written; occurrences of
+the token in the body are neutralized as a second line of defence. The system prompt then states once,
+naming the concrete markers, that fenced content is data and can never redefine the rules. Titles and
+labels go inside the fence too, rather than sitting outside it as trusted-looking prompt structure.
+
+**Why this stays "accepted" rather than "mitigated":** prompt injection has no complete fix. The
+model may still be steered into an odd answer. What bounds the damage is the shape of the feature:
+there is no tool-calling and no agentic loop — `AiProvider.chat` only streams text — output is
+inserted as **plain text** after the user reviews it, and a synthesized interview entry is shown for
+approval before it is ever saved. A hostile entry can influence what the assistant *says*, not what
+the app *does*. Covered by `scripts/ai-roundtrip.ts`.
+
 ### 6.14 Operator backups — ⚠️ Accepted (aggregation, not a new leak)
 The operator backup feature (`BACKUP_DIR`, the `/admin/backups` surface, and the `journald
 backup`/`restore` CLI) writes a single archive of **every vault's opaque ciphertext blobs + media

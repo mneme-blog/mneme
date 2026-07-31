@@ -61,7 +61,7 @@ export function AskJournalSheet({ desk, onClose }: { desk: boolean; onClose: () 
     abortRef.current = ac;
     try {
       await provider.chat({
-        system: chatSystemPrompt(ctx.text),
+        system: chatSystemPrompt(ctx.text, ctx.fenceToken),
         messages: history,
         signal: ac.signal,
         onToken: (tok) =>

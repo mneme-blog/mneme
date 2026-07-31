@@ -9,6 +9,15 @@
 // prompt tells the model to point at. currentLocale()/t() are import-safe
 // outside Vite (the tsx repro scripts) — they fall back to English there.
 import { currentLocale, t } from '../i18n';
+import { fenced, fenceRules, newFenceToken } from './fence';
+
+// Journal text is untrusted input to the model: an entry can hold anything the
+// user pasted, and a Day One import brings in whatever was in the archive. Every
+// prompt below therefore fences that text and states, in terms of the concrete
+// per-request markers, that fenced content is data and not instructions
+// (ai/fence.ts). Containment, not a cure — the real backstop is that output is
+// always user-reviewed before it is inserted or saved.
+const ENTRY_FENCE = 'entry';
 
 export type AiEditorAction = 'continue' | 'summarize' | 'title';
 
@@ -18,7 +27,8 @@ function today(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-export function chatSystemPrompt(contextText: string): string {
+/** `fenceToken` comes from the JournalContext whose text is being embedded. */
+export function chatSystemPrompt(contextText: string, fenceToken: string): string {
   return [
     `You are the assistant inside a private, end-to-end-encrypted journal. Today's date is ${today()}.`,
     'Below are excerpts from the user\'s journal, most relevant first. Answer questions using only these excerpts.',
@@ -26,20 +36,32 @@ export function chatSystemPrompt(contextText: string): string {
     'Quote or reference entries by their title and date when it helps. Be warm but concise.',
     `Respond in ${currentLocale().english}.`,
     '',
+    fenceRules(fenceToken, 'journal'),
+    '',
     '## Journal excerpts',
     '',
     contextText || '(no matching entries)',
   ].join('\n');
 }
 
-export function editorSystemPrompt(action: AiEditorAction, title: string, bodyText: string): string {
-  const entry = `## The entry\n\nTitle: ${title || 'Untitled'}\n\n${bodyText || '(empty so far)'}`;
+export function editorSystemPrompt(
+  action: AiEditorAction,
+  title: string,
+  bodyText: string,
+  fenceToken: string = newFenceToken(),
+): string {
+  const entry =
+    '## The entry\n\n' +
+    fenced(fenceToken, ENTRY_FENCE, `Title: ${title || 'Untitled'}\n\n${bodyText || '(empty so far)'}`);
+  const rules = fenceRules(fenceToken, ENTRY_FENCE);
   switch (action) {
     case 'continue':
       return [
         'You are a writing companion inside a private journal. Continue the user\'s entry below in their voice,',
         'tone, and language. Write 1–3 natural paragraphs that pick up exactly where the text ends.',
         'Output only the continuation — no preamble, no quotation marks, no commentary.',
+        '',
+        rules,
         '',
         entry,
       ].join('\n');
@@ -49,6 +71,8 @@ export function editorSystemPrompt(action: AiEditorAction, title: string, bodyTe
         'in the same language the entry is written in, first person preserved.',
         'Output only the summary — no preamble, no commentary.',
         '',
+        rules,
+        '',
         entry,
       ].join('\n');
     case 'title':
@@ -56,6 +80,8 @@ export function editorSystemPrompt(action: AiEditorAction, title: string, bodyTe
         'You are a writing companion inside a private journal. Suggest 3 short titles (max 6 words each) for the',
         'entry below, in the same language the entry is written in.',
         'Output exactly 3 lines, one title per line — no numbering, no quotes, no commentary.',
+        '',
+        rules,
         '',
         entry,
       ].join('\n');
@@ -80,7 +106,11 @@ export function editorUserMessage(action: AiEditorAction): string {
 
 /** Question phase: the per-type strategy + the generic one-question-at-a-time rules,
  *  with optional history of the same interview type so questions feel continuous. */
-export function interviewSystemPrompt(type: { name: string; prompt: string }, historyText: string): string {
+export function interviewSystemPrompt(
+  type: { name: string; prompt: string },
+  historyText: string,
+  fenceToken: string = newFenceToken(),
+): string {
   return [
     `You are a warm, attentive journaling companion conducting a "${type.name}" interview inside a private, end-to-end-encrypted journal. Today's date is ${today()}.`,
     '',
@@ -98,7 +128,9 @@ export function interviewSystemPrompt(type: { name: string; prompt: string }, hi
       ? '\n## Earlier entries from this interview type (most recent first)\n' +
         'Use these only to keep continuity — refer back when it feels natural ("last time you mentioned…"). ' +
         'Do not quote them at length.\n\n' +
-        historyText
+        fenceRules(fenceToken, ENTRY_FENCE) +
+        '\n\n' +
+        fenced(fenceToken, ENTRY_FENCE, historyText)
       : '',
   ].join('\n');
 }
