@@ -52,7 +52,20 @@ jobs:
       #
       # --generate-notes fills in the commit/PR summary; a curated body can be
       # added afterwards with `gh release edit --notes-file`.
+      #
+      # Idempotent, because there are two ways a tag arrives here. Pushing a tag
+      # from the CLI fires this workflow with no Release yet, so we create one.
+      # Publishing from the Releases UI creates the Release FIRST and pushes the
+      # tag as a side effect — `gh release create` would then fail on an already
+      # existing release and turn the run red even though the image published
+      # fine. In that case the notes the operator wrote in the UI are the good
+      # ones, so leave them alone.
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists — keeping its notes."
+          else
+            gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
+          fi
