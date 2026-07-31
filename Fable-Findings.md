@@ -215,7 +215,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
 
 ### 🔵 Info / accepted
 
-- [ ] [#53](https://github.com/plasticparticle/mneme/issues/53) · **I1 — Same-origin co-hosting caveat.** `deploy/web/Caddyfile` serves the app under `/mneme/`
+- [x] [#53](https://github.com/plasticparticle/mneme/issues/53) · **I1 — Same-origin co-hosting caveat.** `deploy/web/Caddyfile` serves the app under `/mneme/`
   and comments that "the rest of the origin stays free for other services." Any other app on the same
   **origin** shares this app's `localStorage`, IndexedDB (the sealed-seed keystore), and OPFS. The
   sealed seed is encrypted, but a hostile same-origin page could still register a service worker or

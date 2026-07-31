@@ -343,6 +343,27 @@ phrase offline.
 All randomness comes from the platform CSPRNG (`crypto.getRandomValues`); mnemonic entropy is 128-bit
 BIP39.
 
+### 6.15 Same-origin co-hosting — ⚠️ Accepted (deployment choice)
+The browser's isolation boundary is the **origin** (scheme + host + port), not the path. The bundled
+Caddy config serves Mneme under `/mneme/` and notes that "the rest of the origin stays free for other
+services" — that is a routing convenience, and it must not be read as isolation. Anything else served
+from the same origin shares:
+
+- `localStorage` — theme, language, the stored relay URL;
+- **IndexedDB** — the sealed-seed keystore and the sealed AI settings;
+- **OPFS** — the per-owner SQLite database, which holds entries in *plaintext* (§5a: the local DB is
+  the decrypted source of truth);
+- the service-worker registration scope, so a neighbour can register a worker that intercepts
+  Mneme's own requests and serve replaced application code.
+
+The seals are encrypted and a neighbour cannot read the seed from them directly, but plaintext
+entries in OPFS need no key at all, and worker-level code replacement defeats E2EE the same way a
+compromised server does (§6.1).
+
+**Recommendation: give Mneme its own dedicated origin — a subdomain of its own — whenever anything
+else is served from the same host.** A path prefix on a shared origin is fine only when you control
+every other app on that origin and trust it as much as you trust Mneme.
+
 ### 6.14 Operator backups — ⚠️ Accepted (aggregation, not a new leak)
 The operator backup feature (`BACKUP_DIR`, the `/admin/backups` surface, and the `journald
 backup`/`restore` CLI) writes a single archive of **every vault's opaque ciphertext blobs + media

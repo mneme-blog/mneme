@@ -22,6 +22,18 @@
 	# Everything lives under /mneme; the rest of the origin stays free for
 	# other services on this host. Bare / redirects for convenience (302 so a
 	# future root site isn't shadowed by a cached permanent redirect).
+	#
+	# ⚠️ SECURITY: co-hosting is a path-level convenience, not an isolation
+	# boundary. The browser's boundary is the ORIGIN (scheme + host + port), and
+	# everything on this origin shares one localStorage, one IndexedDB — which
+	# holds the sealed-seed keystore — and one OPFS, which holds the decrypted
+	# journal database. Another app served from this origin can read and write
+	# all of it, and can register a service worker that intercepts Mneme's own
+	# requests. The seal is encrypted, so a hostile neighbour can't trivially
+	# read the seed, but it can tamper with storage and serve replaced app code.
+	#
+	# Give Mneme a dedicated origin (its own subdomain) whenever anything else
+	# is served from this host. See docs/SECURITY.md §6.13.
 	redir / /mneme/ 302
 	redir /mneme /mneme/
 
