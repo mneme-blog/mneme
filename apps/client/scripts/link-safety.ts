@@ -91,7 +91,10 @@ for (const href of DANGEROUS) {
 console.log('\nDay One import parser keeps legitimate links');
 {
   const doc: JSONContent = { type: 'doc', content: markdownToBlocks('See [the docs](https://example.com/x) here.') };
-  check('https link survives', hrefs(doc).includes('https://example.com/x'));
+  // Exact equality on the extracted hrefs, not a substring test: the doc must
+  // hold precisely one link and it must be precisely this URL.
+  const found = hrefs(doc);
+  check('https link survives', found.length === 1 && found[0] === 'https://example.com/x');
 }
 
 console.log('\nEditor markdown parser drops the mark');
@@ -101,7 +104,8 @@ for (const href of DANGEROUS) {
 }
 {
   const doc = markdownToDoc('[the docs](https://example.com/x)');
-  check('https link survives', hrefs(doc).includes('https://example.com/x'));
+  const found = hrefs(doc);
+  check('https link survives', found.length === 1 && found[0] === 'https://example.com/x');
 }
 
 console.log('\nSerializer refuses to round-trip a bad href stored by an older build');
