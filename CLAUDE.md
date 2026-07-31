@@ -18,7 +18,9 @@ project. Scaffolded so far:
   encrypted-entry push/pull (`src/sync/`, `src/state/data.tsx`). Identity is in-memory while
   unlocked; at rest the seed is either nowhere (re-enter the mnemonic on cold start — the default)
   or, opt-in ("stay signed in on this device"), **sealed under an Argon2id passphrase or a FIDO2
-  security key** (§6 at-rest: `crypto/seedlock.ts` Argon2id→XChaCha20 v:1 records with version byte
+  security key** (§6 at-rest: `crypto/seedlock.ts` Argon2id→XChaCha20 v:1 records — **128 MiB / t=2 /
+  p=1** since issue #45, raised from 64 MiB / t=3; params are stored per record so old seals keep
+  opening, and 256 MiB was rejected as a mobile-tab OOM risk at ~7 s unlock — with version byte
   + purpose AAD, or v:2 records wrapped by a WebAuthn **PRF-extension** secret from
   `platform/webauthn.ts` — HKDF'd into the wrap key, not offline-brute-forceable; stored in
   IndexedDB via `platform/keystore.ts`; passphrase/security-key unlock on cold start, 15-min

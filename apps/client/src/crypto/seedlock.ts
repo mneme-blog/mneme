@@ -24,11 +24,37 @@ export interface KdfParams {
   p: number;
 }
 
-// §6 names libsodium MODERATE (256 MiB / ops 3), but that assumes native code;
-// pure-JS argon2 at 256 MiB blows far past any unlock budget. 64 MiB / t=3
-// lands around a second on desktop hardware. The params are stored inside the
-// record, so raising them later only affects new seals — old records still open.
-export const DEFAULT_KDF: KdfParams = { t: 3, m: 64 * 1024, p: 1 };
+// The sealed record is an offline-brute-forceable artifact sitting on disk. The
+// KDF cost is the ONLY thing standing between a stolen device and a weak
+// passphrase, so it is worth spending real time on — but this is pure-JS
+// Argon2 on the unlock path, and an unlock happens on every cold start and
+// after every 15-minute auto-lock, so the budget is a couple of seconds, not
+// ten.
+//
+// §6 names libsodium MODERATE (256 MiB / ops 3), which assumes native code.
+// Measured with @noble/hashes on desktop V8 (scripts/argon-bench.ts):
+//
+//   t=3 m=64 MiB   1.8 s     ← the previous default
+//   t=2 m=128 MiB  2.4 s     ← now
+//   t=3 m=128 MiB  3.6 s
+//   t=1 m=256 MiB  2.5 s
+//   t=3 m=256 MiB  7.4 s
+//
+// t=2 / m=128 MiB doubles peak memory for ~33% more wall clock. Memory is the
+// dimension that actually costs a GPU or ASIC attacker — it halves how many
+// guesses they can run in parallel — whereas passes only scale their time
+// linearly. 256 MiB was rejected on top of the wall-clock cost because a
+// quarter-gigabyte allocation is a real crash risk in a mobile browser tab,
+// and this app is installed as a PWA on phones. Mobile is also several times
+// slower than the numbers above, which is the other half of the ceiling.
+//
+// Params are stored per record, so raising them later costs nothing: existing
+// seals keep opening with the params they were written with. A passphrase seal
+// is nonetheless the weaker of the two device-unlock options by construction —
+// the WebAuthn-PRF path (v:2 below) cannot be attacked offline at all, because
+// the secret never leaves the authenticator. Prefer it where available; see
+// docs/SECURITY.md §4.
+export const DEFAULT_KDF: KdfParams = { t: 2, m: 128 * 1024, p: 1 };
 
 const SALT_LEN = 16;
 const KEY_LEN = 32;

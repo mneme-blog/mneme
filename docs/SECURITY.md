@@ -96,8 +96,8 @@ coordinates leak to the tile CDN, as tile indices). Mitigations: this is opt-in 
 consequence stated in the composer UI; current-location and raw-coordinate entry avoid the geocoder
 entirely; and the map is **frozen into a static image** at insert time, so opening the entry later — or
 on another device — decrypts that stored image and makes **no further third-party requests**. There is
-no live/streaming map. (No CSP is currently enforced; if one is added it must allow
-`img-src https://tile.openstreetmap.org` and `connect-src https://nominatim.openstreetmap.org`.)
+no live/streaming map. Both hosts are named explicitly in the shipped CSP (§6.2) — `img-src` for the
+tile CDN, `connect-src` for the geocoder — so this egress is enumerated rather than incidental.
 
 ---
 
@@ -144,7 +144,7 @@ mnemonic ──derive──▶ {data_key, owner X25519, device Ed25519}  (in RAM
 - **Keys at rest, today:** _nothing is persisted by default_ — the identity lives in memory only and
   you re-enter the mnemonic on every cold start. ✅ Optionally (an explicit onboarding choice, "stay
   signed in on this device"), the BIP39 seed is sealed under an **Argon2id** passphrase-derived key
-  (`crypto/seedlock.ts`: Argon2id 64 MiB / t=3 / p=1 → XChaCha20-Poly1305 with the standard
+  (`crypto/seedlock.ts`: Argon2id 128 MiB / t=2 / p=1 → XChaCha20-Poly1305 with the standard
   version-byte envelope and a purpose-binding AAD) and stored in IndexedDB (`platform/keystore.ts`).
   Cold start then asks for the passphrase instead of the phrase; a wrong passphrase fails the AEAD
   tag. KDF parameters are stored inside the record, so they can be raised later without breaking old
@@ -152,7 +152,13 @@ mnemonic ──derive──▶ {data_key, owner X25519, device Ed25519}  (in RAM
   **rotation re-seals the new seed** under the kept wrap key (and clears the seal if that fails — a
   record that would "unlock" into the wiped old identity is worse than none). The sealed record is an
   offline-brute-forceable artifact for whoever obtains the disk; the slow KDF and the passphrase's
-  strength are all that stand in the way, and the UI says so. **Auto-lock after 15 min of
+  strength are all that stand in the way, and the UI says so. The cost was raised from 64 MiB / t=3
+  to 128 MiB / t=2 ([#45](https://github.com/plasticparticle/mneme/issues/45)) — double the peak
+  memory, which is what limits a GPU attacker's parallelism, for ~2.4 s of unlock time on desktop.
+  §6's nominal 256 MiB target assumes native code; in pure JS it costs seconds more and risks an
+  out-of-memory kill in a mobile browser tab. **Where a device supports it, the security-key seal
+  below is the better choice** — it has no offline attack at all — and it is listed first in
+  Preferences → Vault → Device unlock for that reason. **Auto-lock after 15 min of
   inactivity** drops the in-memory keys whenever a seal exists; a manual "Lock journal" control
   exists on both layouts.
 - **Security-key seal (FIDO2/WebAuthn PRF):** ✅ as an alternative to the passphrase, the seed can be

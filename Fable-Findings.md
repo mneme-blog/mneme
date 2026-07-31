@@ -149,7 +149,10 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   **Fix:** per-IP rate limiting on the three auth/register endpoints; a per-owner storage quota; and
   for internet-exposed deployments, default `REQUIRE_APPROVAL=on` or a registration cap.
 
-- [ ] [#45](https://github.com/plasticparticle/mneme/issues/45) · **M4 — Argon2id at-rest KDF cost is well below the parameters the design cites.**
+- [x] [#45](https://github.com/plasticparticle/mneme/issues/45) · **M4 — Argon2id at-rest KDF cost is well below the parameters the design cites.**
+  — **Fixed:** raised to 128 MiB / t=2 (double the peak memory, ~2.4 s unlock). 256 MiB stays
+  rejected — 7.4 s in pure JS and a real OOM risk in a mobile tab — with the residual risk and the
+  preference for the WebAuthn-PRF path documented in ENCRYPTION.md and SECURITY.md §4.
   `apps/client/src/crypto/seedlock.ts:31` — `DEFAULT_KDF = { t: 3, m: 64 MiB, p: 1 }`.
   **Problem:** §6 names libsodium `MODERATE` (256 MiB, ops 3). The code deliberately drops to 64 MiB
   (pure-JS Argon2 at 256 MiB is too slow in a browser). The sealed seed is an offline-brute-forceable

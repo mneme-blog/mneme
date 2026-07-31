@@ -24,7 +24,7 @@ One boring, audited primitive per job. Boring is the compliment here.
 | Owner identity | X25519 (for future sealed-box device pairing) | `@noble/curves` |
 | Device auth | Ed25519 (challenge-response signatures) | `@noble/curves` |
 | Hashing / IDs | SHA-256 | `@noble/hashes` |
-| At-rest passphrase seal | Argon2id (64 MiB, t=3, p=1) | `@noble/hashes` |
+| At-rest passphrase seal | Argon2id (128 MiB, t=2, p=1) | `@noble/hashes` |
 
 **Why `@noble` / `@scure` (paulmillr):** audited, dependency-light, **synchronous** (no wasm init
 dance), and tree-shakeable. This is a recorded override of the project's original "libsodium-wasm"
@@ -121,12 +121,22 @@ and no amount of marketing changes it. At rest, you get to choose how paranoid t
 1. **Nothing persisted (default).** The identity lives in memory only; you re-enter the mnemonic on
    every cold start. Maximum paranoia, minimum convenience.
 2. **Argon2id passphrase seal** (opt-in, record `v:1`). The BIP39 seed is sealed under an Argon2id
-   passphrase-derived key (64 MiB / t=3 / p=1 → XChaCha20-Poly1305, standard envelope, purpose-binding
+   passphrase-derived key (128 MiB / t=2 / p=1 → XChaCha20-Poly1305, standard envelope, purpose-binding
    AAD) and stored in IndexedDB (`crypto/seedlock.ts`, `platform/keystore.ts`). Cold start asks for the
    passphrase; a wrong one fails the AEAD tag. KDF parameters live inside the record so they can be
-   raised later without breaking old seals. **Caveat, stated plainly in the UI:** this sealed record is
-   offline-brute-forceable by whoever steals the disk — the slow KDF and your passphrase strength are
-   the only things standing there.
+   raised later without breaking old seals — and were raised once already, from 64 MiB / t=3.
+
+   Why those numbers: this is pure-JS Argon2 on the unlock path, run at every cold start and after
+   every 15-minute auto-lock, so the budget is a couple of seconds. Measured on desktop V8
+   (`scripts/argon-bench.ts`), 128 MiB / t=2 costs ~2.4 s against ~1.8 s for the old 64 MiB / t=3 —
+   double the peak memory for a third more wall clock. Memory is the dimension that hurts a GPU or
+   ASIC attacker, since it halves how many guesses fit in parallel. The 256 MiB that §6 nominally
+   targets was rejected: it costs 7.4 s at t=3, and a quarter-gigabyte allocation is a real
+   crash risk in a mobile browser tab, which matters for an installed PWA.
+
+   **Caveat, stated plainly in the UI:** this sealed record is offline-brute-forceable by whoever
+   steals the disk — the slow KDF and your passphrase strength are the only things standing there. If
+   your device can do option 3, prefer it: a PRF seal has no offline attack at all.
 3. **FIDO2 / WebAuthn PRF security-key seal** (opt-in, record `v:2`). The seed is sealed under a secret
    obtained from a hardware authenticator (YubiKey, platform passkey) via the WebAuthn **PRF
    extension** (`platform/webauthn.ts` runs the ceremony; the 32-byte PRF output is HKDF'd into the

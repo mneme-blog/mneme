@@ -6,8 +6,12 @@
 //      phrase-rotation re-seal path.
 //   4. Cross-version pinning: a v:1 record must not open via the PRF path and
 //      vice versa, and swapping a v:2 blob into a v:1 record must fail the AAD.
+//   5. Legacy KDF params still open. Cost lives in the record, not in the code,
+//      which is what makes raising DEFAULT_KDF safe — a seal written by an
+//      older build must keep opening with the params it was written with.
 // Run: pnpm --filter client exec tsx scripts/seedlock-methods.ts
 import {
+  DEFAULT_KDF,
   sealSeed,
   openSeed,
   sealSeedWithPrfSecret,
@@ -16,7 +20,9 @@ import {
   isSealedSeed,
   type SealedSeedArgon2,
 } from '../src/crypto/seedlock';
-import { randomBytes } from '../src/crypto/bytes';
+import { randomBytes, utf8 } from '../src/crypto/bytes';
+import { encrypt } from '../src/crypto/aead';
+import { argon2idAsync } from '@noble/hashes/argon2';
 
 function fail(msg: string): never {
   console.error(`FAIL: ${msg}`);
@@ -105,5 +111,35 @@ try {
 }
 if (!threw) fail('a v:2 blob decrypted under the v:1 AAD');
 console.log('OK  cross-version and AAD pinning');
+
+
+
+// ── 5. A seal written with the pre-#45 params must still open ───────────────
+// Hand-build a record the way the old build would have, then open it with
+// today's code. If this ever fails, raising DEFAULT_KDF locked people out.
+const LEGACY_KDF = { t: 3, m: 64 * 1024, p: 1 };
+const legacySalt = randomBytes(16);
+const legacyKey = await argon2idAsync(utf8(pass.normalize('NFKD')), legacySalt, {
+  ...LEGACY_KDF,
+  dkLen: 32,
+});
+const legacyRecord: SealedSeedArgon2 = {
+  v: 1,
+  salt: legacySalt,
+  kdf: LEGACY_KDF,
+  blob: encrypt(legacyKey, seed, utf8('mneme:seedlock:v1')),
+};
+const legacyOpen = await openSeed(legacyRecord, pass);
+if (!eq(legacyOpen.seed, seed)) fail('a legacy-params seal did not open');
+if (legacyOpen.wrap.method !== 'argon2' || legacyOpen.wrap.kdf.m !== LEGACY_KDF.m) {
+  fail('opening a legacy record did not carry its own params back');
+}
+// And a fresh seal must use the raised cost, not the legacy one.
+const fresh = await sealSeed(seed, pass);
+if (fresh.record.v !== 1 || fresh.record.kdf.m !== DEFAULT_KDF.m || fresh.record.kdf.t !== DEFAULT_KDF.t) {
+  fail('a new seal did not use DEFAULT_KDF');
+}
+if (DEFAULT_KDF.m <= LEGACY_KDF.m) fail('DEFAULT_KDF memory cost was not raised');
+console.log('OK  legacy-params seal still opens; new seals use the raised cost');
 
 console.log('\nseedlock-methods: all checks passed');
