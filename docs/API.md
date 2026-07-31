@@ -50,20 +50,43 @@ Errors are `{ "error": "message" }` with an appropriate status (400/401/404/500)
 ## Auth
 
 ### `POST /v1/register`
-The device signs `"mneme:register:" || ownerPub || devicePub` (Ed25519) to prove key possession.
+Two signatures, both Ed25519:
+
+- **device**, over `"mneme:register:" || ownerPub || devicePub` — proves possession of the device key.
+- **owner**, over `"mneme:bind-device:v1:" || ownerPub || ownerSignPub || devicePub` — proves
+  possession of the **seed**, and is what authorizes attaching this device to this vault. The client
+  derives `ownerSignPub` from the seed (`HKDF info="identity-sign"` → Ed25519).
+
+Trust-on-first-use now applies only to **creating** a vault: the relay pins `owner_sign_pubkey` when
+the owner row is created, and every later registration for that owner must be signed by the same key.
+Knowing a vault's `owner_pubkey` — which is a *public* key and not treated as a secret — therefore
+grants nothing. Requests that fail this check get a single, undifferentiated `401` that does not
+reveal whether the owner exists.
+
+Owners registered before this check existed have no pinned key. For them the relay adopts the
+presented key **once**, and only when the request comes from a device already bound to that owner
+(device keys are seed-derived, so an honest client always presents one). Both signatures are verified
+before any of this.
+
 `approval_hint` is optional — a short `[a-z0-9-]{0,32}` code the client derives from the seed (e.g.
 `amber-otter-07`), only used when the relay runs with `REQUIRE_APPROVAL` (see "Admin"); it is not a
 secret and never free text.
 ```jsonc
 // request
-{ "owner_pubkey": "<base64 X25519, 32B>",
-  "device_pubkey": "<base64 Ed25519, 32B>",
-  "signature":     "<base64 Ed25519 sig>",
-  "approval_hint": "amber-otter-07" }   // optional
+{ "owner_pubkey":      "<base64 X25519, 32B>",
+  "device_pubkey":     "<base64 Ed25519, 32B>",
+  "signature":         "<base64 Ed25519 sig>",
+  "owner_sign_pubkey": "<base64 Ed25519, 32B>",
+  "owner_signature":   "<base64 Ed25519 sig>",
+  "approval_hint":     "amber-otter-07" }   // optional
 // 200
 { "owner_id": "<base64url>", "device_id": "<base64url>",
-  "status": "approved" }                // "pending" on a REQUIRE_APPROVAL relay
+  "status": "approved" }                    // "pending" on a REQUIRE_APPROVAL relay
+// 401 — registration is not authorized for this owner
 ```
+> **Upgrade order:** the relay rejects unknown JSON fields, so upgrade the **relay before the
+> client** — a new client against an old relay gets a `400` at sign-in. That is deliberate: failing
+> loudly beats silently falling back to the unauthorized binding.
 On a `REQUIRE_APPROVAL` relay a new owner is `pending`: `/v1/auth/verify` then returns `403` (after
 the signature verifies) and every authenticated call `403`s until the operator approves the vault.
 

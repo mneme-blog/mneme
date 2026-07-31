@@ -9,7 +9,6 @@ package e2e
 import (
 	"context"
 	"crypto/ed25519"
-	"crypto/rand"
 	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
@@ -48,28 +47,20 @@ func TestApprovalFlow(t *testing.T) {
 	defer ts.Close()
 	c := &client{t: t, base: ts.URL}
 
-	devicePub, devicePriv, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ownerPub := make([]byte, 32)
-	if _, err := rand.Read(ownerPub); err != nil {
-		t.Fatal(err)
-	}
+	v := newVaultKeys(t)
+	devicePriv := v.devicePriv
 
 	// Register → the new vault is created 'pending' and says so.
-	regMsg := append(append([]byte("mneme:register:"), ownerPub...), devicePub...)
+	regBody := map[string]string{"approval_hint": "amber-otter-07"}
+	for k, val := range v.registerBody {
+		regBody[k] = val
+	}
 	var reg struct {
 		OwnerID  string `json:"owner_id"`
 		DeviceID string `json:"device_id"`
 		Status   string `json:"status"`
 	}
-	c.post("/v1/register", map[string]string{
-		"owner_pubkey":  b64(ownerPub),
-		"device_pubkey": b64(devicePub),
-		"signature":     b64(ed25519.Sign(devicePriv, regMsg)),
-		"approval_hint": "amber-otter-07",
-	}, http.StatusOK, &reg)
+	c.post("/v1/register", regBody, http.StatusOK, &reg)
 	if reg.Status != store.OwnerStatusPending {
 		t.Fatalf("new owner should be pending, got %q", reg.Status)
 	}

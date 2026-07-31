@@ -48,7 +48,7 @@ func TestBackupRestoreRoundTrip(t *testing.T) {
 	device := "dev-bk-" + randHex(t, 6)
 	ownerPub := randBytes(t, 32)
 	devicePub := randBytes(t, 32)
-	if _, err := st.RegisterOwnerDevice(ctx, owner, ownerPub, device, devicePub, store.OwnerStatusApproved, ""); err != nil {
+	if _, err := st.RegisterOwnerDevice(ctx, owner, ownerPub, device, devicePub, store.OwnerStatusApproved, "", randBytes(t, 32)); err != nil {
 		t.Fatalf("register: %v", err)
 	}
 
@@ -89,7 +89,7 @@ func TestBackupRestoreRoundTrip(t *testing.T) {
 	// Mutate the live state so the restore has something to overwrite, including a
 	// brand-new vault that must vanish after the restore (TRUNCATE CASCADE).
 	other := "owner-bk-" + randHex(t, 6)
-	if _, err := st.RegisterOwnerDevice(ctx, other, randBytes(t, 32), "dev-"+randHex(t, 6), randBytes(t, 32), store.OwnerStatusApproved, ""); err != nil {
+	if _, err := st.RegisterOwnerDevice(ctx, other, randBytes(t, 32), "dev-"+randHex(t, 6), randBytes(t, 32), store.OwnerStatusApproved, "", randBytes(t, 32)); err != nil {
 		t.Fatalf("register other: %v", err)
 	}
 	if _, _, err := st.PushEntry(ctx, owner, store.EntryBlob{EntryID: "e3", LWWClock: 5, Ciphertext: []byte{0x01, 0x02}}); err != nil {

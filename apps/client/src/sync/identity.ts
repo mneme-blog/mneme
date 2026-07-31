@@ -1,6 +1,6 @@
 // Bootstrap a device session from a mnemonic: derive identity locally, then
 // register + challenge-response authenticate against the relay.
-import { deriveIdentity, signWithDevice, type Identity } from '../crypto/keys';
+import { deriveIdentity, signWithDevice, signWithOwner, type Identity } from '../crypto/keys';
 import { mnemonicToSeed } from '../crypto/mnemonic';
 import { toBase64, fromBase64 } from '../crypto/base64';
 import { concat, utf8 } from '../crypto/bytes';
@@ -32,17 +32,30 @@ export function identityFromMnemonic(mnemonic: string): Identity {
 }
 
 const REGISTER_PREFIX = utf8('mneme:register:');
+const BIND_PREFIX = utf8('mneme:bind-device:v1:');
 
-/** Network step: register the device (TOFU) and exchange a signed challenge for a token. */
+/**
+ * Network step: register the device and exchange a signed challenge for a token.
+ *
+ * Registration carries two signatures. The device signature proves possession of
+ * the device key; the OWNER signature proves possession of the seed and is what
+ * authorizes attaching this device to this vault. Trust-on-first-use now applies
+ * only to creating a vault — joining an existing one requires the owner key, so
+ * the owner *public* key (which is not a secret) no longer opens anything.
+ */
 export async function authenticate(relay: RelayClient, identity: Identity): Promise<Session> {
   const regMsg = concat(REGISTER_PREFIX, identity.ownerPub, identity.devicePub);
   const regSig = signWithDevice(identity.devicePriv, regMsg);
-  const { device_id, status } = await relay.register(
-    toBase64(identity.ownerPub),
-    toBase64(identity.devicePub),
-    toBase64(regSig),
-    identity.approvalHint,
-  );
+  const bindMsg = concat(BIND_PREFIX, identity.ownerPub, identity.ownerSignPub, identity.devicePub);
+  const bindSig = signWithOwner(identity.ownerSignPriv, bindMsg);
+  const { device_id, status } = await relay.register({
+    ownerPubkey: toBase64(identity.ownerPub),
+    devicePubkey: toBase64(identity.devicePub),
+    signature: toBase64(regSig),
+    ownerSignPubkey: toBase64(identity.ownerSignPub),
+    ownerSignature: toBase64(bindSig),
+    approvalHint: identity.approvalHint,
+  });
 
   // Approval-gated relay: don't bother exchanging a challenge we can't complete —
   // surface pending straight away so the UI can show the approval screen.

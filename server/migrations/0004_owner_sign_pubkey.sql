@@ -1,0 +1,24 @@
+-- 0004_owner_sign_pubkey.sql — authorize device→owner binding (forward-only).
+--
+-- Before this migration, /v1/register only proved the caller controlled the
+-- *device* key it presented; the owner it asked to be bound to was taken from
+-- the request body unchecked. Anyone who learned a victim's 32-byte
+-- owner_pubkey could therefore bind a device of their own to that owner, pass
+-- challenge→verify, and pull / overwrite / tombstone / wipe the whole vault.
+-- Confidentiality held (no seed, so no plaintext), but integrity and
+-- availability did not.
+--
+-- The fix binds registration to a second key the client derives from the same
+-- BIP39 seed (HKDF info="identity-sign" → Ed25519). Registration now carries a
+-- signature by that key over (owner_pubkey ‖ owner_sign_pubkey ‖ device_pubkey);
+-- binding a device to an EXISTING owner is honoured only when the signature
+-- verifies against the key stored here. Possession of the owner public key alone
+-- no longer grants anything.
+--
+-- NULL means "registered before this migration". Those owners are grandfathered:
+-- the relay adopts a sign key for them on the next registration that comes from a
+-- device already bound to the owner (device keys are seed-derived, so an honest
+-- client always presents one and an attacker cannot). After that first upgrade
+-- the column is set and the strict check applies.
+ALTER TABLE owners
+    ADD COLUMN owner_sign_pubkey BYTEA;

@@ -22,6 +22,16 @@ export interface Identity {
   aiKey: Uint8Array;
   /** X25519 owner public key (for sealed-box pairing). */
   ownerPub: Uint8Array;
+  /**
+   * Ed25519 owner identity signing key. Authorizes binding a device to this
+   * owner at registration: the relay pins the public half the first time a vault
+   * is created and refuses every later registration that isn't signed by it.
+   * Without this, knowing the (non-secret) owner public key was enough to join
+   * someone's vault and overwrite or wipe it — see docs/SECURITY.md §4.
+   */
+  ownerSignPriv: Uint8Array;
+  /** Ed25519 owner identity signing public key. */
+  ownerSignPub: Uint8Array;
   /** base64url(sha256(ownerPub)) — must match the relay's derivation. */
   ownerId: string;
   /**
@@ -51,6 +61,11 @@ export function deriveIdentity(seed: Uint8Array): Identity {
   const identitySeed = hkdf(sha256, seed, SALT, utf8('identity'), KEY_LEN);
   const ownerPub = x25519.getPublicKey(identitySeed);
 
+  // Separate HKDF label, so the signing key is never the same bytes as the
+  // X25519 identity key even though both speak for the same owner.
+  const ownerSignPriv = hkdf(sha256, seed, SALT, utf8('identity-sign'), KEY_LEN);
+  const ownerSignPub = ed25519.getPublicKey(ownerSignPriv);
+
   const deviceSeed = hkdf(sha256, seed, SALT, utf8('device'), KEY_LEN);
   const devicePub = ed25519.getPublicKey(deviceSeed);
 
@@ -59,6 +74,8 @@ export function deriveIdentity(seed: Uint8Array): Identity {
     mediaKey,
     aiKey,
     ownerPub,
+    ownerSignPriv,
+    ownerSignPub,
     ownerId: toBase64Url(sha256(ownerPub)),
     approvalHint: deriveApprovalHint(seed),
     devicePriv: deviceSeed,
@@ -83,4 +100,9 @@ export function deriveApprovalHint(seed: Uint8Array): string {
 /** Ed25519 signature for challenge-response auth and registration. */
 export function signWithDevice(devicePriv: Uint8Array, message: Uint8Array): Uint8Array {
   return ed25519.sign(message, devicePriv);
+}
+
+/** Ed25519 signature by the owner identity key — authorizes device binding. */
+export function signWithOwner(ownerSignPriv: Uint8Array, message: Uint8Array): Uint8Array {
+  return ed25519.sign(message, ownerSignPriv);
 }

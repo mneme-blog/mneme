@@ -36,7 +36,16 @@ project. Scaffolded so far:
   XChaCha20-Poly1305 encrypted client-side before push.
 - **`server/`** — the Go relay (`journald`): `/healthz` + `/readyz`, embedded forward-only migrations,
   device challenge-response auth (Ed25519), the LWW oplog `sync/push`+`sync/pull`, and CORS. Owner-scoped,
-  opaque blobs only. **Optional operator approval** (`REQUIRE_APPROVAL`, opt-in, default off — the
+  opaque blobs only. **Registration is owner-authorized** (§6 pairing; audit finding H1, issue #40):
+  `/v1/register` carries a second Ed25519 signature by an owner identity signing key the client derives
+  from the seed (`HKDF info="identity-sign"`, `crypto/keys.ts` → `ownerSignPub`), over
+  `"mneme:bind-device:v1:" ‖ ownerPub ‖ ownerSignPub ‖ devicePub`. The relay pins that key on vault
+  creation (migration 0004 `owners.owner_sign_pubkey`) and refuses every later registration not signed
+  by it — TOFU now covers *creating* a vault, not *joining* one, so the non-secret `owner_pubkey` no
+  longer lets anyone attach a device and overwrite/tombstone/wipe the vault. Pre-0004 owners are
+  grandfathered once, only from an already-bound device. Check + writes share one transaction with the
+  owner row locked; rejections are a single undifferentiated 401. Regression:
+  `server/e2e/binding_e2e_test.go`. **Optional operator approval** (`REQUIRE_APPROVAL`, opt-in, default off — the
   relay stays open TOFU): with it on, a newly registered owner is `pending` (migration 0003 adds
   `owners.status` pending|approved|rejected, existing owners grandfathered to approved) and `/v1/auth/verify`
   won't mint a session (403) — the auth middleware also reads live status every request so

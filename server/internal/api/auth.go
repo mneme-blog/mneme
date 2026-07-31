@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"time"
 
@@ -23,16 +24,43 @@ func registerMessage(ownerPub, devicePub []byte) []byte {
 	return append(msg, devicePub...)
 }
 
+// bindDeviceMessage is what the OWNER identity signing key signs to authorize
+// binding a device to this owner. Both public keys are inside the message, so a
+// captured signature cannot be replayed for a different owner or a different
+// device — which is the whole point: possession of the owner *public* key must
+// not be enough to join a vault.
+func bindDeviceMessage(ownerPub, ownerSignPub, devicePub []byte) []byte {
+	msg := append([]byte("mneme:bind-device:v1:"), ownerPub...)
+	msg = append(msg, ownerSignPub...)
+	return append(msg, devicePub...)
+}
+
 // POST /v1/register
-// Trust-on-first-use: the first device for an owner creates the owner. Binding an
-// additional device to an existing owner currently also succeeds (TOFU per device).
-// TODO(§6 pairing): require the request to be authorized by the owner identity key
-// (or an existing device session) before honest multi-device pairing ships.
+//
+// Two proofs are required (§6 pairing, resolves the H1 audit finding):
+//   - the caller controls the DEVICE key it presents (self-signed registerMessage), and
+//   - the caller controls the OWNER identity signing key — an Ed25519 key the
+//     client derives from the same BIP39 seed — over bindDeviceMessage.
+//
+// Trust-on-first-use survives only for a brand-new owner: whoever creates the
+// vault pins its owner signing key. Every later registration must sign with that
+// same pinned key, so learning a victim's owner_pubkey no longer lets an attacker
+// bind a device (and thereby read, overwrite, tombstone or wipe the vault).
+//
+// Grandfathering: owners registered before migration 0004 have no pinned key yet.
+// For them the relay adopts the presented key once, and only when the request
+// comes from a device already bound to that owner — device keys are seed-derived,
+// so an honest client always presents one and an attacker cannot.
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		OwnerPubkey  string `json:"owner_pubkey"`  // base64, X25519 (32 bytes)
 		DevicePubkey string `json:"device_pubkey"` // base64, Ed25519 (32 bytes)
 		Signature    string `json:"signature"`     // base64, device-signed registerMessage
+		// Owner identity signing key (Ed25519, 32 bytes) and its signature over
+		// bindDeviceMessage. Required for a new owner; required to match the pinned
+		// key for an existing one.
+		OwnerSignPubkey string `json:"owner_sign_pubkey"`
+		OwnerSignature  string `json:"owner_signature"`
 		// Optional operator hint (only meaningful when REQUIRE_APPROVAL is on): a
 		// short code the client DERIVES from the seed so the operator can tell which
 		// pending vault is which. Constrained to [a-z0-9-]{0,32} so it can never carry
@@ -67,15 +95,43 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Owner authorization material is optional on the wire only so a client that
+	// predates this change keeps working against its own already-bound device;
+	// authorizeBinding rejects every other use of the empty case.
+	var ownerSignPub, ownerSig []byte
+	if req.OwnerSignPubkey != "" || req.OwnerSignature != "" {
+		ownerSignPub, err = base64.StdEncoding.DecodeString(req.OwnerSignPubkey)
+		if err != nil || len(ownerSignPub) != ed25519.PublicKeySize {
+			writeError(w, http.StatusBadRequest, "owner_sign_pubkey must be 32 base64-encoded bytes")
+			return
+		}
+		ownerSig, err = base64.StdEncoding.DecodeString(req.OwnerSignature)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "owner_signature must be base64")
+			return
+		}
+		if !ed25519.Verify(ed25519.PublicKey(ownerSignPub), bindDeviceMessage(ownerPub, ownerSignPub, devicePub), ownerSig) {
+			writeError(w, http.StatusUnauthorized, "owner_signature does not verify against owner_sign_pubkey")
+			return
+		}
+	}
+
 	ownerID := deriveID(ownerPub)
 	deviceID := deriveID(devicePub)
+
 	// A brand-new owner is 'pending' when approval is required, else 'approved'.
 	// (The status is applied only if this creates the owner — see the store.)
 	status := store.OwnerStatusApproved
 	if s.cfg.RequireApproval {
 		status = store.OwnerStatusPending
 	}
-	ownerCreated, err := s.store.RegisterOwnerDevice(r.Context(), ownerID, ownerPub, deviceID, devicePub, status, req.ApprovalHint)
+	ownerCreated, err := s.store.RegisterOwnerDevice(r.Context(), ownerID, ownerPub, deviceID, devicePub, status, req.ApprovalHint, ownerSignPub)
+	if errors.Is(err, store.ErrBindingNotAuthorized) {
+		// Deliberately one message for every rejected case: it must not reveal
+		// whether the owner exists, nor which half of the check failed.
+		writeError(w, http.StatusUnauthorized, "registration is not authorized for this owner")
+		return
+	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "registration failed")
 		return

@@ -193,7 +193,9 @@ retract copies an attacker already exfiltrated while the old phrase was valid.
 
 ## 5. Authentication & tenant isolation
 
-- **Registration** binds an `owner_id` (from the seed) to a device pubkey. It's **trust-on-first-use**.
+- **Registration** binds an `owner_id` (from the seed) to a device pubkey. Creating a vault is
+  **trust-on-first-use**; joining an existing one requires a signature by the owner identity key,
+  which only the seed can produce (§6.5). ✅
 - **Auth** is Ed25519 challenge-response: the relay issues a random challenge (2-min, single-use), the
   device signs it, the relay verifies against the stored device pubkey and issues a random **session
   token** (default 24 h). The token is stored only as `sha256(token)` — a database leak does not yield
@@ -231,13 +233,21 @@ production.** Dev runs over plain HTTP on localhost. CORS is configurable (`CORS
 default reflects any origin and must be tightened in production. 🔧 TLS termination is deployment's job
 and not yet documented as enforced.
 
-### 6.5 Rogue device registration / data poisoning — 🔧 Open
-Registration proves possession of the *device* key and is trust-on-first-use; it does **not** prove
-possession of the *seed*. An attacker who learns your `owner_pubkey` (e.g. from a future sealed-pairing
-leak) could register a device and **push garbage blobs** (a poisoning/DoS nuisance) — though they still
-**cannot decrypt** anything. Proper authorization (signing registration with the owner identity key, or
-an existing-device approval flow) is tied to the §6 multi-device pairing work. Also: **no rate limiting**
-yet, so registration/challenge spam is possible.
+### 6.5 Rogue device registration / data poisoning — ✅ Mitigated
+Registration used to prove possession of the *device* key only, so anyone who learned your
+`owner_pubkey` could bind a device of their own to your vault and then read the ciphertext, overwrite
+every entry with a high `lww_clock`, tombstone them, or `DELETE /v1/account` the whole thing. They
+could never decrypt (no seed), so confidentiality held — but integrity and availability did not.
+
+Registration now carries a **second signature by the owner identity key**, an Ed25519 key derived from
+the same seed (`HKDF info="identity-sign"`). The relay pins that key when the vault is created and
+refuses any later registration not signed by it, so trust-on-first-use survives only for *creating* a
+vault, not for joining one. The owner public key is back to being an ordinary public key.
+
+Owners that predate the check are grandfathered once, and only from a device already bound to them —
+device keys are seed-derived, so an honest client always has one and an attacker with just the owner
+public key does not. See docs/API.md `POST /v1/register`; regression test
+`server/e2e/binding_e2e_test.go`.
 
 ### 6.6 Replay — ✅ Mitigated
 Challenges are single-use and expire (2 min); sessions expire. Replaying a `sync/push` is harmless —
@@ -344,7 +354,7 @@ Severities reflect impact **within the stated threat model** (the relay operator
 |---|-----|---------|--------|-----------|
 | 1 | High | AEAD does not authenticate `entry_id` / `deleted` / `lww_clock` — a hostile relay can relabel, resurrect, or pin entries (media chunks *do* bind AAD; entry bodies don't) | 🔧 Open | §6.1, [ENCRYPTION.md §3](./ENCRYPTION.md) |
 | 2 | High | No Content-Security-Policy — the design's primary mitigation for in-memory keys is absent | 🔧 Open | §6.2, §7.2 |
-| 3 | High | Owner binding at `/v1/register` is unauthenticated (anyone with the owner pubkey can attach a device → write/DoS) | 🔧 Open | §6.5 |
+| 3 | High | Owner binding at `/v1/register` is unauthenticated (anyone with the owner pubkey can attach a device → write/DoS) | ✅ **Fixed** — registration requires an owner-identity-key signature ([#40](https://github.com/plasticparticle/mneme/issues/40)) | §6.5 |
 | 4 | Med | No auto-lock / key-lifetime limit | ✅ **Fixed** — 15-min inactivity auto-lock + manual lock (§4, §6.11) | §4 |
 | 5 | Med | `lww_clock` is attacker-controllable client wall-clock (future-dated writes pin an entry) | 🔧 Open | §6.9 |
 | 6 | Med | No rate limiting / abuse controls on any endpoint | 🔧 Open | §6.5, §7.4 |

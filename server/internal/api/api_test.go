@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"encoding/json"
 	"net/http"
@@ -94,5 +95,39 @@ func TestRegisterMessageVerifies(t *testing.T) {
 	}
 	if ed25519.Verify(pub, registerMessage([]byte("tampered-owner-key-bytes-32-byte"), pub), sig) {
 		t.Fatal("signature verified against a different owner key — message binding is broken")
+	}
+}
+
+// The owner authorization signature (H1) must be bound to all three keys, so a
+// captured registration cannot be replayed for another owner or another device.
+func TestBindDeviceMessageBinding(t *testing.T) {
+	signPub, signPriv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	devicePub, _, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ownerPub := bytes.Repeat([]byte{1}, x25519PubLen)
+	sig := ed25519.Sign(signPriv, bindDeviceMessage(ownerPub, signPub, devicePub))
+
+	if !ed25519.Verify(signPub, bindDeviceMessage(ownerPub, signPub, devicePub), sig) {
+		t.Fatal("bindDeviceMessage signature did not verify")
+	}
+
+	otherDevice, _, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, msg := range map[string][]byte{
+		"different owner":     bindDeviceMessage(bytes.Repeat([]byte{2}, x25519PubLen), signPub, devicePub),
+		"different device":    bindDeviceMessage(ownerPub, signPub, otherDevice),
+		"different sign key":  bindDeviceMessage(ownerPub, otherDevice, devicePub),
+		"register-msg domain": registerMessage(ownerPub, devicePub),
+	} {
+		if ed25519.Verify(signPub, msg, sig) {
+			t.Fatalf("signature verified against %s — message binding is broken", name)
+		}
 	}
 }

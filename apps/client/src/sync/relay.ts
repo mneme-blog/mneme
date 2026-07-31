@@ -1,6 +1,19 @@
 // Typed HTTP client for the Go relay. Binary fields are standard base64
 // (the relay reads them as Go StdEncoding).
 
+export interface RegisterReq {
+  /** base64 X25519 owner public key. */
+  ownerPubkey: string;
+  /** base64 Ed25519 device public key. */
+  devicePubkey: string;
+  /** base64 device signature over "mneme:register:" ‖ ownerPub ‖ devicePub. */
+  signature: string;
+  /** base64 Ed25519 owner identity signing key. */
+  ownerSignPubkey: string;
+  /** base64 owner signature over "mneme:bind-device:v1:" ‖ ownerPub ‖ ownerSignPub ‖ devicePub. */
+  ownerSignature: string;
+  approvalHint?: string;
+}
 export interface RegisterResp {
   owner_id: string;
   device_id: string;
@@ -63,12 +76,17 @@ export class RelayClient {
     this.baseUrl = baseUrl.replace(/\/+$/, '');
   }
 
-  register(ownerPubkey: string, devicePubkey: string, signature: string, approvalHint?: string): Promise<RegisterResp> {
+  register(req: RegisterReq): Promise<RegisterResp> {
     return this.post('/v1/register', {
-      owner_pubkey: ownerPubkey,
-      device_pubkey: devicePubkey,
-      signature,
-      approval_hint: approvalHint ?? '',
+      owner_pubkey: req.ownerPubkey,
+      device_pubkey: req.devicePubkey,
+      signature: req.signature,
+      // Authorizes binding this device to this owner. A relay older than the
+      // H1 fix rejects unknown fields, so an outdated relay fails loudly at
+      // sign-in rather than silently accepting an unauthorized binding.
+      owner_sign_pubkey: req.ownerSignPubkey,
+      owner_signature: req.ownerSignature,
+      approval_hint: req.approvalHint ?? '',
     });
   }
 

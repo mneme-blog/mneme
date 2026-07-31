@@ -4,6 +4,7 @@
 package store
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"time"
@@ -46,28 +47,96 @@ const (
 	OwnerStatusRejected = "rejected"
 )
 
+// ErrBindingNotAuthorized is returned when a registration is not allowed to bind
+// the presented device to the requested owner — the H1 guard. The caller must
+// turn it into a single, undifferentiated 401: which half of the check failed
+// (and whether the owner exists at all) is not the caller's business.
+var ErrBindingNotAuthorized = errors.New("device binding not authorized for this owner")
+
 // RegisterOwnerDevice creates the owner if absent (trust-on-first-use) and binds
-// the device to it. Idempotent: re-registering the same keys is a no-op — in
-// particular ON CONFLICT DO NOTHING means status/hint are set only when the owner
-// is first created and never overwritten (an approved owner can't be silently
-// reset to pending by re-registering). ownerCreated reports whether this call
-// created a brand-new owner (vault), so the caller can count vault creations
-// without storing who created what.
-func (s *Store) RegisterOwnerDevice(ctx context.Context, ownerID string, ownerPub []byte, deviceID string, devicePub []byte, status, approvalHint string) (ownerCreated bool, err error) {
+// the device to it, but only when the caller is authorized to do so. Idempotent:
+// re-registering the same keys is a no-op — in particular ON CONFLICT DO NOTHING
+// means status/hint are set only when the owner is first created and never
+// overwritten (an approved owner can't be silently reset to pending by
+// re-registering). ownerCreated reports whether this call created a brand-new
+// owner (vault), so the caller can count vault creations without storing who
+// created what.
+//
+// ownerSignPub is the Ed25519 owner identity signing key that authorizes binding
+// devices to this owner (migration 0004). The API layer has already verified the
+// caller's signature under it; what this function decides is whether that key may
+// act for this owner:
+//
+//   - owner does not exist          → TOFU. The key is pinned on creation.
+//   - owner has a pinned key        → must equal ownerSignPub, else not authorized.
+//   - owner predates migration 0004 → one-shot grandfathering: allowed only from a
+//     device already bound to this owner (device keys are seed-derived, so an
+//     honest client always presents one and an attacker holding just the owner
+//     public key cannot). The presented key is then pinned.
+//
+// The check and the writes share one transaction, and the owner row is locked for
+// the duration, so two concurrent registrations cannot both pass the check and
+// then race each other's pin.
+func (s *Store) RegisterOwnerDevice(ctx context.Context, ownerID string, ownerPub []byte, deviceID string, devicePub []byte, status, approvalHint string, ownerSignPub []byte) (ownerCreated bool, err error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return false, err
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck // rollback after commit is a no-op
 
+	var pinned []byte
+	ownerExists := true
+	err = tx.QueryRow(ctx, `SELECT owner_sign_pubkey FROM owners WHERE owner_id = $1 FOR UPDATE`, ownerID).Scan(&pinned)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		ownerExists = false
+	case err != nil:
+		return false, err
+	}
+
+	switch {
+	case !ownerExists:
+		// TOFU: whoever creates the vault pins its authorization key. A client
+		// that sends none creates an owner nothing can ever be re-bound to, so
+		// require it — this is the only place the pin can be established safely.
+		if len(ownerSignPub) == 0 {
+			return false, ErrBindingNotAuthorized
+		}
+	case len(pinned) > 0:
+		if !bytes.Equal(pinned, ownerSignPub) {
+			return false, ErrBindingNotAuthorized
+		}
+	default:
+		// Pre-0004 owner: only a device the relay already knows for this owner
+		// may register (and thereby pin a key going forward).
+		var bound bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS(SELECT 1 FROM devices WHERE device_id = $1 AND owner_id = $2 AND device_pubkey = $3)`,
+			deviceID, ownerID, devicePub).Scan(&bound); err != nil {
+			return false, err
+		}
+		if !bound {
+			return false, ErrBindingNotAuthorized
+		}
+	}
+
 	tag, err := tx.Exec(ctx,
-		`INSERT INTO owners (owner_id, owner_pubkey, status, approval_hint)
-		 VALUES ($1, $2, $3, $4) ON CONFLICT (owner_id) DO NOTHING`,
-		ownerID, ownerPub, status, approvalHint)
+		`INSERT INTO owners (owner_id, owner_pubkey, status, approval_hint, owner_sign_pubkey)
+		 VALUES ($1, $2, $3, $4, $5) ON CONFLICT (owner_id) DO NOTHING`,
+		ownerID, ownerPub, status, approvalHint, ownerSignPub)
 	if err != nil {
 		return false, err
 	}
 	ownerCreated = tag.RowsAffected() == 1
+	if !ownerCreated && len(pinned) == 0 && len(ownerSignPub) > 0 {
+		// Grandfathering: adopt a signing key for a pre-0004 owner. Guarded by
+		// `IS NULL` as well as the row lock, so it is strictly one-shot.
+		if _, err := tx.Exec(ctx,
+			`UPDATE owners SET owner_sign_pubkey = $2 WHERE owner_id = $1 AND owner_sign_pubkey IS NULL`,
+			ownerID, ownerSignPub); err != nil {
+			return false, err
+		}
+	}
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO devices (device_id, owner_id, device_pubkey) VALUES ($1, $2, $3) ON CONFLICT (device_id) DO NOTHING`,
 		deviceID, ownerID, devicePub); err != nil {

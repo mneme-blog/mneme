@@ -49,8 +49,10 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
 
 ### 🔴 High
 
-- [ ] [#40](https://github.com/plasticparticle/mneme/issues/40) · **H1 — A device can be bound to an existing account without proving ownership of the account
-  key (account takeover / remote vault destruction).**
+- [x] [#40](https://github.com/plasticparticle/mneme/issues/40) · **H1 — A device can be bound to an existing account without proving ownership of the account
+  key (account takeover / remote vault destruction).** — **Fixed:** registration now requires an
+  Ed25519 signature by an owner identity key derived from the seed; the relay pins it per owner
+  (migration 0004) and TOFU survives only for creating a vault.
   `server/internal/api/auth.go:31-100` (`handleRegister`), `server/internal/store/store.go:56-77`
   (`RegisterOwnerDevice`). *This is the project's own acknowledged `TODO(§6 pairing)` at auth.go:29.*
   **Problem:** Registration only verifies the caller controls the *device* key

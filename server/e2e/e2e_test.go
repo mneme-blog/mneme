@@ -12,7 +12,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/ed25519"
-	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
@@ -49,27 +48,17 @@ func TestFullFlow(t *testing.T) {
 	defer ts.Close()
 	c := &client{t: t, base: ts.URL}
 
-	// Keys: device is Ed25519; owner pubkey is opaque to the server (32 bytes).
-	devicePub, devicePriv, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ownerPub := make([]byte, 32)
-	if _, err := rand.Read(ownerPub); err != nil {
-		t.Fatal(err)
-	}
+	// Keys: device and owner-identity keys are Ed25519; the owner pubkey itself
+	// is opaque to the server (32 bytes).
+	v := newVaultKeys(t)
+	devicePriv := v.devicePriv
 
 	// 1. Register.
-	regMsg := append(append([]byte("mneme:register:"), ownerPub...), devicePub...)
 	var reg struct {
 		OwnerID  string `json:"owner_id"`
 		DeviceID string `json:"device_id"`
 	}
-	c.post("/v1/register", map[string]string{
-		"owner_pubkey":  b64(ownerPub),
-		"device_pubkey": b64(devicePub),
-		"signature":     b64(ed25519.Sign(devicePriv, regMsg)),
-	}, http.StatusOK, &reg)
+	c.post("/v1/register", v.registerBody, http.StatusOK, &reg)
 	if reg.OwnerID == "" || reg.DeviceID == "" {
 		t.Fatal("register returned empty ids")
 	}
@@ -204,11 +193,7 @@ func TestFullFlow(t *testing.T) {
 
 	// Re-registering the same keys works (TOFU) and finds a clean slate: no
 	// entries, no media. This is exactly what a leaked-but-rotated phrase sees.
-	c.post("/v1/register", map[string]string{
-		"owner_pubkey":  b64(ownerPub),
-		"device_pubkey": b64(devicePub),
-		"signature":     b64(ed25519.Sign(devicePriv, regMsg)),
-	}, http.StatusOK, &reg)
+	c.post("/v1/register", v.registerBody, http.StatusOK, &reg)
 	c.post("/v1/auth/challenge", map[string]string{"device_id": reg.DeviceID}, http.StatusOK, &chal)
 	challenge, _ = base64.StdEncoding.DecodeString(chal.Challenge)
 	c.post("/v1/auth/verify", map[string]string{
