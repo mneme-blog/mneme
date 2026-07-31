@@ -513,6 +513,13 @@ The server sees **metadata**: number of entries (≈ frequency), blob sizes, edi
 **reminder times** (cleartext, since the scheduler needs them). E2EE protects **content**, not
 **form**. Reminders fire generically ("Reminder") — the client decrypts content locally.
 
+**No freshness guarantee** (also accepted): the AEAD tag stops the relay forging or altering a blob,
+but not choosing *which* blob to hand back. A malicious relay can serve a stale ciphertext (rollback —
+`lww_clock` is cleartext, so it knows which is older), silently omit a record from a pull, or reorder
+and drop. Fixing it needs the client to authenticate the record *set* — a signed manifest / hash chain
+/ Merkle root inside the ciphertext — which is unbuilt. The local OPFS DB being the source of truth is
+what limits the damage. docs/SECURITY.md §6.7.
+
 ---
 
 ## 4. Repo structure (monorepo, pnpm + Go module)

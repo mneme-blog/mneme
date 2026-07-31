@@ -221,7 +221,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   sealed seed is encrypted, but a hostile same-origin page could still register a service worker or
   tamper with storage. **Recommendation:** host Mneme on its own dedicated origin/subdomain.
 
-- [ ] [#54](https://github.com/plasticparticle/mneme/issues/54) · **I2 — Relay can roll back / drop / withhold blobs (no freshness guarantee).** Inherent to a
+- [x] [#54](https://github.com/plasticparticle/mneme/issues/54) · **I2 — Relay can roll back / drop / withhold blobs (no freshness guarantee).** Inherent to a
   dumb E2EE relay with cleartext `lww_clock`: the AEAD tag prevents *forgery*, but a malicious relay
   can serve a stale ciphertext or silently omit the newest one. This is an accepted property of the
   design (E2EE protects content, not availability/freshness), worth stating explicitly in the docs.

@@ -293,10 +293,25 @@ overshoot by about one batch.
 Challenges are single-use and expire (2 min); sessions expire. Replaying a `sync/push` is harmless —
 LWW makes it idempotent (a non-newer clock is ignored).
 
-### 6.7 Server withholds or deletes data — ⚠️ Accepted (availability, not confidentiality)
-A malicious server can refuse to return blobs or drop them. E2EE is about confidentiality/integrity of
-*content*, not availability. Multi-device replication and local-first storage reduce the blast radius
-(your unlocked device still has the data).
+### 6.7 Server rolls back, withholds, or drops data — ⚠️ Accepted (no freshness guarantee)
+**There is no freshness guarantee.** The AEAD tag stops the relay from *forging* or *altering* a
+blob — any tampering fails decryption — but it says nothing about *which* blob you are handed, or
+whether you are handed one at all. A malicious relay can:
+
+- **serve a stale version** of an entry instead of the newest one (a rollback), because `lww_clock`
+  is cleartext and unauthenticated, so the relay knows exactly which ciphertext is older;
+- **omit an entry entirely** from a `sync/pull` — a client that has never seen it cannot know it
+  should exist;
+- **drop or reorder** records, or simply stop answering.
+
+This is inherent to a dumb E2EE blob relay and is **accepted**, not solved. Detecting it would need
+the client to authenticate the *set* of records — a signed manifest, a hash chain, or a Merkle root
+over the oplog carried inside the ciphertext — which is real design work and not currently built.
+
+What limits the damage in practice: the local OPFS database is the source of truth (§5a), so an
+unlocked device keeps its data regardless of what the relay says; every device that has synced holds
+an independent copy; and a rollback cannot produce content you never wrote, only re-show content you
+did. Related: §6.9, where the cleartext `lww_clock` is what makes targeted rollback precise.
 
 ### 6.8 Metadata & traffic analysis — ⚠️ Accepted
 Entry counts, blob sizes, edit cadence, reminder times, and `owner_id`↔device linkage are visible (§2).
@@ -419,7 +434,7 @@ Severities reflect impact **within the stated threat model** (the relay operator
 | 4 | Med | No auto-lock / key-lifetime limit | ✅ **Fixed** — 15-min inactivity auto-lock + manual lock (§4, §6.11) | §4 |
 | 5 | Med | `lww_clock` is attacker-controllable client wall-clock (future-dated writes pin an entry) | 🔧 Open | §6.9 |
 | 6 | Med | No rate limiting / abuse controls on any endpoint | ✅ **Fixed** — per-IP throttle on the auth endpoints + per-owner storage quota ([#44](https://github.com/plasticparticle/mneme/issues/44)) | §6.5, §7.4 |
-| 7 | Med | Relay can silently roll back / drop / reorder the record set (no freshness proof) | 🔧 Open | §6.7 |
+| 7 | Med | Relay can silently roll back / drop / reorder the record set (no freshness proof) | ⚠️ **Accepted & documented** — inherent to a dumb E2EE relay; a signed manifest / hash chain is unbuilt ([#54](https://github.com/plasticparticle/mneme/issues/54)) | §6.7 |
 | 8 | Low | Recovery phrase can be copied to the system clipboard | ⚠️ Accepted (UI-nudged; convenience vs. exposure) | §6.11 |
 | 9 | Low | External Google Fonts (privacy leak, no SRI, weakens CSP story) | ✅ **Fixed** — fonts self-hosted via `@fontsource-variable` | — |
 | 10 | Low | Device/owner enumeration via distinct error responses | 🔧 Open | §6.5 |
