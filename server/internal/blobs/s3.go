@@ -59,6 +59,56 @@ func (s *s3Store) Delete(ctx context.Context, key string) error {
 	return s.client.RemoveObject(ctx, s.bucket, key, minio.RemoveObjectOptions{})
 }
 
+// DeletePrefix lists and removes every object under prefix. Deletion is driven
+// by what object storage actually holds, not by the media_blobs index, so
+// chunks that were uploaded but never finalized (and therefore have no index
+// row) are removed too — that gap is what let ciphertext outlive a vault.
+//
+// An empty prefix is refused outright: it would enumerate the entire bucket,
+// and the only way to reach this code with one is a caller bug that would
+// otherwise cross the owner boundary.
+func (s *s3Store) DeletePrefix(ctx context.Context, prefix string) (int, error) {
+	if prefix == "" {
+		return 0, errors.New("blobs: refusing to delete an empty prefix")
+	}
+	objects := s.client.ListObjects(ctx, s.bucket, minio.ListObjectsOptions{
+		Prefix:    prefix,
+		Recursive: true,
+	})
+
+	// RemoveObjects consumes a channel and reports failures on another, so feed
+	// it from a goroutine while draining the error side here.
+	keys := make(chan minio.ObjectInfo)
+	var listErr error
+	count := 0
+	go func() {
+		defer close(keys)
+		for obj := range objects {
+			if obj.Err != nil {
+				listErr = obj.Err
+				return
+			}
+			count++
+			select {
+			case keys <- obj:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	var firstErr error
+	for e := range s.client.RemoveObjects(ctx, s.bucket, keys, minio.RemoveObjectsOptions{}) {
+		if e.Err != nil && firstErr == nil {
+			firstErr = fmt.Errorf("remove %s: %w", e.ObjectName, e.Err)
+		}
+	}
+	if listErr != nil {
+		return count, fmt.Errorf("list %s: %w", prefix, listErr)
+	}
+	return count, firstErr
+}
+
 func (s *s3Store) Get(ctx context.Context, key string) ([]byte, error) {
 	obj, err := s.client.GetObject(ctx, s.bucket, key, minio.GetObjectOptions{})
 	if err != nil {

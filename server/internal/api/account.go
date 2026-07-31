@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -28,12 +27,6 @@ func (s *Server) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 // deletion (above) and the operator's vault deletion (admin.go). found=false when
 // the owner did not exist.
 func (s *Server) wipeOwner(ctx context.Context, owner string) (found bool, err error) {
-	// Snapshot the media index before the rows cascade away.
-	media, err := s.store.ListOwnerMedia(ctx, owner)
-	if err != nil {
-		return false, err
-	}
-
 	// The DB wipe is the authoritative act: it kills the oplog, the media index,
 	// and every session (including, for self-deletion, the one making the request).
 	found, err = s.store.DeleteOwner(ctx, owner)
@@ -45,16 +38,15 @@ func (s *Server) wipeOwner(ctx context.Context, owner string) (found bool, err e
 	}
 	s.metrics.bump(metricVaultsDeleted, 1)
 
-	// Best-effort chunk cleanup after the point of no return. A failure here only
-	// orphans opaque ciphertext whose index (and key) no longer exist.
-	for _, m := range media {
-		for n := 0; n < m.Chunks; n++ {
-			key := fmt.Sprintf("%s/%d", m.S3Key, n)
-			if err := s.blobs.Delete(ctx, key); err != nil &&
-				!errors.Is(err, blobs.ErrNotConfigured) && !errors.Is(err, blobs.ErrNotFound) {
-				log.Printf("owner wipe: orphaned chunk %s: %v", key, err)
-			}
-		}
+	// Best-effort chunk cleanup after the point of no return. Sweeping the
+	// owner's whole object prefix — rather than walking the media index we just
+	// deleted — is what makes the deletion promise true: a chunk uploaded but
+	// never finalized has no index row, so index-driven cleanup left it behind
+	// forever, surviving both media deletion and full account deletion. A
+	// failure here only orphans opaque ciphertext whose keys no longer exist.
+	if _, err := s.blobs.DeletePrefix(ctx, ownerMediaPrefix(owner)); err != nil &&
+		!errors.Is(err, blobs.ErrNotConfigured) && !errors.Is(err, blobs.ErrNotFound) {
+		log.Printf("owner wipe: chunk sweep failed: %v", err)
 	}
 	return true, nil
 }

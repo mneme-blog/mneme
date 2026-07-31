@@ -182,10 +182,15 @@ the relay learns nothing beyond the random id and ciphertext sizes.
 Without `S3_ENDPOINT` configured the media endpoints answer `503`; clients keep recordings queued
 locally and retry. Re-uploading the same media id is idempotent.
 
-`DELETE` removes the Postgres index row first, then best-effort-deletes the S3 chunks (a failure
-there only orphans ciphertext nothing references). It is **idempotent** — deleting an unknown or
-already-deleted id answers `204` — because clients queue deletions while offline (the local
-`media_tombstones` table) and retry until acknowledged.
+`DELETE` removes the Postgres index row first, then best-effort-sweeps the **whole
+`media/{owner}/{id}/` object prefix** (a failure there only orphans ciphertext nothing references).
+Sweeping the prefix rather than the indexed chunk range matters: a chunk that was uploaded but never
+`complete`d has no index row, so index-driven cleanup could never reach it and it survived both media
+deletion and full account deletion. Object storage, not the index, is the authority on what exists.
+For the same reason a `DELETE` for an id with no index row still sweeps its chunks.
+
+It is **idempotent** — deleting an unknown or already-deleted id answers `204` — because clients
+queue deletions while offline (the local `media_tombstones` table) and retry until acknowledged.
 
 ---
 
@@ -193,9 +198,10 @@ already-deleted id answers `204` — because clients queue deletions while offli
 
 ### `DELETE /v1/account` → `204 No Content`
 
-Deletes **everything** stored for the authenticated owner: entry blobs, the media index and its S3
-chunks, reminders, push subscriptions, devices, and all sessions (including the one making the
-request). There is no request body and no undo.
+Deletes **everything** stored for the authenticated owner: entry blobs, the media index, **every
+object under the `media/{owner}/` prefix** — including chunks from uploads that were never finalized,
+which no index row covers — reminders, push subscriptions, devices, and all sessions (including the
+one making the request). There is no request body and no undo.
 
 This is the server half of **recovery-phrase rotation** (`apps/client/src/sync/rotate.ts`): because
 `owner_id` and all keys are derived from the mnemonic, a phrase can't be changed in place — the

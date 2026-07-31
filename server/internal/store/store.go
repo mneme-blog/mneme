@@ -225,26 +225,13 @@ func (s *Store) LookupSession(ctx context.Context, tokenHash []byte) (ownerID, d
 
 // ── Account deletion (mnemonic rotation) ────────────────────────────────────
 
-// ListOwnerMedia returns every media index row for an owner, so the caller can
-// remove the chunk objects from object storage before/after the DB wipe.
-func (s *Store) ListOwnerMedia(ctx context.Context, ownerID string) ([]MediaBlob, error) {
-	rows, err := s.pool.Query(ctx,
-		`SELECT media_id, s3_key, bytes, chunks FROM media_blobs WHERE owner_id = $1`, ownerID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var out []MediaBlob
-	for rows.Next() {
-		var m MediaBlob
-		if err := rows.Scan(&m.MediaID, &m.S3Key, &m.Bytes, &m.Chunks); err != nil {
-			return nil, err
-		}
-		out = append(out, m)
-	}
-	return out, rows.Err()
-}
+// NOTE: there is deliberately no ListOwnerMedia here any more. Driving chunk
+// cleanup off the media_blobs index could only ever reach *finalized* objects,
+// so a chunk uploaded and never completed had no index row and survived both
+// media deletion and full account deletion. Cleanup now enumerates the owner's
+// object-storage prefix instead (blobs.Store.DeletePrefix, called from
+// api.wipeOwner) — object storage, not the index, is the authority on what
+// exists.
 
 // DeleteOwner removes the owner row; every other table (devices, sessions,
 // challenges, entry_blobs, media_blobs, reminders, push_subs) cascades from it.

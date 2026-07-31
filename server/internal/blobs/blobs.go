@@ -11,6 +11,8 @@ package blobs
 import (
 	"context"
 	"errors"
+	"sort"
+	"strings"
 	"sync"
 
 	"github.com/plasticparticle/mneme/server/internal/config"
@@ -28,6 +30,16 @@ type Store interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	// Delete removes one chunk. Deleting a key that was never stored is not an error.
 	Delete(ctx context.Context, key string) error
+	// DeletePrefix removes every object whose key starts with prefix, and
+	// reports how many it removed. This is what makes "delete my vault" true:
+	// cleanup driven off the media_blobs index can only ever reach chunks that
+	// were finalized, and a chunk PUT that is never completed has no index row.
+	// Enumerating object storage directly catches those too.
+	//
+	// Callers MUST pass a prefix that already contains the owner scope (see
+	// api.mediaKeyPrefix) — this is the one operation that can reach across
+	// objects, so the boundary is the caller's to get right.
+	DeletePrefix(ctx context.Context, prefix string) (int, error)
 }
 
 // New selects a Store from config: S3/MinIO when an endpoint is set, Disabled otherwise.
@@ -46,6 +58,9 @@ func (Disabled) Get(context.Context, string) ([]byte, error) {
 	return nil, ErrNotConfigured
 }
 func (Disabled) Delete(context.Context, string) error { return ErrNotConfigured }
+func (Disabled) DeletePrefix(context.Context, string) (int, error) {
+	return 0, ErrNotConfigured
+}
 
 // Memory is an in-process Store for tests.
 type Memory struct {
@@ -79,4 +94,30 @@ func (s *Memory) Delete(_ context.Context, key string) error {
 	defer s.mu.Unlock()
 	delete(s.m, key)
 	return nil
+}
+
+func (s *Memory) DeletePrefix(_ context.Context, prefix string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n := 0
+	for k := range s.m {
+		if strings.HasPrefix(k, prefix) {
+			delete(s.m, k)
+			n++
+		}
+	}
+	return n, nil
+}
+
+// Keys returns every stored key — tests only, so they can assert that a wipe
+// really emptied object storage rather than just the index.
+func (s *Memory) Keys() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]string, 0, len(s.m))
+	for k := range s.m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }

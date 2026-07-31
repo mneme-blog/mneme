@@ -116,8 +116,10 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   explicitly with a strict `isAllowedUri`/allowlist rather than relying on defaults. Apply the same
   allowlist on the serialize side (`markdown.ts:170`) so a bad href can't round-trip.
 
-- [ ] [#43](https://github.com/plasticparticle/mneme/issues/43) · **M2 — Un-finalized media chunks are never garbage-collected — they survive account deletion,
-  breaking the "delete my vault" guarantee.**
+- [x] [#43](https://github.com/plasticparticle/mneme/issues/43) · **M2 — Un-finalized media chunks are never garbage-collected — they survive account deletion,
+  breaking the "delete my vault" guarantee.** — **Fixed:** cleanup now enumerates the owner's
+  object-storage prefix (`blobs.Store.DeletePrefix`) instead of walking the media index, so
+  never-finalized chunks are swept by both media deletion and account deletion.
   `server/internal/api/media.go:71-92` (`handlePutMediaChunk`), `server/internal/api/account.go:30-60`
   (`wipeOwner`), `media.go:158-187` (`handleDeleteMedia`).
   **Problem:** `handlePutMediaChunk` writes a chunk to `media/{owner}/{mediaID}/{n}` with no

@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,7 +45,8 @@ func TestFullFlow(t *testing.T) {
 
 	// Media chunks land in an in-memory blob store: the e2e suite needs only
 	// Postgres, while the HTTP surface is exercised exactly as with MinIO.
-	ts := httptest.NewServer(api.New(st, blobs.NewMemory(), config.Config{SessionTTL: time.Hour}).Routes())
+	bl := blobs.NewMemory()
+	ts := httptest.NewServer(api.New(st, bl, config.Config{SessionTTL: time.Hour}).Routes())
 	defer ts.Close()
 	c := &client{t: t, base: ts.URL}
 
@@ -185,9 +187,28 @@ func TestFullFlow(t *testing.T) {
 	noAuth.post("/v1/sync/pull", map[string]any{"since": 0}, http.StatusUnauthorized, nil)
 	noAuth.rawGet("/v1/media/"+mediaID+"/chunks/0", http.StatusUnauthorized)
 
+	// An upload that is started and never completed still has chunks on disk,
+	// but no media_blobs row. It used to be unreachable by every cleanup path
+	// and outlived the vault itself (audit finding M2, issue #43).
+	orphanID := "fedcba9876543210fedcba9876543210"
+	c.raw(http.MethodPut, "/v1/media/"+orphanID+"/chunks/0", []byte{0x01, 0x02, 0x03}, http.StatusOK)
+	// Deleting it works even though the relay has no index row for it.
+	c.do(http.MethodDelete, "/v1/media/"+orphanID, nil, http.StatusNoContent, nil)
+	for _, k := range bl.Keys() {
+		if strings.Contains(k, orphanID) {
+			t.Fatalf("un-finalized chunk survived media deletion: %s", k)
+		}
+	}
+
+	// A second one, left in place, must be swept by account deletion below.
+	c.raw(http.MethodPut, "/v1/media/"+orphanID+"/chunks/0", []byte{0x01, 0x02, 0x03}, http.StatusOK)
+
 	// 8. Account deletion (the server half of mnemonic rotation): everything the
 	// owner ever stored — and the session that asked — must stop existing.
 	c.do(http.MethodDelete, "/v1/account", nil, http.StatusNoContent, nil)
+	if keys := bl.Keys(); len(keys) != 0 {
+		t.Fatalf("account deletion left ciphertext in object storage: %v", keys)
+	}
 	c.post("/v1/sync/pull", map[string]any{"since": 0}, http.StatusUnauthorized, nil) // session cascaded away
 	c.token = ""
 

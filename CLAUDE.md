@@ -58,7 +58,12 @@ project. Scaffolded so far:
   single-tenant/family relay — the mnemonic-is-the-account model has no signup to gate otherwise (e2e
   `TestApprovalFlow`; docs/API.md "Admin", docs/SECURITY.md §6.8). Reminders CRUD + scheduler (logs, no push transport yet). Media is **implemented
   server-relayed** (§12 resolved): `internal/blobs` streams client-encrypted ~1 MiB chunks to S3/MinIO
-  (minio-go, bucket auto-provisioned) under `/v1/media/*`; `503` when `S3_ENDPOINT` is unset. Push
+  (minio-go, bucket auto-provisioned) under `/v1/media/*`; `503` when `S3_ENDPOINT` is unset. Chunk
+  **cleanup is prefix-driven, not index-driven** (audit finding M2, issue #43): `blobs.Store.DeletePrefix`
+  sweeps `media/{owner}/{id}/` on media delete and `media/{owner}/` on vault wipe, because a chunk PUT
+  that is never `complete`d has no `media_blobs` row and index-driven cleanup could never reach it —
+  it outlived both media deletion and account deletion. Object storage, not the index, is the authority
+  on what exists; `store.ListOwnerMedia` was removed so the old pattern can't come back. Push
   delivery is still a stub. **Operator admin surface** (`/admin`, only when `ADMIN_TOKEN` is set,
   otherwise 404): embedded HTML dashboard + `GET /admin/stats` — per-vault storage footprints
   (truncated pseudonymous owner ids) and owner-less daily counters (`usage_daily`, migration 0002,

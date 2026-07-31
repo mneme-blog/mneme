@@ -28,6 +28,13 @@ const maxMediaChunks = 10_000
 // Random hex/base64url ids only — also keeps the derived S3 key path-safe.
 var mediaIDRe = regexp.MustCompile(`^[A-Za-z0-9_-]{16,64}$`)
 
+// ownerMediaPrefix is the key prefix covering EVERY media object of one owner.
+// The trailing slash matters: without it "media/abc" would also match the keys
+// of an owner id that merely starts with "abc".
+func ownerMediaPrefix(ownerID string) string {
+	return fmt.Sprintf("media/%s/", ownerID)
+}
+
 func mediaKeyPrefix(ownerID, mediaID string) string {
 	return fmt.Sprintf("media/%s/%s", ownerID, mediaID)
 }
@@ -161,12 +168,10 @@ func (s *Server) handleDeleteMedia(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	m, err := s.store.GetMedia(r.Context(), owner, mediaID)
-	if errors.Is(err, store.ErrNotFound) {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-	if err != nil {
+	// The index row is best-effort here: an object with chunks on disk but no
+	// index row (an upload that was never completed) must still be deletable,
+	// so a missing row is not a reason to skip the chunk sweep.
+	if _, err := s.store.GetMedia(r.Context(), owner, mediaID); err != nil && !errors.Is(err, store.ErrNotFound) {
 		writeError(w, http.StatusInternalServerError, "media lookup failed")
 		return
 	}
@@ -174,14 +179,15 @@ func (s *Server) handleDeleteMedia(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "media deletion failed")
 		return
 	}
-	// Chunk cleanup after the index row is gone: a failure here only orphans
-	// opaque ciphertext that nothing references anymore.
-	for n := 0; n < m.Chunks; n++ {
-		key := fmt.Sprintf("%s/%d", m.S3Key, n)
-		if err := s.blobs.Delete(r.Context(), key); err != nil &&
-			!errors.Is(err, blobs.ErrNotConfigured) && !errors.Is(err, blobs.ErrNotFound) {
-			log.Printf("media delete: orphaned chunk %s: %v", key, err)
-		}
+	// Sweep the object prefix rather than the indexed chunk range: chunks
+	// uploaded but never finalized have no index row, and keying cleanup off
+	// the index is exactly what used to leave them behind forever. The prefix
+	// embeds the authenticated owner, so this cannot reach another tenant.
+	if _, err := s.blobs.DeletePrefix(r.Context(), mediaKeyPrefix(owner, mediaID)+"/"); err != nil &&
+		!errors.Is(err, blobs.ErrNotConfigured) && !errors.Is(err, blobs.ErrNotFound) {
+		// A failure here only orphans opaque ciphertext that nothing
+		// references anymore; the client's deletion queue retries.
+		log.Printf("media delete: chunk sweep for %s failed: %v", mediaID, err)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
