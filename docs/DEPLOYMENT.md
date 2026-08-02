@@ -141,9 +141,17 @@ the server in readable form. Full API details in [API.md](./API.md#admin).
 ## Deploying a new version
 
 ```bash
-./deploy/prod.sh up -d --build    # rebuild images + rolling restart
+./deploy/prod.sh pull             # fetch the released images
+./deploy/prod.sh up -d            # rolling restart onto them
 ./deploy/prod.sh ps               # confirm healthy
 ```
+
+Building from your own working tree instead: `./deploy/prod.sh up -d --build`.
+
+You can also do this from the dashboard — one button, with an automatic pre-update backup and an
+automatic rollback if the new version doesn't come up. It needs a small root-owned agent installed on
+the host first (the relay itself has no business restarting the stack); see
+[MAINTENANCE.md → One-click updates](./MAINTENANCE.md#one-click-updates).
 
 Changed `SITE_ADDRESS`? `./deploy/prod.sh restart web` to pick it up. Stopping the stack while keeping
 all data is `./deploy/prod.sh down` (note: `down -v` **destroys the volumes** — that's your entire

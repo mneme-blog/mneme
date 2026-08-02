@@ -8,6 +8,11 @@ dist/
 !.env.example
 !.env.prod.example
 
+# Deployment state, written by the updater agent on the host — the installed
+# image pin and the request/state spool it shares with the relay.
+/deploy/version.env
+/deploy/updater/spool/
+
 # Go
 /server/journald
 *.test

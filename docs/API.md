@@ -41,6 +41,9 @@ the auth model.
 | GET | `/admin/backups/{name}` | 🔑 | download one archive (gzip tar) |
 | DELETE | `/admin/backups/{name}` | 🔑 | remove one stored archive |
 | POST | `/admin/backups/{name}/restore` | 🔑 | restore from an archive (requires `{"confirm":"restore"}` body) |
+| GET | `/admin/update` | 🔑 | one-click update state: versions, agent progress, rollback cost |
+| POST | `/admin/update` | 🔑 | apply a release (requires `{"confirm":"update","tag":"vX.Y.Z"}`) |
+| POST | `/admin/update/rollback` | 🔑 | return to the previous version (requires `{"confirm":"rollback"}`) |
 
 Errors are `{ "error": "message" }` with an appropriate status (400/401/404/500). CORS preflight
 (`OPTIONS`) is answered for configured origins (`CORS_ORIGINS`).
@@ -295,8 +298,8 @@ are unknowable — the mime type never reaches the relay.
 
 Requires `Authorization: Bearer <ADMIN_TOKEN>`. Reports the running build and — unless disabled —
 the newest published GitHub release, so the dashboard can show a "newer version available" banner.
-It is **informational only**: the relay never downloads or applies anything; upgrading is a host-side
-operation the operator runs (see deploy/README.md).
+The relay still never downloads or applies anything itself; when one-click updates are enabled,
+applying is a host-side agent's job (see `/admin/update` below).
 
 ```json
 {
@@ -307,7 +310,11 @@ operation the operator runs (see deploy/README.md).
   "name": "v0.3.0",
   "published_at": "2026-07-01T12:00:00Z",
   "notes": "…release body (truncated)…",
-  "checked_at": "2026-07-06T09:00:00Z"
+  "checked_at": "2026-07-06T09:00:00Z",
+  "schema": 4,
+  "latest_schema": 5,
+  "latest_min_safe_schema": 0,
+  "rollback_after_update": "fast"
 }
 ```
 
@@ -317,6 +324,11 @@ operation the operator runs (see deploy/README.md).
   last good result with an `error` field). This is the relay's **only** outbound call.
 - Set `UPDATE_CHECK=off` (or `false`/`0`) to disable it entirely for air-gapped deployments — the
   endpoint then returns `{"current": "…", "disabled": true}` and makes no outbound request.
+- `schema` is the migration head this build carries. `latest_schema` / `latest_min_safe_schema` come
+  from the newest release's `mneme-release.json` asset, and `rollback_after_update` says what undoing
+  that update would cost: `fast` (swap the image back), `deep` (needs the pre-update backup replayed),
+  or `unknown` (the release published no manifest — assume the worst). Absent when no release
+  comparison could be made.
 
 ### `DELETE /admin/vaults/{id}` → `204 No Content`
 
@@ -405,6 +417,58 @@ schema version is newer than the running binary is refused — upgrade `journald
 
 The **recommended** path for real DR is the CLI (`journald restore <archive>`): it runs against a
 stopped or freshly-provisioned server, which is the usual state when recovering. See README/§Commands.
+
+### One-click updates
+
+All admin-gated. Inert (`503` on the POSTs) unless `UPDATE_SPOOL_DIR` is set **and** the host-side
+updater agent is installed — see [MAINTENANCE.md](./MAINTENANCE.md#one-click-updates).
+
+The relay does not apply updates. These endpoints validate the request and write it to a spool
+directory shared with a root-owned agent on the host, which does the work and writes progress back.
+The relay holds no Docker access and no host access of any kind; the only thing it can express is
+"update to `<version tag>`" or "roll back", and the tag is validated against a strict
+`vMAJOR.MINOR.PATCH` pattern on both sides before it becomes part of an image reference.
+
+`GET /admin/update` → `200` — the panel's whole state:
+
+```json
+{
+  "enabled": true,
+  "version": { "current": "v0.2.1", "latest": "v0.3.0", "update_available": true, "…": "…" },
+  "state": {
+    "action": "update", "phase": "done", "running": false, "result": "success",
+    "from": "v0.2.0", "to": "v0.2.1", "installed": "v0.2.1", "previous": "v0.2.0",
+    "previous_schema": 3, "backup_archive": "mneme-20260801T120000Z.tar.gz",
+    "started_at": "2026-08-01T12:00:00Z", "finished_at": "2026-08-01T12:02:41Z"
+  },
+  "pending": null,
+  "log": ["2026-08-01T12:00:00Z updating v0.2.0 → v0.2.1", "…"],
+  "rollback": { "available": true, "target": "v0.2.0", "cost": "fast", "min_safe_schema": 0,
+                "backup_archive": "mneme-20260801T120000Z.tar.gz" }
+}
+```
+
+`phase` is written by the agent (`queued`, `backing-up`, `pulling`, `starting`, `verifying`,
+`rolling-back`, `rebuilding`, `restoring`, `done`, `failed`). `result` is `success`, `rolled_back`
+(the new version failed and the old one was restored automatically), or `failed` (both failed —
+an operator is needed). `rollback.cost` is derived from this build's breaking migrations versus the
+schema head recorded for the previous version.
+
+`POST /admin/update` → `202` — apply a release. Body **must** be `{"confirm":"update","tag":"v0.3.0"}`;
+the confirmation and the tag pattern are both enforced server-side (400 otherwise), `409` if a run is
+already in flight, `503` if the feature is off. The response is `{"status":"queued","request_id":"…"}`
+— it returns as soon as the request is written, because the process answering it is the one about to
+be replaced. Poll `GET /admin/update` for progress.
+
+`POST /admin/update/rollback` → `202` — return to the previously installed version. Body
+`{"confirm":"rollback"}`, or `{"confirm":"rollback","deep":true}` for the destructive variant that
+rebuilds the database at the old schema and replays the pre-update archive (needed only when the
+update contained a breaking migration; **everything written since the update is lost**). `400` if no
+previous version is recorded, or if a deep rollback is asked for with no archive on record.
+
+The rollback **target is not taken from the request** — it comes from the agent's own record of what
+it replaced. After a bad update the relay is the component that is wrong; it does not get to name
+where the stack goes.
 
 ---
 

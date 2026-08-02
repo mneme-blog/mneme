@@ -3,10 +3,6 @@ package store
 import (
 	"context"
 	"fmt"
-	"io/fs"
-	"sort"
-	"strconv"
-	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -16,6 +12,11 @@ import (
 // Migrate applies any not-yet-applied SQL migrations in version order. Forward-only:
 // migrations are never edited in place, only added. Each file runs in its own
 // transaction together with the bookkeeping insert, so a failure rolls back cleanly.
+//
+// The list comes from migrations.List, which also parses each file's mandatory
+// "-- rollback:" marker (see migrations/manifest.go). Sharing that one parser is
+// deliberate: a migration that forgot to declare its rollback safety fails here,
+// at startup, rather than reaching the updater as an unanswerable question.
 func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	if _, err := pool.Exec(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (
 		version    INT PRIMARY KEY,
@@ -24,17 +25,13 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return fmt.Errorf("ensure schema_migrations: %w", err)
 	}
 
-	files, err := fs.Glob(migrations.FS, "*.sql")
+	list, err := migrations.List()
 	if err != nil {
-		return fmt.Errorf("list migrations: %w", err)
+		return err
 	}
-	sort.Strings(files)
 
-	for _, name := range files {
-		version, err := versionOf(name)
-		if err != nil {
-			return err
-		}
+	for _, mig := range list {
+		name, version := mig.Name, mig.Version
 
 		var exists bool
 		if err := pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=$1)`, version).Scan(&exists); err != nil {
@@ -66,19 +63,4 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		}
 	}
 	return nil
-}
-
-// versionOf parses the leading integer of a filename like "0001_init.sql".
-func versionOf(name string) (int, error) {
-	base := name
-	if i := strings.IndexByte(base, '_'); i >= 0 {
-		base = base[:i]
-	} else {
-		base = strings.TrimSuffix(base, ".sql")
-	}
-	v, err := strconv.Atoi(base)
-	if err != nil {
-		return 0, fmt.Errorf("migration %q has no leading version number: %w", name, err)
-	}
-	return v, nil
 }

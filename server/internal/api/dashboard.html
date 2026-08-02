@@ -74,7 +74,8 @@
   footer { margin-top: 40px; color: var(--ink-soft); font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 14px; }
   .hidden { display: none; }
 
-  /* update-available banner — informational only; the operator upgrades on the host */
+  /* update-available banner — the headline. Applying happens in the panel below,
+     and only when a host-side updater agent is installed (UPDATE_SPOOL_DIR). */
   #update {
     margin-top: 18px; padding: 12px 16px; border-radius: 10px;
     background: var(--accent-soft); border: 1px solid var(--accent);
@@ -120,13 +121,35 @@
     border: 1px dashed var(--line); border-radius: 10px; padding: 14px 16px; }
   .bk-disabled code { font-family: "Spline Sans Mono", ui-monospace, monospace; color: var(--ink); }
 
+  /* version & updates */
+  .up-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .up-status { color: var(--ink-soft); font-size: 13px; }
+  .up-status.err { color: var(--accent); }
+  .up-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .up-vers { display: flex; gap: 22px; flex-wrap: wrap; margin: 12px 0 0; font-size: 13.5px; }
+  .up-vers .k { color: var(--ink-soft); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; display: block; }
+  .up-vers .v { font-family: "Spline Sans Mono", ui-monospace, monospace; }
+  .up-warn {
+    margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px;
+    color: #9a6a00; background: rgba(200,150,0,.1); border: 1px solid rgba(200,150,0,.4);
+  }
+  .up-log {
+    margin-top: 12px; max-height: 190px; overflow: auto; padding: 10px 12px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+    font-family: "Spline Sans Mono", ui-monospace, monospace; font-size: 12px;
+    color: var(--ink-soft); white-space: pre-wrap; word-break: break-word;
+  }
+  .up-run { color: var(--accent); font-weight: 600; }
+
   /* delete-confirmation modal */
-  #modalWrap, #restoreWrap {
+  #modalWrap, #restoreWrap, #updWrap {
     position: fixed; inset: 0; background: rgba(30, 22, 16, .4); backdrop-filter: blur(2px);
     display: flex; align-items: center; justify-content: center; z-index: 10;
   }
   /* The id rule above outranks .hidden (id > class specificity) — restate it. */
-  #modalWrap.hidden, #restoreWrap.hidden { display: none; }
+  #modalWrap.hidden, #restoreWrap.hidden, #updWrap.hidden { display: none; }
+  #modal label { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--ink-soft); margin-top: 10px; }
+  #modal label input { width: auto; margin: 2px 0 0; }
   #modal {
     background: var(--card); border: 1px solid var(--line); border-radius: 12px;
     padding: 22px 24px; width: min(420px, 88vw);
@@ -182,6 +205,50 @@
       <thead id="vaultHead"></thead>
       <tbody id="vaultRows"></tbody>
     </table>
+
+    <h2>Version &amp; updates</h2>
+    <div id="upDisabled" class="bk-disabled hidden">
+      One-click updates are off. The relay can report new releases but never applies one itself —
+      that needs the updater agent installed on the host (<code>deploy/updater/install.sh</code>),
+      which is what holds the privilege to restart the stack. Until then, update on the host with
+      <code>./deploy/prod.sh pull &amp;&amp; ./deploy/prod.sh up -d</code>.
+    </div>
+    <div id="upPanel" class="hidden">
+      <div class="up-head">
+        <span id="upStatus" class="up-status"></span>
+        <div class="up-acts">
+          <button id="upRollback" class="btn ghost" type="button">Roll back</button>
+          <button id="upApply" class="btn" type="button">Update</button>
+        </div>
+      </div>
+      <div class="up-vers">
+        <span><span class="k">Running</span><span class="v" id="upCur">—</span></span>
+        <span><span class="k">Latest release</span><span class="v" id="upLatestV">—</span></span>
+        <span><span class="k">Previous</span><span class="v" id="upPrev">—</span></span>
+        <span><span class="k">Pre-update backup</span><span class="v" id="upArchive">—</span></span>
+      </div>
+      <div id="upWarn" class="up-warn hidden"></div>
+      <div id="upLog" class="up-log hidden"></div>
+    </div>
+
+    <div id="updWrap" class="hidden">
+      <div id="modal">
+        <h3 id="updTitle">Update</h3>
+        <div id="updBody"></div>
+        <p>Type <strong class="mono" id="updWord">update</strong> to confirm:</p>
+        <input id="updInput" type="text" autocomplete="off" spellcheck="false">
+        <label id="updDeepRow" class="hidden">
+          <input id="updDeep" type="checkbox">
+          <span>Rebuild the database and restore the pre-update backup.
+            <strong>Everything written since the update is lost.</strong></span>
+        </label>
+        <div id="updErr"></div>
+        <div class="actions">
+          <button id="updCancel" type="button">Cancel</button>
+          <button id="updGo" type="button" disabled>Confirm</button>
+        </div>
+      </div>
+    </div>
 
     <h2>Backups &amp; recovery</h2>
     <div id="bkDisabled" class="bk-disabled hidden">
@@ -552,8 +619,20 @@
     $('chartPeak').textContent = 'peak ' + (isBytes ? fmtBytes(peak) : fmtNum(peak));
   }
 
-  // Running build vs. the latest GitHub release. Purely informational — reveals
-  // a banner when a newer release exists; never blocks or alters the dashboard.
+  // ── version & updates ──
+  //
+  // The relay applies nothing itself. "Update" queues a request for the host
+  // agent, which backs up first, pulls, restarts, health-gates, and rolls back
+  // on its own if the new version does not come up. Everything below is a view
+  // of the state that agent writes; the dashboard is never the thing in control.
+
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  let upState = { enabled: false, running: false, latest: '', cost: 'unknown', canRollback: false };
+
+  // Running build vs. the latest GitHub release. Always shown; the banner is
+  // informational even when the button below is unavailable.
   function renderVersion(v) {
     $('ver').textContent = v.current ? '· ' + v.current : '';
     const show = v && v.update_available && v.latest;
@@ -564,15 +643,184 @@
     $('upLink').href = v.html_url || '#';
   }
 
-  async function loadVersion() {
+  function renderUpdate(d) {
+    const v = d.version || {}, st = d.state || {}, rb = d.rollback || {};
+    renderVersion(v);
+
+    $('upDisabled').classList.toggle('hidden', !!d.enabled);
+    $('upPanel').classList.toggle('hidden', !d.enabled);
+    if (!d.enabled) return;
+
+    const running = !!st.running || st.phase === 'queued';
+    upState = {
+      enabled: true, running,
+      latest: v.latest || '',
+      cost: rb.cost || 'unknown',
+      canRollback: !!rb.available,
+      archive: rb.backup_archive || '',
+    };
+
+    $('upCur').textContent = st.installed || v.current || '—';
+    $('upLatestV').textContent = v.latest || (v.disabled ? 'check disabled' : '—');
+    $('upPrev').textContent = st.previous || '—';
+    $('upArchive').textContent = rb.backup_archive || '—';
+
+    // Status line: what the agent is doing, or how the last run ended.
+    let status = '', err = false;
+    if (running) {
+      status = 'in progress — ' + (st.phase || 'working') +
+        (st.to ? ' (→ ' + st.to + ')' : '') + ' · do not restart the host';
+    } else if (st.result === 'success') {
+      status = 'last run: ' + (st.action || 'update') + ' to ' + (st.to || '?') + ' succeeded' +
+        (st.finished_at ? ' · ' + new Date(st.finished_at).toLocaleString() : '');
+    } else if (st.result === 'rolled_back') {
+      status = 'last run was rolled back automatically: ' + (st.error || 'the new version did not start');
+      err = true;
+    } else if (st.result === 'failed') {
+      status = 'last run FAILED: ' + (st.error || 'see the log below');
+      err = true;
+    } else if (d.error) {
+      status = 'spool unreadable: ' + d.error + ' — is the updater agent installed?';
+      err = true;
+    } else {
+      status = 'idle';
+    }
+    $('upStatus').className = 'up-status' + (err ? ' err' : '') + (running ? ' up-run' : '');
+    $('upStatus').textContent = status;
+
+    // Buttons. Nothing is clickable while a run is in flight — the agent rejects
+    // a second request anyway, but a disabled button is a clearer answer.
+    const canUpdate = !running && v.update_available && v.latest;
+    $('upApply').disabled = !canUpdate;
+    $('upApply').textContent = running ? 'Working…'
+      : v.update_available && v.latest ? 'Update to ' + v.latest
+      : 'Up to date';
+    $('upRollback').disabled = running || !rb.available;
+    $('upRollback').textContent = rb.available ? 'Roll back to ' + rb.target : 'Roll back';
+
+    // The honest warning: say up front when taking this update cannot be undone
+    // by an image swap, because that is exactly when people want to know.
+    let warn = '';
+    if (canUpdate && v.rollback_after_update === 'deep') {
+      warn = '<strong>' + esc(v.latest) + ' contains a schema change that cannot be undone by ' +
+        'switching the image back.</strong> Rolling back afterwards would mean rebuilding the ' +
+        'database from the pre-update backup, losing anything written in between. A backup is ' +
+        'taken automatically before the update starts.';
+    } else if (canUpdate && v.rollback_after_update === 'unknown') {
+      warn = esc(v.latest) + ' published no schema manifest, so the cost of rolling back cannot be ' +
+        'determined in advance. Assume it may need the pre-update backup.';
+    }
+    $('upWarn').innerHTML = warn;
+    $('upWarn').classList.toggle('hidden', !warn);
+
+    const log = d.log || [];
+    $('upLog').textContent = log.join('\n');
+    $('upLog').classList.toggle('hidden', log.length === 0);
+    if (running) $('upLog').scrollTop = $('upLog').scrollHeight;
+  }
+
+  async function loadUpdate() {
     const token = sessionStorage.getItem(KEY);
     if (!token) return;
     try {
-      const res = await fetch(API + '/version', { headers: { Authorization: 'Bearer ' + token } });
-      if (!res.ok) return; // non-fatal: leave the banner hidden
-      renderVersion(await res.json());
-    } catch { /* offline / air-gapped — no banner */ }
+      const res = await fetch(API + '/update', { headers: authHeaders() });
+      if (!res.ok) return; // non-fatal: panel keeps its last state
+      const d = await res.json();
+      renderUpdate(d);
+      // While the agent works, poll fast enough to feel live. The relay itself
+      // restarts mid-run, so fetches WILL fail for a stretch — that is expected,
+      // and the catch above keeps the panel from flashing an error.
+      if (upState.running) scheduleUpdatePoll();
+    } catch { /* relay is restarting mid-update — keep polling */
+      if (upState.running) scheduleUpdatePoll();
+    }
   }
+
+  let upPollTimer = null;
+  function scheduleUpdatePoll() {
+    clearTimeout(upPollTimer);
+    upPollTimer = setTimeout(loadUpdate, 3000);
+  }
+
+  // One modal for both actions; `updAction` says which is being confirmed.
+  let updAction = null;
+  function openUpdateModal(action) {
+    updAction = action;
+    const isUpdate = action === 'update';
+    $('updTitle').textContent = isUpdate
+      ? 'Update to ' + upState.latest + '?'
+      : 'Roll back to the previous version?';
+    $('updBody').innerHTML = isUpdate
+      ? '<p>The host agent will take a full backup, pull ' + esc(upState.latest) + ', restart the ' +
+        'relay and the web app, and wait for them to report healthy. If they do not, it puts the ' +
+        'current version back automatically.</p>' +
+        '<p>The stack is briefly unavailable while it restarts. Devices keep working offline and ' +
+        'sync when it returns — the local copy on each device is the source of truth.</p>'
+      : '<p>Switches the stack back to the previously installed version. Database migrations are ' +
+        'forward-only, so this works when the newer release only added to the schema.</p>' +
+        (upState.cost === 'deep'
+          ? '<p><strong>This update changed the schema in a way the older version cannot read.</strong> ' +
+            'A plain rollback will not come up; tick the box below to rebuild the database from the ' +
+            'pre-update backup instead.</p>'
+          : upState.cost === 'unknown'
+            ? '<p>The schema of the previous version was not recorded, so a plain rollback may fail. ' +
+              'If it does, the pre-update backup is still on the relay.</p>'
+            : '');
+    $('updWord').textContent = action;
+    $('updInput').placeholder = action;
+    $('updInput').value = '';
+    $('updErr').textContent = '';
+    $('updGo').disabled = true;
+    $('updGo').textContent = isUpdate ? 'Update' : 'Roll back';
+    // The destructive option is only offered where it is the actual remedy.
+    const offerDeep = !isUpdate && upState.cost !== 'fast' && upState.archive;
+    $('updDeepRow').classList.toggle('hidden', !offerDeep);
+    $('updDeep').checked = false;
+    $('updWrap').classList.remove('hidden');
+    $('updInput').focus();
+  }
+  function closeUpdateModal() {
+    updAction = null;
+    $('updWrap').classList.add('hidden');
+  }
+
+  async function confirmUpdate() {
+    if (!updAction || $('updInput').value.trim() !== updAction) return;
+    const isUpdate = updAction === 'update';
+    const path = isUpdate ? '/update' : '/update/rollback';
+    const body = isUpdate
+      ? { confirm: 'update', tag: upState.latest }
+      : { confirm: 'rollback', deep: $('updDeep').checked };
+    $('updGo').disabled = true;
+    $('updErr').textContent = 'queueing…';
+    try {
+      const res = await fetch(API + path, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body),
+      });
+      if (!res.ok && res.status !== 202) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.error || ('HTTP ' + res.status));
+      }
+      closeUpdateModal();
+      upState.running = true;
+      loadUpdate();
+    } catch (e) {
+      $('updErr').textContent = 'failed: ' + e.message;
+      $('updGo').disabled = false;
+    }
+  }
+
+  $('upApply').addEventListener('click', () => openUpdateModal('update'));
+  $('upRollback').addEventListener('click', () => openUpdateModal('rollback'));
+  $('updCancel').addEventListener('click', closeUpdateModal);
+  $('updGo').addEventListener('click', confirmUpdate);
+  $('updInput').addEventListener('input', () => {
+    $('updGo').disabled = $('updInput').value.trim() !== updAction;
+  });
+  $('updInput').addEventListener('keydown', e => { if (e.key === 'Enter') confirmUpdate(); });
+  $('updWrap').addEventListener('click', e => { if (e.target === $('updWrap')) closeUpdateModal(); });
 
   async function load() {
     const token = sessionStorage.getItem(KEY);
@@ -587,7 +835,7 @@
       $('status').className = '';
       $('status').textContent = 'updated ' + new Date().toLocaleTimeString();
       loadBackups();
-      loadVersion();
+      loadUpdate();
     } catch (e) {
       $('status').className = 'err';
       $('status').textContent = 'fetch failed: ' + e.message;

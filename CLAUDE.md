@@ -97,6 +97,29 @@ project. Scaffolded so far:
   / `list-backups`) — the CLI is the recommended DR path (runs against a stopped/fresh server). Tests:
   `internal/backup/backup_test.go` (fakes, no DB) + `e2e/backup_e2e_test.go` (real Postgres round-trip).
   docs/API.md "Backups & disaster recovery", docs/SECURITY.md §6.14.
+  **One-click updates** (`/admin` → "Version & updates"): the dashboard can apply a release and roll
+  one back. The relay **cannot update itself** — it is PID 1 in the container being replaced, and
+  giving it the Docker socket would put root-equivalent host access behind an HTTP endpoint inside the
+  stack it is meant to be the least-privileged part of. So it writes a request into a spool directory
+  (`internal/deploy`, `UPDATE_SPOOL_DIR`, off by default) and a **root-owned host agent**
+  (`deploy/updater/`: systemd path unit → `mneme-updater.sh`, installed by `install.sh`) does the
+  work: backup → pin `deploy/version.env` → pull → `up -d --no-build` → health gate → **automatic
+  rollback** if the new version never reports healthy. The health gate is the container `HEALTHCHECK`
+  running `journald healthcheck` → `/readyz` (a subcommand because distroless has no curl), which only
+  passes once migrations applied *and* Postgres is reachable — so a release that cannot migrate is
+  caught rather than left serving errors. The relay's request vocabulary is deliberately two verbs
+  (`update <tag>` / `rollback`) with the tag validated against a strict semver pattern **on both
+  sides**; a compromised relay can request a downgrade to a published release and nothing else
+  (docs/SECURITY.md §6.17). Rollback honesty comes from a **schema contract**: every migration must
+  declare `-- rollback: safe|breaking` (parsed by `migrations/manifest.go`, shared with
+  `store.Migrate` so an undeclared migration fails at startup, enforced by a test), the release
+  workflow publishes it as the release's `mneme-release.json` asset via `journald schema-info`, and
+  the relay reads it to say **before** an update whether undoing it is an image swap (`fast`) or needs
+  the pre-update archive replayed into a rebuilt database (`deep`, destructive — its own tick-box).
+  Prod compose is now **image-based** (`ghcr.io/plasticparticle/mneme-{server,web}`, `build:` kept
+  alongside so `--build` still works) and the release workflow publishes the **web** image too, since
+  pulling only the relay would leave a split-version deployment. Caveat that is easy to miss: a
+  server-side rollback does not undo **client-side** migrations — device OPFS DBs are forward-only too.
 - **Infra** — `docker-compose.yml` (Postgres + MinIO + server, `backups` volume), `server/Dockerfile`, `.devcontainer/`.
 - **Content-Security-Policy** (§6's named XSS mitigation; audit finding H2, issue #41) — defined ONCE in
   `apps/client/csp.js` (plain JS) and shipped twice: `vite.config.ts` injects it as a `<meta http-equiv>`

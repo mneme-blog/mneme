@@ -6,7 +6,7 @@
 #   ./deploy/prod.sh logs -f server     # follow relay logs
 #   ./deploy/prod.sh down               # stop (volumes/data survive)
 #
-# See deploy/README.md for the full runbook (backups, restore, TLS).
+# See docs/MAINTENANCE.md for the full runbook (backups, restore, TLS).
 name: mneme-prod
 
 services:
@@ -39,6 +39,15 @@ services:
       retries: 10
 
   server:
+    # Released images are the default so the stack can be moved between versions
+    # by pulling, which is what makes the /admin "update" button possible. The
+    # tag is pinned in deploy/version.env, rewritten by the updater agent on
+    # every apply and rollback; unset, it falls back to :latest.
+    #
+    # `build:` stays alongside it: `./deploy/prod.sh up -d --build` still builds
+    # from the working tree and tags the result as this image name, so a source
+    # deployment works exactly as before. The updater always passes --no-build.
+    image: ${MNEME_SERVER_IMAGE:-ghcr.io/plasticparticle/mneme-server:latest}
     build:
       context: .
       dockerfile: server/Dockerfile
@@ -47,6 +56,15 @@ services:
         # MNEME_VERSION=$(git describe --tags --always); falls back to "dev".
         VERSION: "${MNEME_VERSION:-dev}"
     restart: unless-stopped
+    # The updater's health gate reads this. `journald healthcheck` probes /readyz,
+    # which is only OK once migrations have run and Postgres is reachable — so a
+    # release that cannot migrate is detected as unhealthy and rolled back.
+    healthcheck:
+      test: ["CMD", "/journald", "healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     environment:
       DATABASE_URL: postgres://journal:${POSTGRES_PASSWORD}@postgres:5432/journal?sslmode=disable
       S3_ENDPOINT: http://minio:9000
@@ -65,6 +83,12 @@ services:
       REQUIRE_APPROVAL: ${REQUIRE_APPROVAL:-false}
       # Dashboard update check (GitHub releases); set off for air-gapped hosts.
       UPDATE_CHECK: ${UPDATE_CHECK:-on}
+      # One-click updates from /admin. Empty (the default) = the dashboard reports
+      # new releases but offers no button. Set to the container spool path below
+      # ONLY after installing the host agent (deploy/updater/install.sh does both).
+      # The relay never gains host access: it writes a request here, and the
+      # root-owned agent on the host is what acts on it.
+      UPDATE_SPOOL_DIR: ${UPDATE_SPOOL_DIR:-}
       # Per-IP throttle on the unauthenticated auth endpoints (0 disables).
       RATE_LIMIT_AUTH_PER_MINUTE: ${RATE_LIMIT_AUTH_PER_MINUTE:-30}
       RATE_LIMIT_AUTH_BURST: ${RATE_LIMIT_AUTH_BURST:-15}
@@ -73,18 +97,25 @@ services:
       TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-true}
       # Per-owner storage cap in bytes (entries + finalized media). 0 = unlimited.
       QUOTA_BYTES_PER_OWNER: ${QUOTA_BYTES_PER_OWNER:-0}
-      # Rolling encrypted-blob archives of every vault (see deploy/README.md).
+      # Rolling encrypted-blob archives of every vault (see docs/MAINTENANCE.md).
       BACKUP_DIR: /backups
       BACKUP_INTERVAL: ${BACKUP_INTERVAL:-24h}
       BACKUP_KEEP: ${BACKUP_KEEP:-14}
     volumes:
       # Bind mount on the host so archives are trivial to copy off-box.
       - ${BACKUP_HOST_DIR:?set in .env.prod}:/backups
+      # The update spool, shared with the host agent. Mounted unconditionally
+      # (compose cannot mount conditionally) but inert until UPDATE_SPOOL_DIR is
+      # set above — an unused spool directory costs nothing.
+      - ${UPDATE_SPOOL_HOST_DIR:-./deploy/updater/spool}:/var/lib/mneme/spool
     depends_on:
       postgres: { condition: service_healthy }
       minio: { condition: service_started }
 
   web:
+    # Same story as `server` above: released image by default, still buildable
+    # from source with `--build`.
+    image: ${MNEME_WEB_IMAGE:-ghcr.io/plasticparticle/mneme-web:latest}
     build:
       context: .
       dockerfile: deploy/web/Dockerfile

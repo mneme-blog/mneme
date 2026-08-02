@@ -48,7 +48,7 @@ func fakeGitHub(t *testing.T, tag, htmlURL string) (*httptest.Server, *int) {
 }
 
 func newTestChecker(current string, enabled bool, apiURL string) *updateChecker {
-	u := newUpdateChecker(current, enabled)
+	u := newUpdateChecker(current, 0, enabled)
 	u.apiURL = apiURL
 	u.ttl = 0 // always refresh so each test call reflects the current server state
 	return u
@@ -95,7 +95,7 @@ func TestUpdateCheckerDevBuild(t *testing.T) {
 
 func TestUpdateCheckerDisabledMakesNoCall(t *testing.T) {
 	gh, hits := fakeGitHub(t, "v9.9.9", "https://example/x")
-	u := newUpdateChecker("v0.1.0", false)
+	u := newUpdateChecker("v0.1.0", 0, false)
 	u.apiURL = gh.URL
 	info := u.info(context.Background())
 	if !info.Disabled || info.Latest != "" {
@@ -138,7 +138,7 @@ func TestUpdateCheckerErrorFallsBackToLastGood(t *testing.T) {
 
 func TestUpdateCheckerCachesWithinTTL(t *testing.T) {
 	gh, hits := fakeGitHub(t, "v9.9.9", "https://example/x")
-	u := newUpdateChecker("v0.1.0", true)
+	u := newUpdateChecker("v0.1.0", 0, true)
 	u.apiURL = gh.URL
 	u.ttl = time.Hour
 	for i := 0; i < 3; i++ {

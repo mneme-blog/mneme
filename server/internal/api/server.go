@@ -12,7 +12,9 @@ import (
 	"github.com/plasticparticle/mneme/server/internal/backup"
 	"github.com/plasticparticle/mneme/server/internal/blobs"
 	"github.com/plasticparticle/mneme/server/internal/config"
+	"github.com/plasticparticle/mneme/server/internal/deploy"
 	"github.com/plasticparticle/mneme/server/internal/store"
+	"github.com/plasticparticle/mneme/server/migrations"
 )
 
 type Server struct {
@@ -22,6 +24,9 @@ type Server struct {
 	metrics *metrics
 	backup  *backup.Service
 	updates *updateChecker
+	// spool hands one-click update requests to the host agent. Disabled (and the
+	// endpoints inert) unless UPDATE_SPOOL_DIR is set.
+	spool *deploy.Spool
 	// authLimiter throttles the unauthenticated endpoints — the only way into
 	// the relay, and so the only place an anonymous caller can cost anything.
 	authLimiter *rateLimiter
@@ -31,13 +36,22 @@ func New(st *store.Store, bl blobs.Store, cfg config.Config) *Server {
 	if bl == nil {
 		bl = blobs.Disabled{}
 	}
+	// The compiled-in schema head feeds the update check's rollback estimate. A
+	// parse failure here would mean a migration is missing its rollback marker,
+	// which store.Migrate already refuses to start with; degrade to 0 ("unknown")
+	// rather than making the constructor fallible.
+	schema := 0
+	if m, err := migrations.Describe(); err == nil {
+		schema = m.Schema
+	}
 	return &Server{
 		store:       st,
 		blobs:       bl,
 		cfg:         cfg,
 		metrics:     newMetrics(),
 		backup:      backup.NewService(cfg.Backup.Dir, cfg.Backup.Keep, st, bl),
-		updates:     newUpdateChecker(cfg.Version, cfg.UpdateCheck),
+		updates:     newUpdateChecker(cfg.Version, schema, cfg.UpdateCheck),
+		spool:       deploy.NewSpool(cfg.UpdateSpoolDir),
 		authLimiter: newRateLimiter(cfg.RateLimit.AuthPerMinute, cfg.RateLimit.AuthBurst),
 	}
 }
@@ -89,6 +103,9 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("GET /admin/backups/{name}", s.adminAuth(http.HandlerFunc(s.handleAdminDownloadBackup)))
 	mux.Handle("DELETE /admin/backups/{name}", s.adminAuth(http.HandlerFunc(s.handleAdminDeleteBackup)))
 	mux.Handle("POST /admin/backups/{name}/restore", s.adminAuth(http.HandlerFunc(s.handleAdminRestoreBackup)))
+	mux.Handle("GET /admin/update", s.adminAuth(http.HandlerFunc(s.handleAdminUpdateStatus)))
+	mux.Handle("POST /admin/update", s.adminAuth(http.HandlerFunc(s.handleAdminUpdate)))
+	mux.Handle("POST /admin/update/rollback", s.adminAuth(http.HandlerFunc(s.handleAdminRollback)))
 
 	return s.cors(s.logging(mux))
 }

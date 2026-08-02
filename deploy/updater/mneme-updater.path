@@ -1,0 +1,18 @@
+# Wakes the updater when the relay drops a request into the spool.
+#
+# A path unit rather than a timer: updates are operator-initiated, so polling
+# would just burn wakeups to notice nothing. PathExists fires as soon as the file
+# appears (the relay writes it with a rename, so it is never seen half-written)
+# and re-arms once the agent has consumed it.
+
+[Unit]
+Description=Watch for Mneme update requests
+Documentation=https://github.com/plasticparticle/mneme/blob/main/docs/MAINTENANCE.md
+
+[Path]
+# Must match UPDATE_SPOOL_HOST_DIR in .env.prod. install.sh writes both.
+PathExists=/var/lib/mneme/spool/request.json
+Unit=mneme-updater.service
+
+[Install]
+WantedBy=multi-user.target

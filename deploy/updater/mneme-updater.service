@@ -1,0 +1,38 @@
+# Applies one Mneme update request, then exits. Triggered by mneme-updater.path.
+#
+# This unit is root-owned and root-run: it drives docker compose, which is
+# root-equivalent on the host. That privilege is exactly why it lives here and
+# not in a container — see the header of mneme-updater.sh.
+
+[Unit]
+Description=Apply a Mneme update
+Documentation=https://github.com/plasticparticle/mneme/blob/main/docs/MAINTENANCE.md
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/mneme-updater.conf
+ExecStart=/usr/local/lib/mneme/mneme-updater.sh
+
+# An update pulls images, restarts the stack, and health-gates the result. The
+# script enforces its own HEALTH_TIMEOUT; this is the outer backstop for a run
+# that wedges somewhere systemd can see and the script cannot.
+TimeoutStartSec=3600
+
+# Deliberately NOT Restart=on-failure. A failed update has already rolled itself
+# back and written why; restarting would re-run the last request against a stack
+# that is now in a different state. Recovery is an operator decision.
+
+# The agent needs the Docker socket and the checkout, and nothing else.
+NoNewPrivileges=false
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+StandardOutput=journal
+StandardError=journal

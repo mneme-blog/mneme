@@ -61,6 +61,10 @@ func dispatch(args []string) error {
 		return cmdRestore(args)
 	case "list-backups":
 		return cmdListBackups(args)
+	case "healthcheck":
+		return cmdHealthcheck(args)
+	case "schema-info":
+		return cmdSchemaInfo(args)
 	case "version", "--version", "-v":
 		fmt.Println(version)
 		return nil
@@ -82,6 +86,9 @@ usage:
   journald restore ARCHIVE [--yes]
                                 replace ALL relay data from ARCHIVE (destructive)
   journald list-backups         list archives in BACKUP_DIR
+  journald healthcheck          probe /readyz on the local listener (container HEALTHCHECK)
+  journald schema-info [--out PATH]
+                                print this build's migration/rollback manifest as JSON
   journald version              print the build version
 
 Backups archive every vault's opaque ciphertext + media chunks. They contain no
