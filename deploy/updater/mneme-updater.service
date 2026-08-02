@@ -25,8 +25,15 @@ TimeoutStartSec=3600
 # that is now in a different state. Recovery is an operator decision.
 
 # The agent needs the Docker socket and the checkout, and nothing else.
+#
+# ProtectHome=tmpfs, not true: both hide /home and /root, but "true" makes them
+# inaccessible outright, so nothing can bind a path back in. The checkout is
+# wherever the operator cloned it, and a home directory is the common case —
+# install.sh writes a drop-in with BindPaths= for REPO_DIR and SPOOL_DIR when
+# they live there, which only works on top of tmpfs. Every other home stays
+# empty. Do not tighten this back to "true" without moving the checkout.
 NoNewPrivileges=false
-ProtectHome=true
+ProtectHome=tmpfs
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true

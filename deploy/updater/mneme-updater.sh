@@ -128,6 +128,27 @@ on_error() {
 
 compose() { (cd "$REPO_DIR" && "$COMPOSE" "$@"); }
 
+# The unit runs with ProtectHome=tmpfs, so /home and /root are empty unless
+# install.sh bound the checkout back in. Without this check that misconfiguration
+# surfaces as `cd: <REPO_DIR>: No such file or directory` from whichever compose
+# call happens to run first — while current_version() has already swallowed the
+# same failure and reported "unknown". Fail up front, and say what it means.
+preflight() {
+  local problem=""
+  if [[ ! -d $REPO_DIR ]]; then
+    problem="REPO_DIR ($REPO_DIR) is not reachable from this service"
+  elif [[ ! -x $COMPOSE ]]; then
+    problem="$COMPOSE is missing or not executable"
+  elif [[ ! -d $SPOOL_DIR ]]; then
+    problem="SPOOL_DIR ($SPOOL_DIR) is not reachable from this service"
+  fi
+  [[ -z $problem ]] && return 0
+
+  log "preflight failed: $problem"
+  log "if that path does exist on the host, the unit's sandbox is hiding it — re-run deploy/updater/install.sh, which binds the checkout and spool back in when they live under /home or /root"
+  return 1
+}
+
 # The version currently pinned, i.e. what is running now.
 current_version() {
   if [[ -f $VERSION_ENV ]]; then
@@ -400,7 +421,14 @@ deep_rollback() {
 main() {
   mkdir -p "$SPOOL_DIR"
   rotate_log
-  [[ -f $REQUEST_FILE ]] || exit 0
+
+  # Started by hand with nothing to apply — install.sh does exactly this to prove
+  # the service can reach the checkout through its sandbox before the operator
+  # finds out during a real update.
+  if [[ ! -f $REQUEST_FILE ]]; then
+    preflight || exit 1
+    exit 0
+  fi
 
   for tool in docker jq curl; do
     command -v "$tool" >/dev/null || { log "missing required tool: $tool"; exit 1; }
@@ -426,6 +454,13 @@ main() {
   S_STARTED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
   load_state
+
+  # After consuming the request, never before: a preflight failure that left the
+  # request in place would have the path unit re-trigger this run forever.
+  preflight || {
+    write_state failed false failed "the updater cannot reach the deployment directory; nothing was changed (see the log)"
+    exit 1
+  }
 
   # The action functions write their own precise failure state before returning
   # non-zero, so they must not reach the ERR trap — it would overwrite a specific

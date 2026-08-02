@@ -110,7 +110,7 @@ STUB
 run_agent() {
   CTL="$WORK/ctl" \
   MNEME_UPDATER_CONF=/dev/null \
-  REPO_DIR="$WORK/repo" \
+  REPO_DIR="${REPO_DIR_OVERRIDE:-$WORK/repo}" \
   SPOOL_DIR="$WORK/spool" \
   HEALTH_TIMEOUT=6 \
   SITE_PROBE_URL="" \
@@ -263,6 +263,29 @@ request '{"id":"r8","action":"update","tag":"v0.3.0"}'
 check "the second run backs off cleanly" "exit=0" "$(cat "$WORK/locked.out")"
 if [[ -f $WORK/spool/request.json ]]; then ok "left the request for the holder"
   else bad "consumed the request while locked out"; fi
+
+echo
+echo "an unreachable deployment directory fails the preflight, not the backup"
+# The unit hides /home and /root (ProtectHome=tmpfs); if install.sh has not bound
+# the checkout back in, REPO_DIR simply is not there. That used to surface three
+# steps in, as a `cd: ...: No such file or directory` from the backup, after
+# current_version() had already swallowed the same failure and logged "unknown".
+setup_scenario
+request '{"id":"r9","action":"update","tag":"v0.3.0"}'
+REPO_DIR_OVERRIDE="$WORK/not-mounted" run_agent || true
+check "result is failed" failed "$(state .result)"
+if grep -q "preflight failed" "$WORK/spool/update.log"; then ok "named the real problem"
+  else bad "did not log a preflight failure"; fi
+if ! called backup; then ok "never reached the backup"
+  else bad "still tried to take a backup"; fi
+if [[ ! -f $WORK/spool/request.json ]]; then ok "consumed the request (no retrigger loop)"
+  else bad "left the request for the path unit to fire again"; fi
+
+echo "the preflight alone is what a request-less run does (install.sh self-test)"
+setup_scenario
+run_agent && ok "passes when the checkout is reachable" || bad "failed on a good checkout"
+REPO_DIR_OVERRIDE="$WORK/not-mounted" run_agent && bad "passed with no checkout" \
+  || ok "fails when the checkout is missing"
 
 echo
 printf '%d passed, %d failed\n' "$PASS" "$FAIL"

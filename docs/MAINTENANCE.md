@@ -183,6 +183,14 @@ Requires `docker`, `jq`, `curl`, `flock`, and systemd on the host. Until those t
 dashboard still reports new releases and simply offers no button — installing the agent does not
 silently switch the feature on.
 
+The installer records where your checkout is, and the service is sandboxed: it runs with
+`ProtectHome=tmpfs`, so `/home` and `/root` are empty as far as it is concerned. If the checkout (or
+the spool) lives in a home directory — the ordinary homelab case — the installer writes a drop-in at
+`/etc/systemd/system/mneme-updater.service.d/10-paths.conf` binding exactly those two paths back in,
+and nothing else. **Move the checkout and you must re-run the installer**, or the agent will find an
+empty directory where the deployment used to be. It checks this at install time by starting the
+service once with an empty spool, which runs the agent's preflight and exits.
+
 Watch a run: `journalctl -u mneme-updater.service -f`, or the log tail shown in the dashboard panel.
 Remove it again with `sudo ./deploy/updater/install.sh --uninstall`.
 
@@ -269,6 +277,7 @@ printf 'MNEME_VERSION=v0.2.1\nMNEME_SERVER_IMAGE=ghcr.io/plasticparticle/mneme-s
 | New relay endpoint 404s after a deploy | Compose reused a stale image. Force it: `./deploy/prod.sh up -d --build server`. |
 | `/admin` returns 404 | Intended when `ADMIN_TOKEN` is empty. Set it in `.env.prod` and redeploy to enable the surface. |
 | A client feels haunted after a dependency bump | A long-lived dev Vite server can go stale; restart it against a cold server before chasing ghosts. |
+| An update fails with `preflight failed: REPO_DIR … is not reachable` (older builds: `cd: …: No such file or directory`) | The updater's systemd sandbox cannot see the checkout — it was moved, or the install predates the path drop-in. Re-run `sudo ./deploy/updater/install.sh`. Nothing was changed by the failed run. |
 
 ---
 
