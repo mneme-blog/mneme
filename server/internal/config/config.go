@@ -22,6 +22,14 @@ type Config struct {
 	AdminToken  string // bearer token for /admin; empty disables the admin surface entirely
 	Version     string // build identifier, set by main (not from the environment)
 	UpdateCheck bool   // whether the admin surface may query GitHub for a newer release
+	// UpdateSpoolDir enables one-click updates from /admin. It is the directory
+	// the relay shares with the host-side updater agent (deploy/updater): the
+	// relay writes an update request there, the agent applies it and writes its
+	// progress back. Empty (the default) means the dashboard can report that a
+	// newer release exists but offers no button — which is the correct default,
+	// because applying an update requires an agent the operator installed on the
+	// host on purpose. The relay never gains any host access of its own.
+	UpdateSpoolDir string
 	// RequireApproval gates new vaults behind operator approval. Off by default
 	// (open trust-on-first-use). When on, a newly registered owner is 'pending'
 	// and cannot authenticate until approved in /admin; owners already on the
@@ -89,6 +97,7 @@ func Load() Config {
 		AdminToken:  env("ADMIN_TOKEN", ""),
 		// Version is stamped in by main via -ldflags; not an env value.
 		UpdateCheck:       envBool("UPDATE_CHECK", true),
+		UpdateSpoolDir:    env("UPDATE_SPOOL_DIR", ""),
 		RequireApproval:   envBool("REQUIRE_APPROVAL", false),
 		TrustProxyHeaders: envBool("TRUST_PROXY_HEADERS", false),
 		RateLimit: RateLimitConfig{

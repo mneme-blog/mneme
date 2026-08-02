@@ -20,5 +20,8 @@
 -- device already bound to the owner (device keys are seed-derived, so an honest
 -- client always presents one and an attacker cannot). After that first upgrade
 -- the column is set and the strict check applies.
+--
+-- rollback: safe — one nullable column. Rolling the binary back past this
+-- re-opens the binding hole it closed, but it does not corrupt anything.
 ALTER TABLE owners
     ADD COLUMN owner_sign_pubkey BYTEA;

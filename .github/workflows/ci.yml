@@ -50,6 +50,18 @@ jobs:
         env:
           TEST_DATABASE_URL: postgres://journal:journal_dev@localhost:5432/journal?sslmode=disable
 
+  # The host-side updater agent restarts production stacks, so it gets exercised
+  # here against stubbed docker/compose rather than only ever in anger. Covers
+  # the automatic-rollback path, which is the whole reason the feature is safe.
+  updater:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: shellcheck
+        run: shellcheck deploy/updater/mneme-updater.sh deploy/updater/install.sh deploy/prod.sh
+      - name: updater regression tests
+        run: ./deploy/updater/updater-test.sh
+
   client:
     runs-on: ubuntu-latest
     steps:

@@ -418,6 +418,39 @@ resurrect a stale credential. Restore is destructive (it replaces all relay data
 a typed `{"confirm":"restore"}` on the HTTP path and a stdin prompt on the CLI; archive names on the
 HTTP download/restore/delete paths are validated against a strict regex (the path-traversal boundary).
 
+### 6.17 One-click updates — ⚠️ Accepted (opt-in privilege escalation, deliberately bounded)
+The `/admin` dashboard can apply a release (`UPDATE_SPOOL_DIR` + the host agent in `deploy/updater/`).
+State it plainly: **with this enabled, whoever holds `ADMIN_TOKEN` can cause the host to pull and run
+new code and restart the stack.** That is a privilege escalation from "read aggregate stats" to
+"replace the running software", and it is the point of the feature — but it is why the feature is
+**off by default and requires a deliberate host-side install**, not merely a config flag.
+
+The escalation is bounded by construction rather than by trust in the relay:
+
+- **The relay holds no host access.** No Docker socket is mounted into any container. The relay writes
+  a JSON request into a shared directory; a root-owned systemd unit on the host reads it. If the relay
+  is fully compromised, the attacker gains the ability to *ask*, not to *act*.
+- **The request vocabulary is two verbs.** `update` (with a version tag) and `rollback`. No image,
+  registry, path, command, or flag is expressible. The tag is validated against a strict
+  `^v[0-9]+\.[0-9]+\.[0-9]+…$` pattern on **both** sides — the agent re-validates rather than trusting
+  that the relay did — and is pasted into a fixed image reference against a fixed registry. So the
+  worst a compromised relay achieves is a **downgrade to a published Mneme release**, which is a real
+  attack (it can re-open a fixed vulnerability, e.g. rolling back past 0004's registration binding)
+  but not arbitrary code execution.
+- **Both actions need a typed confirmation** enforced server-side, so a stray authenticated request
+  cannot restart the stack.
+- **Every update takes a full backup first**, and a release that fails to become healthy is rolled
+  back automatically.
+
+Residual risks worth naming: a downgrade attack as above (mitigated only by protecting `ADMIN_TOKEN`
+— rotate it, and consider leaving updates off on an internet-reachable relay); images are pulled by
+**tag, not digest**, so the registry and the transport are trusted (GHCR over TLS); and the agent runs
+as root, so a bug in the agent script is a host-level bug. The conservative posture is unchanged and
+fully supported: leave `UPDATE_SPOOL_DIR` unset and update on the host by hand.
+
+Note also that a server-side rollback does **not** roll back client-side state: local device databases
+migrate forward-only too, so a device that has opened the newer client stays migrated (§11).
+
 ---
 
 ## 7. Known weaknesses / hardening backlog

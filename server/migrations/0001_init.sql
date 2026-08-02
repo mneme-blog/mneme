@@ -1,6 +1,8 @@
 -- 0001_init.sql — initial relay schema (forward-only).
 -- Everything here is opaque ciphertext or pure metadata; the server never
 -- sees plaintext, keys, or the mnemonic. See CLAUDE.md §5b.
+--
+-- rollback: safe — the base schema; there is no earlier release to fall back to.
 
 -- owner identity = public key derived from the mnemonic seed; no password, no email.
 CREATE TABLE owners (

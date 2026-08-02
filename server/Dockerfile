@@ -15,4 +15,10 @@ RUN CGO_ENABLED=0 go build -ldflags "-X main.version=${VERSION}" -o /journald ./
 FROM gcr.io/distroless/static-debian12
 COPY --from=build /journald /journald
 EXPOSE 8080
+# The updater's health gate waits on this: a release that fails to start, or
+# fails to migrate, never reports healthy and gets rolled back automatically.
+# Exec form and a subcommand of the binary itself, because distroless has no
+# shell and no curl — /journald is the only executable in the image.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
+    CMD ["/journald", "healthcheck"]
 ENTRYPOINT ["/journald"]

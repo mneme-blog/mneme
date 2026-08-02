@@ -15,6 +15,9 @@
 -- user-adjacent string the relay stores — a deliberate, minimal accepted leak
 -- (§3). Its charset is constrained to [a-z0-9-] by the register handler, so it
 -- can never carry markup or free-form PII.
+--
+-- rollback: safe — two columns with defaults plus an index; an older relay that
+-- never selects them keeps working against this schema unchanged.
 ALTER TABLE owners
     ADD COLUMN status TEXT NOT NULL DEFAULT 'approved'
         CHECK (status IN ('pending', 'approved', 'rejected'));
