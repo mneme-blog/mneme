@@ -85,6 +85,9 @@
   #update .u-from { color: var(--ink-soft); font-size: 13px; }
   #update a { color: var(--accent); font-weight: 600; text-decoration: none; margin-inline-start: auto; white-space: nowrap; }
   #update a:hover { text-decoration: underline; }
+  /* The id rule above outranks .hidden (id > class specificity) — restate it.
+     Without this the empty banner shows before/without data, with a dead "#" link. */
+  #update.hidden { display: none; }
 
   .rowdel {
     font: inherit; font-size: 12px; padding: 3px 9px; border-radius: 6px; cursor: pointer;
