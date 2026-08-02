@@ -284,7 +284,10 @@ review→save path. Saved entries are tagged with the interview type's **name as
 starting an interview feeds the model the recent same-label entries (`ai/interview.ts`
 `buildInterviewHistory`) so repeated runs stay continuous ("history-aware"). Synthesis emits simple
 Markdown that a new **`editor/doc.ts markdownToDoc`** (headings/lists/quotes/paragraphs, plain-text
-runs) turns into a real entry doc; prompts live in `ai/prompts.ts`. **Interview types** are built-in
+runs) turns into a real entry doc; the prompts ask for a leading `# ` title line, which
+`splitMarkdownTitle` lifts into the entry's **title** on save (replacing the date-time default; a
+draft without one keeps the default — regression check `scripts/interview-title.ts`); prompts live
+in `ai/prompts.ts`. **Interview types** are built-in
 **and** user-created, and sync exactly like templates — a new encrypted record kind (`kind:
 'interviewType'` inside the ciphertext, `sync/engine.ts`) so **no server changes**: same once-per-
 device pristine/builtin seeding (`data/interviews.ts`), supersede-on-sync, dirty-flag outbox, local

@@ -5,9 +5,10 @@
 // (interviewSystemPrompt drives one-question-at-a-time turns, primed with the
 // same-type history from ai/interview.ts so it feels continuous) and the
 // synthesis phase (interviewSynthesisPrompt rewrites the whole transcript into a
-// first-person entry as simple Markdown). On save, markdownToDoc turns that into
-// a real entry tagged with the interview type's name — that label is what
-// buildInterviewHistory matches next time. The transcript lives in component
+// first-person entry as simple Markdown, led by a "# " title line). On save, the
+// title line becomes the entry's title (splitMarkdownTitle — no date-time default)
+// and markdownToDoc turns the rest into a real entry tagged with the interview
+// type's name — that label is what buildInterviewHistory matches next time. The transcript lives in component
 // state only; like Ask-my-journal, nothing about the conversation is persisted
 // or synced — only the entry the user chooses to save is.
 import type { JSX, VNode } from 'preact';
@@ -27,7 +28,7 @@ import {
   freeformDraftPrompt,
 } from '../ai/prompts';
 import { buildInterviewHistory, HISTORY_BUDGET_CHARS } from '../ai/interview';
-import { markdownToDoc, docToText } from '../editor/doc';
+import { markdownToDoc, splitMarkdownTitle, docToText } from '../editor/doc';
 import { DocPreview } from '../editor/DocPreview';
 import { toAiError, type AiMessage } from '../ai/types';
 
@@ -226,11 +227,16 @@ export function GuidedInterviewSheet({
   const save = (): void => {
     const text = draft.trim();
     if (!text) return;
-    const doc = markdownToDoc(text);
+    // The synthesis prompts ask for a leading "# " title line; lift it into the
+    // entry's title (instead of the date-time default) and keep it out of the
+    // body. A draft without one falls back to the default title untouched.
+    const { title, body } = splitMarkdownTitle(text);
+    const doc = markdownToDoc(body);
     const entry = createEntry({
       // The notebook the compose FAB was in, else the same default as a normal
       // new entry (app.tsx newEntry).
       journalId: journalId ?? journals[0]?.id ?? 'j-personal',
+      title: title ?? undefined,
       bodyJson: JSON.stringify(doc),
       bodyText: docToText(doc),
       // Tag with the interview type's name so future runs of the same type can
