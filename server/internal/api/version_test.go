@@ -33,29 +33,50 @@ func TestSemverLess(t *testing.T) {
 	}
 }
 
-// fakeGitHub serves a canned releases/latest payload and counts hits.
-func fakeGitHub(t *testing.T, tag, htmlURL string) (*httptest.Server, *int) {
+// ghHits counts requests per fake endpoint.
+type ghHits struct{ releases, main int }
+
+// fakeGitHub serves canned releases/latest and commits/main payloads and counts
+// hits. An empty mainSha makes the commit endpoint 404 (main track unavailable).
+func fakeGitHub(t *testing.T, tag, htmlURL, mainSha string) (*httptest.Server, *ghHits) {
 	t.Helper()
-	hits := 0
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		hits++
+	hits := &ghHits{}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/releases/latest", func(w http.ResponseWriter, r *http.Request) {
+		hits.releases++
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"tag_name": tag, "html_url": htmlURL, "name": tag, "body": "release notes",
 		})
-	}))
+	})
+	mux.HandleFunc("/commits/main", func(w http.ResponseWriter, r *http.Request) {
+		hits.main++
+		if mainSha == "" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"sha":      mainSha,
+			"html_url": "https://example/commit/" + mainSha,
+			"commit":   map[string]any{"committer": map[string]string{"date": "2026-08-01T00:00:00Z"}},
+		})
+	})
+	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
-	return srv, &hits
+	return srv, hits
 }
 
-func newTestChecker(current string, enabled bool, apiURL string) *updateChecker {
+// newTestChecker points BOTH outbound URLs at the fake — a checker in tests must
+// never reach the real api.github.com.
+func newTestChecker(current string, enabled bool, baseURL string) *updateChecker {
 	u := newUpdateChecker(current, 0, enabled)
-	u.apiURL = apiURL
+	u.apiURL = baseURL + "/releases/latest"
+	u.mainAPIURL = baseURL + "/commits/main"
 	u.ttl = 0 // always refresh so each test call reflects the current server state
 	return u
 }
 
 func TestUpdateCheckerAvailable(t *testing.T) {
-	gh, _ := fakeGitHub(t, "v9.9.9", "https://example/releases/v9.9.9")
+	gh, _ := fakeGitHub(t, "v9.9.9", "https://example/releases/v9.9.9", "")
 	info := newTestChecker("v0.1.0", true, gh.URL).info(context.Background())
 	if !info.UpdateAvailable {
 		t.Errorf("update_available = false, want true")
@@ -72,7 +93,7 @@ func TestUpdateCheckerAvailable(t *testing.T) {
 }
 
 func TestUpdateCheckerUpToDate(t *testing.T) {
-	gh, _ := fakeGitHub(t, "v0.1.0", "https://example/releases/v0.1.0")
+	gh, _ := fakeGitHub(t, "v0.1.0", "https://example/releases/v0.1.0", "")
 	info := newTestChecker("v0.1.0", true, gh.URL).info(context.Background())
 	if info.UpdateAvailable {
 		t.Errorf("update_available = true, want false when running the latest")
@@ -83,7 +104,7 @@ func TestUpdateCheckerUpToDate(t *testing.T) {
 }
 
 func TestUpdateCheckerDevBuild(t *testing.T) {
-	gh, _ := fakeGitHub(t, "v0.1.0", "https://example/releases/v0.1.0")
+	gh, _ := fakeGitHub(t, "v0.1.0", "https://example/releases/v0.1.0", "")
 	info := newTestChecker("dev", true, gh.URL).info(context.Background())
 	if info.UpdateAvailable {
 		t.Errorf("dev build must not report update_available")
@@ -94,15 +115,14 @@ func TestUpdateCheckerDevBuild(t *testing.T) {
 }
 
 func TestUpdateCheckerDisabledMakesNoCall(t *testing.T) {
-	gh, hits := fakeGitHub(t, "v9.9.9", "https://example/x")
-	u := newUpdateChecker("v0.1.0", 0, false)
-	u.apiURL = gh.URL
+	gh, hits := fakeGitHub(t, "v9.9.9", "https://example/x", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	u := newTestChecker("v0.1.0", false, gh.URL)
 	info := u.info(context.Background())
-	if !info.Disabled || info.Latest != "" {
+	if !info.Disabled || info.Latest != "" || info.MainTag != "" {
 		t.Errorf("disabled checker leaked a comparison: %+v", info)
 	}
-	if *hits != 0 {
-		t.Errorf("disabled checker made %d outbound calls, want 0", *hits)
+	if hits.releases+hits.main != 0 {
+		t.Errorf("disabled checker made %d outbound calls, want 0", hits.releases+hits.main)
 	}
 	if info.Current != "v0.1.0" {
 		t.Errorf("current = %q, want v0.1.0 even when disabled", info.Current)
@@ -137,20 +157,84 @@ func TestUpdateCheckerErrorFallsBackToLastGood(t *testing.T) {
 }
 
 func TestUpdateCheckerCachesWithinTTL(t *testing.T) {
-	gh, hits := fakeGitHub(t, "v9.9.9", "https://example/x")
-	u := newUpdateChecker("v0.1.0", 0, true)
-	u.apiURL = gh.URL
+	gh, hits := fakeGitHub(t, "v9.9.9", "https://example/x", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	u := newTestChecker("v0.1.0", true, gh.URL)
 	u.ttl = time.Hour
 	for i := 0; i < 3; i++ {
 		u.info(context.Background())
 	}
-	if *hits != 1 {
-		t.Errorf("made %d outbound calls, want 1 (cache should absorb polls)", *hits)
+	if hits.releases != 1 || hits.main != 1 {
+		t.Errorf("made %d+%d outbound calls, want 1+1 (cache should absorb polls)", hits.releases, hits.main)
+	}
+}
+
+func TestBuildMatchesCommit(t *testing.T) {
+	const head = "44569a4aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	cases := []struct {
+		current string
+		want    bool
+	}{
+		{"main-44569a4", true},            // CI main build of the head
+		{"main-" + head, true},            // full-sha form
+		{"v0.2.1-3-g44569a4", true},       // source build of the head (git describe)
+		{"v0.2.1-3-g44569a4-dirty", true}, // dirty working tree, same commit
+		{"main-1234567", false},           // an older main build
+		{"v0.2.1-3-g1234567", false},      // a source build of another commit
+		{"v0.2.1", false},                 // release tag names no commit → no match
+		{"dev", false},                    // unidentifiable build
+		{"", false},
+	}
+	for _, c := range cases {
+		if got := buildMatchesCommit(c.current, head); got != c.want {
+			t.Errorf("buildMatchesCommit(%q, head) = %v, want %v", c.current, got, c.want)
+		}
+	}
+}
+
+func TestUpdateCheckerMainTrack(t *testing.T) {
+	const head = "44569a4aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	gh, _ := fakeGitHub(t, "v0.2.1", "https://example/releases/v0.2.1", head)
+
+	// A release build names no commit → switching to main is offered.
+	info := newTestChecker("v0.2.1", true, gh.URL).info(context.Background())
+	if info.MainTag != "main-44569a4" || !info.MainUpdateAvailable {
+		t.Errorf("release build: main_tag=%q available=%v, want main-44569a4/true", info.MainTag, info.MainUpdateAvailable)
+	}
+	if info.MainHTMLURL == "" || info.MainCommittedAt == "" {
+		t.Errorf("missing main display fields: %+v", info)
+	}
+
+	// Builds of exactly the head commit are already on main — no switch offered.
+	for _, current := range []string{"main-44569a4", "v0.2.1-3-g44569a4"} {
+		info = newTestChecker(current, true, gh.URL).info(context.Background())
+		if info.MainUpdateAvailable {
+			t.Errorf("%q is the head of main but main_update_available = true", current)
+		}
+		if info.MainTag != "main-44569a4" {
+			t.Errorf("%q: main_tag = %q, want main-44569a4", current, info.MainTag)
+		}
+	}
+
+	// An older main build gets the switch offered again.
+	info = newTestChecker("main-1234567", true, gh.URL).info(context.Background())
+	if !info.MainUpdateAvailable {
+		t.Errorf("older main build must offer the switch to the head")
+	}
+}
+
+func TestUpdateCheckerMainHeadUnavailable(t *testing.T) {
+	gh, _ := fakeGitHub(t, "v9.9.9", "https://example/x", "") // commits/main 404s
+	info := newTestChecker("v0.1.0", true, gh.URL).info(context.Background())
+	if info.MainTag != "" || info.MainUpdateAvailable {
+		t.Errorf("main fields must stay empty when the head cannot be fetched: %+v", info)
+	}
+	if !info.UpdateAvailable || info.Latest != "v9.9.9" {
+		t.Errorf("release comparison must survive a failed main fetch: %+v", info)
 	}
 }
 
 func TestAdminVersionEndpoint(t *testing.T) {
-	gh, _ := fakeGitHub(t, "v9.9.9", "https://example/releases/v9.9.9")
+	gh, _ := fakeGitHub(t, "v9.9.9", "https://example/releases/v9.9.9", "")
 	cfg := testConfig()
 	cfg.AdminToken = "s3cret"
 	srv := &Server{cfg: cfg, metrics: newMetrics(), updates: newTestChecker("v0.1.0", true, gh.URL)}

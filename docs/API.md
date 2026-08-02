@@ -297,9 +297,10 @@ are unknowable — the mime type never reaches the relay.
 ### `GET /admin/version` → `200`
 
 Requires `Authorization: Bearer <ADMIN_TOKEN>`. Reports the running build and — unless disabled —
-the newest published GitHub release, so the dashboard can show a "newer version available" banner.
-The relay still never downloads or applies anything itself; when one-click updates are enabled,
-applying is a host-side agent's job (see `/admin/update` below).
+the newest published GitHub release (the "newer version available" banner) plus the head of the
+main branch (the dashboard's "Switch to main" development channel). The relay still never downloads
+or applies anything itself; when one-click updates are enabled, applying is a host-side agent's job
+(see `/admin/update` below).
 
 ```json
 {
@@ -314,14 +315,19 @@ applying is a host-side agent's job (see `/admin/update` below).
   "schema": 4,
   "latest_schema": 5,
   "latest_min_safe_schema": 0,
-  "rollback_after_update": "fast"
+  "rollback_after_update": "fast",
+  "main_tag": "main-1a2b3c4",
+  "main_html_url": "https://github.com/plasticparticle/mneme/commit/…",
+  "main_committed_at": "2026-07-06T08:00:00Z",
+  "main_update_available": true
 }
 ```
 
 - `current` is stamped into the binary at build time (`-ldflags -X main.version`); source builds
   report `dev`, and a non-semver `current` is never flagged as out-of-date (`update_available:false`).
 - The relay queries `api.github.com` at most once per hour (cached; a failed check falls back to the
-  last good result with an `error` field). This is the relay's **only** outbound call.
+  last good result with an `error` field). It is the relay's **only** outbound destination: the
+  latest release, and the head commit of main.
 - Set `UPDATE_CHECK=off` (or `false`/`0`) to disable it entirely for air-gapped deployments — the
   endpoint then returns `{"current": "…", "disabled": true}` and makes no outbound request.
 - `schema` is the migration head this build carries. `latest_schema` / `latest_min_safe_schema` come
@@ -329,6 +335,11 @@ applying is a host-side agent's job (see `/admin/update` below).
   that update would cost: `fast` (swap the image back), `deep` (needs the pre-update backup replayed),
   or `unknown` (the release published no manifest — assume the worst). Absent when no release
   comparison could be made.
+- `main_tag` is the CI-published image tag for the head of main (`main-<short sha>`) — exactly what
+  `POST /admin/update` accepts. `main_update_available` is false only when the running build **is**
+  that commit (identified from a `main-<sha>` tag or a git-describe `-g<sha>` suffix); main builds
+  publish no schema manifest, so their rollback cost is always unknown. All `main_*` fields are
+  absent when the head cannot be fetched.
 
 ### `DELETE /admin/vaults/{id}` → `204 No Content`
 

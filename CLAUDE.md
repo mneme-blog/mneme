@@ -108,9 +108,11 @@ project. Scaffolded so far:
   running `journald healthcheck` → `/readyz` (a subcommand because distroless has no curl), which only
   passes once migrations applied *and* Postgres is reachable — so a release that cannot migrate is
   caught rather than left serving errors. The relay's request vocabulary is deliberately two verbs
-  (`update <tag>` / `rollback`) with the tag validated against a strict semver pattern **on both
-  sides**; a compromised relay can request a downgrade to a published release and nothing else
-  (docs/SECURITY.md §6.17). Rollback honesty comes from a **schema contract**: every migration must
+  (`update <tag>` / `rollback`) with the tag validated **on both sides** against a strict pattern —
+  release semver or an immutable per-commit main build (`main-<sha>`, published by CI for every
+  green commit on main; the dashboard offers the current head as a "Switch to main" development
+  channel, never the bare moving tag `main`); a compromised relay can request a downgrade to a
+  published release or a past main build and nothing else (docs/SECURITY.md §6.17). Rollback honesty comes from a **schema contract**: every migration must
   declare `-- rollback: safe|breaking` (parsed by `migrations/manifest.go`, shared with
   `store.Migrate` so an undeclared migration fails at startup, enforced by a test), the release
   workflow publishes it as the release's `mneme-release.json` asset via `journald schema-info`, and

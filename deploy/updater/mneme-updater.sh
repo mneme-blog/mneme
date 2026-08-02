@@ -11,12 +11,15 @@
 #
 # The relay can only ask for two things, and cannot say how they are done:
 #
-#   {"action":"update","tag":"v0.3.0"}   move the stack to a published release
+#   {"action":"update","tag":"v0.3.0"}   move the stack to a published release,
+#                                        or tag "main-<sha>" for a CI-built
+#                                        image of a commit on main
 #   {"action":"rollback","deep":false}   return to the version recorded here
 #
 # The tag is re-validated below and pasted into a fixed image reference. A fully
 # compromised relay can therefore request a downgrade to a published Mneme
-# release, and nothing else — no image, registry, path, or command comes from it.
+# release or a CI-published main build, and nothing else — no image, registry,
+# path, or command comes from it.
 #
 # Every update takes a backup FIRST and health-gates the result, rolling back
 # automatically if the new version does not come up. See docs/MAINTENANCE.md.
@@ -51,8 +54,10 @@ LOG_FILE="$SPOOL_DIR/update.log"
 LOCK_FILE="$SPOOL_DIR/.lock"
 
 # Mirrors deploy.ValidTag in the relay. Duplicated on purpose: this side must not
-# depend on the relay having validated anything.
-TAG_RE='^v[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$'
+# depend on the relay having validated anything. Release tags plus immutable
+# per-commit main builds (main-<sha>, published by CI) — never the bare moving
+# tag "main", which would make the recorded "previous" meaningless for rollback.
+TAG_RE='^(v[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?|main-[0-9a-f]{7,40})$'
 
 # ── state + logging ─────────────────────────────────────────────────────────
 
@@ -428,8 +433,8 @@ main() {
   case $action in
     update)
       if [[ ! $tag =~ $TAG_RE ]]; then
-        log "rejecting request: '$tag' is not a release tag"
-        write_state failed false failed "not a release tag"
+        log "rejecting request: '$tag' is not a release or main-build tag"
+        write_state failed false failed "not a release or main-build tag"
         exit 1
       fi
       do_update "$tag" || exit 1

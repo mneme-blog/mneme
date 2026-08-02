@@ -141,8 +141,28 @@ The relay writes a request and reads back progress. It never touches Docker, and
 is never mounted into any container** — the agent that holds that privilege lives on the host, runs
 as root under systemd, and accepts exactly two instructions: *update to `<validated version tag>`* or
 *roll back*. Nothing else about the operation comes from the relay: not the registry, not the image,
-not a command. A fully compromised relay can ask for a downgrade to a published Mneme release, and
-that is the entire blast radius.
+not a command. A fully compromised relay can ask for a downgrade to a published Mneme release or a
+CI-published main build, and that is the entire blast radius.
+
+### Running the development branch (main)
+
+Next to *Update to vX.Y.Z* the panel offers **Switch to main-\<sha\>** — the head of the main
+branch. CI publishes an image pair for **every commit that passes on main**, tagged with the
+commit's short sha (`main-1a2b3c4`), and the dashboard offers exactly the current head. Things to
+know before clicking it:
+
+- **It is an unreleased build.** It passed CI, nothing more: no release notes, and no schema
+  manifest — so the dashboard cannot predict the rollback cost and you should assume rolling back
+  may need the pre-update backup (taken automatically first, like every update).
+- **Tags are immutable per-commit.** There is no moving `main` tag to chase; staying current means
+  clicking again when a new head appears. This is deliberate — the updater pins by tag and records
+  the previous tag for rollback, both of which need tags that keep meaning the same image.
+- **A brand-new commit may not be pullable yet** — its image only exists once CI has finished. A
+  failed pull changes nothing (the pin is restored, the stack is untouched); try again later.
+- **The way back:** the *Update to vX.Y.Z* button stays enabled while a non-release build is
+  running, so you can move onto the latest release at any time (schema caveats apply as usual —
+  migrations are forward-only, so a main build that migrated further than the release can only go
+  back via deep rollback). *Roll back* returns to whatever ran before the switch.
 
 ### Install it
 

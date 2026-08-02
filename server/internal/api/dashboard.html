@@ -152,6 +152,9 @@
   /* The id rule above outranks .hidden (id > class specificity) — restate it. */
   #modalWrap.hidden, #restoreWrap.hidden, #updWrap.hidden { display: none; }
   #modal label { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--ink-soft); margin-top: 10px; }
+  /* Same id-outranks-.hidden trap as above: without this the deep-rollback
+     checkbox shows in every modal, not just the rollback one. */
+  #modal label.hidden { display: none; }
   #modal label input { width: auto; margin: 2px 0 0; }
   #modal {
     background: var(--card); border: 1px solid var(--line); border-radius: 12px;
@@ -159,6 +162,7 @@
   }
   #modal h3 { font-family: Georgia, "Newsreader", serif; font-weight: 500; margin: 0 0 10px; }
   #modal p { color: var(--ink-soft); font-size: 13.5px; margin: 0 0 8px; }
+  #modal p a { color: var(--accent); }
   #modal input {
     font: inherit; width: 100%; box-sizing: border-box; padding: 9px 12px; margin: 10px 0 4px;
     border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink);
@@ -221,12 +225,14 @@
         <span id="upStatus" class="up-status"></span>
         <div class="up-acts">
           <button id="upRollback" class="btn ghost" type="button">Roll back</button>
+          <button id="upMainApply" class="btn ghost hidden" type="button">Switch to main</button>
           <button id="upApply" class="btn" type="button">Update</button>
         </div>
       </div>
       <div class="up-vers">
         <span><span class="k">Running</span><span class="v" id="upCur">—</span></span>
         <span><span class="k">Latest release</span><span class="v" id="upLatestV">—</span></span>
+        <span><span class="k">Latest main</span><span class="v" id="upMainV">—</span></span>
         <span><span class="k">Previous</span><span class="v" id="upPrev">—</span></span>
         <span><span class="k">Pre-update backup</span><span class="v" id="upArchive">—</span></span>
       </div>
@@ -632,7 +638,7 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  let upState = { enabled: false, running: false, latest: '', cost: 'unknown', canRollback: false };
+  let upState = { enabled: false, running: false, latest: '', mainTag: '', cost: 'unknown', canRollback: false };
 
   // Running build vs. the latest GitHub release. Always shown; the banner is
   // informational even when the button below is unavailable.
@@ -658,6 +664,8 @@
     upState = {
       enabled: true, running,
       latest: v.latest || '',
+      mainTag: v.main_tag || '',
+      mainUrl: v.main_html_url || '',
       cost: rb.cost || 'unknown',
       canRollback: !!rb.available,
       archive: rb.backup_archive || '',
@@ -665,6 +673,8 @@
 
     $('upCur').textContent = st.installed || v.current || '—';
     $('upLatestV').textContent = v.latest || (v.disabled ? 'check disabled' : '—');
+    $('upMainV').textContent = v.main_tag || (v.disabled ? 'check disabled' : '—');
+    if (v.main_committed_at) $('upMainV').title = 'committed ' + new Date(v.main_committed_at).toLocaleString();
     $('upPrev').textContent = st.previous || '—';
     $('upArchive').textContent = rb.backup_archive || '—';
 
@@ -693,11 +703,27 @@
 
     // Buttons. Nothing is clickable while a run is in flight — the agent rejects
     // a second request anyway, but a disabled button is a clearer answer.
-    const canUpdate = !running && v.update_available && v.latest;
+    //
+    // The release button is also enabled when the running build is not itself a
+    // plain release (a main build, a source build): the banner never nags such
+    // builds, but moving them onto the latest release is a legitimate ask —
+    // it is how a stint on the main channel ends.
+    const onRelease = /^v\d+\.\d+\.\d+$/.test(v.current || '');
+    const canUpdate = !running && !!v.latest && (v.update_available || !onRelease);
     $('upApply').disabled = !canUpdate;
     $('upApply').textContent = running ? 'Working…'
-      : v.update_available && v.latest ? 'Update to ' + v.latest
+      : canUpdate ? 'Update to ' + v.latest
       : 'Up to date';
+
+    // The development channel: the head of main, as a CI-published per-commit
+    // image. Hidden entirely when the check can't see main (air-gapped).
+    const canMain = !running && !!v.main_tag && !!v.main_update_available;
+    $('upMainApply').classList.toggle('hidden', !v.main_tag);
+    $('upMainApply').disabled = !canMain;
+    $('upMainApply').textContent = running ? 'Working…'
+      : v.main_update_available ? 'Switch to ' + v.main_tag
+      : 'On latest main';
+
     $('upRollback').disabled = running || !rb.available;
     $('upRollback').textContent = rb.available ? 'Roll back to ' + rb.target : 'Roll back';
 
@@ -745,16 +771,28 @@
     upPollTimer = setTimeout(loadUpdate, 3000);
   }
 
-  // One modal for both actions; `updAction` says which is being confirmed.
+  // One modal for both actions; `updAction` says which is being confirmed and
+  // `updTag` which version — the latest release or a main build, same wire verb.
   let updAction = null;
-  function openUpdateModal(action) {
+  let updTag = '';
+  function openUpdateModal(action, tag) {
     updAction = action;
+    updTag = tag || '';
     const isUpdate = action === 'update';
+    const isMain = isUpdate && /^main-/.test(updTag);
     $('updTitle').textContent = isUpdate
-      ? 'Update to ' + upState.latest + '?'
+      ? (isMain ? 'Switch to ' : 'Update to ') + updTag + '?'
       : 'Roll back to the previous version?';
     $('updBody').innerHTML = isUpdate
-      ? '<p>The host agent will take a full backup, pull ' + esc(upState.latest) + ', restart the ' +
+      ? (isMain
+          ? '<p><strong>' + esc(updTag) + ' is an unreleased development build</strong> — the head of the ' +
+            'main branch' + (upState.mainUrl ? ' (<a href="' + esc(upState.mainUrl) + '" target="_blank" ' +
+            'rel="noopener noreferrer">view the commit</a>)' : '') + '. It has passed CI, but nothing more: ' +
+            'no release notes, and no schema manifest — so the cost of rolling back afterwards is unknown; ' +
+            'assume it may need the pre-update backup. A brand-new commit’s image may not be published ' +
+            'yet (a failed pull changes nothing).</p>'
+          : '') +
+        '<p>The host agent will take a full backup, pull ' + esc(updTag) + ', restart the ' +
         'relay and the web app, and wait for them to report healthy. If they do not, it puts the ' +
         'current version back automatically.</p>' +
         '<p>The stack is briefly unavailable while it restarts. Devices keep working offline and ' +
@@ -784,6 +822,7 @@
   }
   function closeUpdateModal() {
     updAction = null;
+    updTag = '';
     $('updWrap').classList.add('hidden');
   }
 
@@ -792,7 +831,7 @@
     const isUpdate = updAction === 'update';
     const path = isUpdate ? '/update' : '/update/rollback';
     const body = isUpdate
-      ? { confirm: 'update', tag: upState.latest }
+      ? { confirm: 'update', tag: updTag }
       : { confirm: 'rollback', deep: $('updDeep').checked };
     $('updGo').disabled = true;
     $('updErr').textContent = 'queueing…';
@@ -815,7 +854,8 @@
     }
   }
 
-  $('upApply').addEventListener('click', () => openUpdateModal('update'));
+  $('upApply').addEventListener('click', () => openUpdateModal('update', upState.latest));
+  $('upMainApply').addEventListener('click', () => openUpdateModal('update', upState.mainTag));
   $('upRollback').addEventListener('click', () => openUpdateModal('rollback'));
   $('updCancel').addEventListener('click', closeUpdateModal);
   $('updGo').addEventListener('click', confirmUpdate);
