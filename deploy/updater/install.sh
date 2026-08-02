@@ -20,6 +20,8 @@ SPOOL_DIR=${SPOOL_DIR:-/var/lib/mneme/spool}
 LIB_DIR=/usr/local/lib/mneme
 CONF=/etc/mneme-updater.conf
 UNIT_DIR=/etc/systemd/system
+DROPIN_DIR=$UNIT_DIR/mneme-updater.service.d
+DROPIN=$DROPIN_DIR/10-paths.conf
 
 die() { echo "error: $*" >&2; exit 1; }
 
@@ -28,6 +30,8 @@ die() { echo "error: $*" >&2; exit 1; }
 if [[ ${1:-} == --uninstall ]]; then
   systemctl disable --now mneme-updater.path 2>/dev/null || true
   rm -f "$UNIT_DIR/mneme-updater.path" "$UNIT_DIR/mneme-updater.service"
+  rm -f "$DROPIN"
+  rmdir "$DROPIN_DIR" 2>/dev/null || true
   rm -f "$LIB_DIR/mneme-updater.sh"
   systemctl daemon-reload
   echo "Removed the updater units and script."
@@ -76,8 +80,42 @@ sed "s#^PathExists=.*#PathExists=$SPOOL_DIR/request.json#" \
   "$REPO_DIR/deploy/updater/mneme-updater.path" >"$UNIT_DIR/mneme-updater.path"
 install -m 0644 "$REPO_DIR/deploy/updater/mneme-updater.service" "$UNIT_DIR/mneme-updater.service"
 
+# The service runs with ProtectHome=tmpfs, which leaves /home and /root empty for
+# it. A checkout in a home directory is the ordinary case for a homelab, so bind
+# exactly the paths this agent needs back in — and nothing else, so other users'
+# homes stay hidden. Anywhere outside /home and /root needs no help.
+install -d -m 0755 "$DROPIN_DIR"
+{
+  echo "# Written by deploy/updater/install.sh — re-run the installer instead of editing."
+  echo "#"
+  echo "# ProtectHome=tmpfs in the unit empties /home and /root for this service."
+  echo "# These are the paths it still has to see. Nothing here comes from the relay."
+  echo "[Service]"
+  bound=""
+  for dir in "$REPO_DIR" "$SPOOL_DIR"; do
+    case $dir in
+      /home/* | /root | /root/*) echo "BindPaths=$dir"; bound="yes" ;;
+    esac
+  done
+  [[ -n $bound ]] || echo "# (nothing to bind — neither path lives under /home or /root)"
+} >"$DROPIN"
+chmod 0644 "$DROPIN"
+
 systemctl daemon-reload
 systemctl enable --now mneme-updater.path
+
+# Prove the service can actually reach the checkout from inside its sandbox. With
+# no request in the spool the agent runs its preflight and exits, so this is safe
+# to run here — and it turns a misconfigured path into an install-time error
+# instead of a baffling failure during the operator's first real update.
+if [[ -e "$SPOOL_DIR/request.json" ]]; then
+  echo "note: an update request is already queued; skipping the self-test."
+elif systemctl start mneme-updater.service; then
+  echo "Self-test passed: the service can reach $REPO_DIR."
+else
+  journalctl -u mneme-updater.service -n 20 --no-pager >&2 || true
+  die "the updater cannot reach $REPO_DIR from inside its systemd sandbox (see the log above)"
+fi
 
 cat <<EOF
 
