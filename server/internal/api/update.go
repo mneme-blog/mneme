@@ -87,7 +87,7 @@ func (s *Server) handleAdminUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !deploy.ValidTag(req.Tag) {
-		writeError(w, http.StatusBadRequest, "tag must be a release version like v0.3.0")
+		writeError(w, http.StatusBadRequest, "tag must be a release version like v0.3.0 or a main build like main-1a2b3c4")
 		return
 	}
 	s.submitUpdate(w, deploy.Request{

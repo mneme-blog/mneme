@@ -16,7 +16,7 @@
 // The trust direction matters: the relay can only ever ask for one of two fixed
 // actions against a validated version tag. It cannot name an image, a registry,
 // a command, or a path. A fully compromised relay can request a downgrade to a
-// published Mneme release — no more than that.
+// published Mneme release or a CI-published main build — no more than that.
 package deploy
 
 import (
@@ -43,7 +43,7 @@ const (
 type Action string
 
 const (
-	// ActionUpdate moves the stack to a specific published release.
+	// ActionUpdate moves the stack to a specific published release or main build.
 	ActionUpdate Action = "update"
 	// ActionRollback returns to the version recorded as previously running.
 	ActionRollback Action = "rollback"
@@ -76,10 +76,14 @@ var ErrDisabled = errors.New("one-click updates are not enabled on this relay")
 // tagPattern constrains what may be requested. The agent composes an image
 // reference from this, so it is the boundary between "a version" and "arbitrary
 // text that ends up on a docker command line": strict vMAJOR.MINOR.PATCH with an
-// optional prerelease/build suffix, nothing else. No slashes, no colons, no @.
-var tagPattern = regexp.MustCompile(`^v[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$`)
+// optional prerelease/build suffix, or a per-commit main build (main-<sha> as
+// published by CI for every commit that passes on main), nothing else. No
+// slashes, no colons, no @. Deliberately NOT the bare moving tag "main": the
+// updater pins by tag and records "previous" for rollback, both of which need
+// tags that keep meaning the same image.
+var tagPattern = regexp.MustCompile(`^(?:v[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?|main-[0-9a-f]{7,40})$`)
 
-// ValidTag reports whether s is a release tag the updater will accept.
+// ValidTag reports whether s is a release or main-build tag the updater will accept.
 func ValidTag(s string) bool { return tagPattern.MatchString(s) }
 
 // Request is what the relay writes and the agent consumes.
@@ -161,7 +165,7 @@ func (s *Spool) Submit(req Request) error {
 		return fmt.Errorf("unknown action %q", req.Action)
 	}
 	if req.Action == ActionUpdate && !ValidTag(req.Tag) {
-		return fmt.Errorf("%q is not a release tag", req.Tag)
+		return fmt.Errorf("%q is not a release or main-build tag", req.Tag)
 	}
 
 	s.mu.Lock()

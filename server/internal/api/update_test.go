@@ -75,6 +75,28 @@ func TestUpdateQueuesRequest(t *testing.T) {
 	}
 }
 
+// A main build (the dashboard's "Switch to main" channel) rides the same verb.
+func TestUpdateQueuesMainBuild(t *testing.T) {
+	dir := t.TempDir()
+	srv := updateServer(t, dir)
+
+	rec := postAdmin(t, srv, "/admin/update", `{"confirm":"update","tag":"main-1a2b3c4"}`)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("POST /admin/update = %d (%s), want 202", rec.Code, rec.Body)
+	}
+	body, err := os.ReadFile(filepath.Join(dir, "request.json"))
+	if err != nil {
+		t.Fatalf("no request written: %v", err)
+	}
+	var req deploy.Request
+	if err := json.Unmarshal(body, &req); err != nil {
+		t.Fatal(err)
+	}
+	if req.Action != deploy.ActionUpdate || req.Tag != "main-1a2b3c4" {
+		t.Fatalf("queued %+v", req)
+	}
+}
+
 // The confirmation string is the guard against a stray authenticated request
 // restarting the stack, so it is enforced server-side, not only in the UI.
 func TestUpdateRequiresConfirmation(t *testing.T) {

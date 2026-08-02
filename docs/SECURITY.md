@@ -431,12 +431,16 @@ The escalation is bounded by construction rather than by trust in the relay:
   a JSON request into a shared directory; a root-owned systemd unit on the host reads it. If the relay
   is fully compromised, the attacker gains the ability to *ask*, not to *act*.
 - **The request vocabulary is two verbs.** `update` (with a version tag) and `rollback`. No image,
-  registry, path, command, or flag is expressible. The tag is validated against a strict
-  `^v[0-9]+\.[0-9]+\.[0-9]+…$` pattern on **both** sides — the agent re-validates rather than trusting
-  that the relay did — and is pasted into a fixed image reference against a fixed registry. So the
-  worst a compromised relay achieves is a **downgrade to a published Mneme release**, which is a real
-  attack (it can re-open a fixed vulnerability, e.g. rolling back past 0004's registration binding)
-  but not arbitrary code execution.
+  registry, path, command, or flag is expressible. The tag is validated against a strict pattern on
+  **both** sides — the agent re-validates rather than trusting that the relay did — and is pasted
+  into a fixed image reference against a fixed registry. Two tag shapes exist: release semver
+  (`^v[0-9]+\.[0-9]+\.[0-9]+…$`) and, since the dashboard gained a "Switch to main" channel,
+  immutable per-commit main builds (`main-[0-9a-f]{7,40}`, published by CI only for commits that
+  passed on main; the bare moving tag `main` is deliberately rejected). So the worst a compromised
+  relay achieves is a **downgrade to a published Mneme release or to any past CI-published main
+  build**, which is a real attack (it can re-open a fixed vulnerability, e.g. rolling back past
+  0004's registration binding, and old main commits include states no release ever shipped) but not
+  arbitrary code execution — every requestable image is code that was on this repository's main.
 - **Both actions need a typed confirmation** enforced server-side, so a stray authenticated request
   cannot restart the stack.
 - **Every update takes a full backup first**, and a release that fails to become healthy is rolled

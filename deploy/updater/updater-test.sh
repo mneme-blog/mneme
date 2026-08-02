@@ -148,6 +148,18 @@ if [[ ! -f $WORK/spool/request.json ]]; then ok "request was consumed"
   else bad "request file survived the run"; fi
 
 echo
+echo "a main build updates like a release (immutable per-commit tag)"
+setup_scenario
+request '{"id":"r1m","action":"update","tag":"main-abc1234"}'
+run_agent || true
+check "result is success"        success      "$(state .result)"
+check "installed is the main build" main-abc1234 "$(state .installed)"
+check "previous is the old tag"  v0.2.0       "$(state .previous)"
+check "version pin updated"      main-abc1234 "$(pin MNEME_VERSION)"
+check "server image pinned"      ghcr.io/plasticparticle/mneme-server:main-abc1234 "$(pin MNEME_SERVER_IMAGE)"
+check "web image pinned"         ghcr.io/plasticparticle/mneme-web:main-abc1234    "$(pin MNEME_WEB_IMAGE)"
+
+echo
 echo "a version that never becomes healthy is rolled back automatically"
 setup_scenario
 echo 2 >"$WORK/ctl/healthy_from_up"   # the new version fails; the restored one is fine
@@ -223,7 +235,8 @@ if called "/journald restore /backups/mneme-20260801T120000Z.tar.gz --yes"; then
 
 echo
 echo "a bogus tag is refused at the agent, not just at the relay"
-for tag in "latest" "v1.2" "ghcr.io/evil/x:v1.0.0" "v1.0.0 --privileged"; do
+for tag in "latest" "v1.2" "ghcr.io/evil/x:v1.0.0" "v1.0.0 --privileged" \
+           "main" "main-abc123" "main-ABC1234" "main-xyzxyzx"; do
   setup_scenario
   request "$(jq -nc --arg t "$tag" '{id:"rX",action:"update",tag:$t}')"
   run_agent || true

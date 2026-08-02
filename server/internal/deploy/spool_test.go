@@ -11,7 +11,8 @@ import (
 )
 
 func TestValidTag(t *testing.T) {
-	ok := []string{"v0.0.1", "v1.2.3", "v10.20.30", "v1.0.0-rc.1", "v1.0.0+build.5"}
+	ok := []string{"v0.0.1", "v1.2.3", "v10.20.30", "v1.0.0-rc.1", "v1.0.0+build.5",
+		"main-abc1234", "main-0123456789abcdef0123456789abcdef01234567"}
 	for _, s := range ok {
 		if !ValidTag(s) {
 			t.Errorf("ValidTag(%q) = false, want true", s)
@@ -27,6 +28,9 @@ func TestValidTag(t *testing.T) {
 		"v1.0.0@sha256:abc",
 		"../../etc/passwd",
 		"v1.0.0\nv2.0.0",
+		// main builds: only the immutable per-commit form, lowercase hex, ≥7 chars.
+		"main-", "main-abc123", "main-ABC1234", "main-abc1234;x", "main-xyzxyzx",
+		"main-0123456789abcdef0123456789abcdef012345678", // 41 hex chars
 	}
 	for _, s := range bad {
 		if ValidTag(s) {
