@@ -29,6 +29,8 @@ import { Lightbox } from '../ui/Lightbox';
 import { TemplatesSheet } from '../ui/Templates';
 import { EntryDateTime } from '../ui/EntryDateTime';
 import { JournalPicker, JournalSheet } from '../ui/JournalPicker';
+import { FilmRenderDialog, type FilmRenderTarget } from '../ui/FilmRender';
+import type { VideoInterviewData } from '../editor/videointerviewData';
 import { t, tp, fmtDate } from '../i18n';
 import '../editor/editor.css';
 
@@ -235,6 +237,18 @@ function EntryEditor({
     [],
   );
 
+  // Stitching a video interview into one film. The dialog only starts and
+  // watches the render — video/film.ts owns it, so closing the editor mid-encode
+  // doesn't cancel it and the result still lands via attachFilm.
+  const [filmTarget, setFilmTarget] = useState<FilmRenderTarget | null>(null);
+  const videoInterviewHandlers = useMemo(
+    () => ({
+      ...mediaHandlers,
+      onRender: (data: VideoInterviewData) => setFilmTarget({ entryId: entry.id, data }),
+    }),
+    [mediaHandlers],
+  );
+
   // The editor instance, reachable from callbacks created before it exists.
   const editorRef = useRef<Editor | null>(null);
   // Latest mode, read by the (stable) save closure.
@@ -264,6 +278,7 @@ function EntryEditor({
     slash: { handle: slashHandle, commands: slashCommands },
     media: mediaHandlers,
     location: mediaHandlers,
+    videoInterview: videoInterviewHandlers,
     math: mathHandle,
     wiki,
     onFiles: (files) => void uploadFiles(files),
@@ -517,6 +532,8 @@ function EntryEditor({
           onCapture={(blob, durationMs) => void attach('video', blob, durationMs)}
         />
       )}
+
+      {filmTarget && <FilmRenderDialog target={filmTarget} onClose={() => setFilmTarget(null)} />}
       {capturing === 'audio' && (
         <AudioCapture
           desk={desk}

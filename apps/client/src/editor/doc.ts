@@ -14,6 +14,7 @@ import type { Block } from '../data/sample';
 import { mathExtension, type MathHandle } from './math';
 import { wikiLinkNode, type WikiLinkHandlers } from './wikilink';
 import { ALLOWED_LINK_PROTOCOLS, isSafeHref } from './url';
+import { videoInterviewMediaIds } from './videointerviewData';
 
 // lowlight's "common" grammar set (~35 languages); unset code blocks auto-detect.
 const lowlight = createLowlight(common);
@@ -102,6 +103,17 @@ export function docToText(doc: JSONContent): string {
     if (node.type === 'entryLink' && typeof node.attrs?.label === 'string') {
       out.push(`🔗 ${node.attrs.label}`);
     }
+    // A video interview surfaces its type name and every question — the answers
+    // are video, so the questions are the only text there is to search on.
+    if (node.type === 'videoInterview') {
+      const name = typeof node.attrs?.typeName === 'string' ? node.attrs.typeName : '';
+      out.push(`🎬 ${name || 'video interview'}\n`);
+      if (Array.isArray(node.attrs?.cards)) {
+        for (const c of node.attrs.cards as { q?: unknown }[]) {
+          if (typeof c?.q === 'string' && c.q) out.push(`${c.q}\n`);
+        }
+      }
+    }
     // Location cards surface their place names so previews/search match them.
     if (node.type === 'locationMap') {
       const from = (node.attrs?.from as { label?: unknown } | undefined)?.label;
@@ -135,6 +147,13 @@ export function docMediaIds(doc: JSONContent): string[] {
       for (const m of [node.attrs?.map, node.attrs?.photo] as { id?: unknown }[]) {
         if (typeof m?.id === 'string' && m.id) ids.push(m.id);
       }
+    }
+    // A video interview references one clip per answered question plus the
+    // rendered film — the most media of any node type. See the note on
+    // videoInterviewMediaIds: an id missed here survives entry deletion on the
+    // relay, so the repro script asserts this list exactly.
+    if (node.type === 'videoInterview' && node.attrs) {
+      ids.push(...videoInterviewMediaIds(node.attrs));
     }
     node.content?.forEach(walk);
   };

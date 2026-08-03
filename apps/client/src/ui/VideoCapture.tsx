@@ -6,26 +6,12 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { t } from '../i18n';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { fmtDuration, pickMimeType } from './recorder';
 
-// Preferred container/codec order; the browser picks the first it supports
-// (Safari records mp4, everyone else webm). The chosen type rides along in the
-// Blob and is stored as the attachment's mime.
-const MIME_CANDIDATES = [
-  'video/webm;codecs=vp9,opus',
-  'video/webm;codecs=vp8,opus',
-  'video/webm',
-  'video/mp4',
-];
-
-function pickMimeType(): string | undefined {
-  if (typeof MediaRecorder === 'undefined') return undefined;
-  return MIME_CANDIDATES.find((m) => MediaRecorder.isTypeSupported(m));
-}
-
-export function fmtDuration(ms: number): string {
-  const s = Math.round(ms / 1000);
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-}
+// The format choice and duration formatting live in ./recorder.ts, shared with
+// the multi-take video-interview session. Re-exported here because several
+// modules already import fmtDuration from this file.
+export { fmtDuration };
 
 type Stage = 'idle' | 'recording' | 'review' | 'error';
 

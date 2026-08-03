@@ -292,6 +292,61 @@ device pristine/builtin seeding (`data/interviews.ts`), supersede-on-sync, dirty
 `ui/InterviewTypes.tsx` (Preferences → Assistant, or "Manage interview types" inside the picker).
 Wire-path check: `pnpm --filter client exec tsx scripts/interview-types-roundtrip.ts` (relay running).
 
+**Guided VIDEO interview** (the same interview types, answered on camera) is in — reached from the
+written interview's picker (a camera button per type) and the mobile compose chooser.
+`ui/VideoInterview.tsx` runs `pick → planning → plan → record → saving`. The shaping constraint: the
+model **cannot hear a recorded answer**, and browser `SpeechRecognition` ships audio to Google/Apple
+servers, which is a non-starter here — so adaptivity moves *before* the session. The whole question
+list is planned in **one** call (`ai/prompts.ts videoInterviewPlanPrompt`, line-prefixed `Q: ` output
+rather than JSON because the `AiProvider` abstraction has no tool-calling or JSON mode), parsed
+forgivingly by `ai/plan.ts` (`parseQuestionPlan`/`toPlan`), and shown in an editable plan step. A bad
+or unreachable model **falls back to a built-in question set rather than dead-ending** — unlike the
+written interview, the session works with no provider at all. Recording then makes **zero AI calls
+and no network requests**: one camera stream is held across every take (this is why it doesn't reuse
+`VideoCapture`, which owns its stream for a single take) with a fresh `MediaRecorder` per question,
+plus retake / skip / back. Cross-session continuity is unchanged — it has always come from the label
+(`buildInterviewHistory`), never a transcript. Saving follows `import/run.ts`: `createEntry`
+(synchronous) → `addMedia` per clip → `updateEntry` with a doc holding one **`videoInterview`**
+block-atom node (`editor/videointerview.tsx`; pure half in `editor/videointerviewData.ts`, which
+`editor/doc.ts` imports — the node module reaches `ui/Attachments` → `state/data.tsx` → `doc.ts`, so
+importing it from `doc.ts` would be a cycle). Node attrs pair each question with its clip
+(`cards: [{q, clip}]`, `clip: null` = skipped — parallel arrays would desynchronise on a retake),
+plus `sessionId`, `typeName`, `film`, `renderedAt`. Everything but the media ids stays inside the
+encrypted body. **`docMediaIds` is security-critical here**: one node references up to 7 media rows
+(6 clips + the film), more than any other node type, and the repro script asserts that list
+*exactly* so a nested reference added later can't silently outlive the entry on the relay.
+**Per-question time limit is device-local `localStorage`, deliberately NOT a field on
+`InterviewType`** — `sync/engine.ts` encodes that record field by field, so a new field is silently
+stripped the moment an older build edits and re-pushes it (LWW field loss, no conflict, no warning).
+
+**One-click film rendering** stitches the answers into a single video with each question cut in as a
+~2.5 s title card. Entirely on-device, no relay involvement, **no CSP and no COOP/COEP change** —
+`worker-src 'self' blob:` already covers it, and the wa-sqlite VFS choice stays safe. `video/film.ts`
+is the only module the UI imports; it picks **mediabunny 1.52 (MPL-2.0, zero deps) + WebCodecs in
+`video/filmWorker.ts`**, falling back to a realtime canvas + `MediaRecorder` re-record
+(`video/fallback.ts`, lazy-imported) when WebCodecs is missing — feature-detected on **both**
+`VideoEncoder` *and* `AudioEncoder`, since iOS 16.4–18.7 shipped WebCodecs video-only. Output targets
+MP4/H.264/AAC, falling back to WebM/VP*/Opus **wholesale** (MP4-with-Opus is legal but unplayable in
+QuickTime and older Safari). The load-bearing idea is the **integer clock**: source timestamps are
+never passed through — two whole-number counters (`frame`, `audioFrames`) are the only clock, each
+clip is resampled onto it, and its audio padded/trimmed to exactly the frame count its video occupies
+so picture and sound re-converge at every seam. Title cards are silent but carry **real silence, not
+a gap** (a muxer hole around a card is the classic cause of audio drifting late by question four),
+and are rasterized on the **main thread** (`video/cards.ts`, reading live theme tokens) because
+worker font loading for the bundled faces is unreliable. Renders live in a module-level registry
+keyed by session id, so navigating away doesn't cancel one; the result lands via
+`state/data.tsx attachFilm` (functional updater — the editor may be long gone), and `stopAllRenders`
+runs on vault lock and vault deletion. Source clips are **kept** so the film can be re-rendered or an
+answer retaken; "Delete the source clips" on the card is the lever against the doubled footprint.
+Caveat: mediabunny lands in its own chunk (~540 kB) but **is PWA-precached**, so an install carries
+it whether or not the user ever renders. Checks: `pnpm --filter client exec tsx
+scripts/video-interview-repro.ts` (jsdom — plan parsing against real model failure modes, node/doc
+helpers, the exact `docMediaIds` list, `setFilmAttr`, timeline and audio maths) and **`node
+scripts/film-e2e.mjs`**, which builds `filmtest/` and drives headless Chrome to encode two
+deliberately mismatched clips (MKV/VP8/PCM 44.1 kHz mono 640×480@24 + WebM/VP8/Opus 48 kHz stereo
+1280×720@30) and assert 0 ms A/V drift — jsdom has no WebCodecs, so this is the only automated cover
+for the riskiest part.
+
 **Day One import** (§10 step 7, the first import path) is in: Preferences → Vault → "Import from
 Day One" (`ui/ImportDayOne.tsx`) takes a Day One **JSON export .zip** and rebuilds it locally as
 encrypted entries. `src/import/` does the work — `dayone.ts` unzips (fflate) and resolves each

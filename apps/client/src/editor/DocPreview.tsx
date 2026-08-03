@@ -4,7 +4,7 @@
 // keyboard side effects) of mounting a real editor instance per template.
 import type { ComponentChildren, VNode } from 'preact';
 import type { JSONContent } from '@tiptap/core';
-import { t } from '../i18n';
+import { t, tp } from '../i18n';
 import { parseBody } from './doc';
 import { renderLatex } from './math';
 import './editor.css';
@@ -107,6 +107,17 @@ function renderNode(n: JSONContent, i: number): ComponentChildren {
       return (
         <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--ui)', fontSize: '0.82em', color: 'var(--ink-3)', border: '1px dashed var(--line)', borderRadius: 9, padding: '4px 10px' }}>
           {label}
+        </div>
+      );
+    }
+    case 'videoInterview': {
+      // Display-only marker; previews never resolve the clip or film bytes.
+      const name = typeof n.attrs?.typeName === 'string' && n.attrs.typeName ? n.attrs.typeName : t('editorx.preview.videoInterview');
+      const count = Array.isArray(n.attrs?.cards) ? n.attrs.cards.length : 0;
+      return (
+        <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--ui)', fontSize: '0.82em', color: 'var(--ink-3)', border: '1px dashed var(--line)', borderRadius: 9, padding: '4px 10px' }}>
+          {`🎬 ${name}`}
+          {count > 0 && ` · ${tp('editorx.videoInterview.questions', count)}`}
         </div>
       );
     }

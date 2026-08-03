@@ -26,6 +26,8 @@ import { seedBuiltinTemplates, localizeBuiltinTemplate } from '../data/templates
 import { seedBuiltinInterviews, localizeBuiltinInterview } from '../data/interviews';
 import type { JSONContent } from '@tiptap/core';
 import { blocksToDoc, textToDoc, docToText, docMediaIds } from '../editor/doc';
+import { setFilmAttr } from '../editor/videointerviewData';
+import { stopAllRenders } from '../video/film';
 import { LocalDb, destroyOwnerDb, type MediaRecord } from '../db';
 import { makeThumbnail } from '../ui/thumbnail';
 import { t, tp, fmtDate, useI18n } from '../i18n';
@@ -114,6 +116,12 @@ interface AppData {
   lock(): void;
   createEntry(input: { journalId: string; title?: string; bodyText?: string; bodyJson?: string; labels?: string[] }): JournalEntry;
   updateEntry(id: string, patch: { journalId?: string; title?: string; bodyText?: string; bodyJson?: string; labels?: string[]; createdAt?: number; attachments?: MediaAttachment[] }): void;
+  /**
+   * Write a rendered film into the video-interview node with this session id.
+   * A no-op if the entry or the node is gone (the user deleted it while the
+   * render was running).
+   */
+  attachFilm(entryId: string, sessionId: string, film: MediaAttachment): void;
   /**
    * After the user confirmed: tombstone the entry (the deletion syncs to other
    * devices through the LWW oplog) and delete every recording it references —
@@ -922,6 +930,9 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
     // Drop references rather than zeroing the key bytes: an in-flight flush
     // still holds them, and zeroing under a running encrypt would push garbage
     // ciphertext. setStatusLive keeps that straggler from re-opening the UI.
+    // A film render outlives the editor by design; it must not outlive the
+    // unlocked vault, since its output would have nowhere to be written.
+    stopAllRenders();
     session.current = null;
     identity.current = null;
     wrap.current = null;
@@ -1001,6 +1012,34 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         const next: JournalEntry = { ...cur, ...patch, updatedAt: now };
         if (dbReady.current) void db.putLocal(next);
         pending.current.set(id, next);
+        syncPendingCount();
+        void flush();
+        return mergeByLWW(prev, [next]);
+      });
+    },
+    [db, flush, syncPendingCount],
+  );
+
+  // Write a finished film into its video-interview node. Separate from
+  // updateEntry because the render can outlive the editor that started it (the
+  // handle lives in video/film.ts, not in a component), so the caller has no
+  // reliable view of the entry's current body — the functional updater does.
+  const attachFilm: AppData['attachFilm'] = useCallback(
+    (entryId, sessionId, film) => {
+      const now = Date.now();
+      setEntries((prev) => {
+        const cur = prev.find((e) => e.id === entryId);
+        if (!cur) return prev;
+        const bodyJson = setFilmAttr(cur.bodyJson, sessionId, film, now);
+        if (!bodyJson) return prev; // entry or node gone — drop it rather than guess
+        const next: JournalEntry = {
+          ...cur,
+          bodyJson,
+          bodyText: docToText(JSON.parse(bodyJson) as JSONContent),
+          updatedAt: now,
+        };
+        if (dbReady.current) void db.putLocal(next);
+        pending.current.set(entryId, next);
         syncPendingCount();
         void flush();
         return mergeByLWW(prev, [next]);
@@ -1533,7 +1572,9 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
   const deleteVault: AppData['deleteVault'] = useCallback(async () => {
     const s = session.current;
     if (!s) throw new Error('not signed in');
-    // Tear down the background loop so no flush/pull races the wipe.
+    // Tear down the background loop so no flush/pull races the wipe — and stop
+    // any film render, whose output would otherwise land in a deleted vault.
+    stopAllRenders();
     setStatus('connecting');
     try {
       await relay.deleteAccount(s.token);
@@ -1628,6 +1669,6 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
     [interviewTypes, locale],
   );
 
-  const value: AppData = { status, hasVault, vaultMethod, ownerId, pendingApproval, approvalHint, retryApproval, pendingCount, pendingJournalIds, syncTotal, saving, bootstrapping, entries: liveEntries, journals: journalsWithCounts, templates: localizedTemplates, interviewTypes: localizedInterviewTypes, aiSettings, saveAiSettings, signIn, unlock, unlockWithKey, setDeviceUnlock, lock, createEntry, updateEntry, deleteEntry, newJournal, updateJournal, deleteJournal, createTemplate, updateTemplate, deleteTemplate, createInterviewType, updateInterviewType, deleteInterviewType, addMedia, removeMedia, mediaBlob, mediaThumb, rotatePhrase, deleteVault, relayUrl, setRelayUrl };
+  const value: AppData = { status, hasVault, vaultMethod, ownerId, pendingApproval, approvalHint, retryApproval, pendingCount, pendingJournalIds, syncTotal, saving, bootstrapping, entries: liveEntries, journals: journalsWithCounts, templates: localizedTemplates, interviewTypes: localizedInterviewTypes, aiSettings, saveAiSettings, signIn, unlock, unlockWithKey, setDeviceUnlock, lock, createEntry, updateEntry, attachFilm, deleteEntry, newJournal, updateJournal, deleteJournal, createTemplate, updateTemplate, deleteTemplate, createInterviewType, updateInterviewType, deleteInterviewType, addMedia, removeMedia, mediaBlob, mediaThumb, rotatePhrase, deleteVault, relayUrl, setRelayUrl };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

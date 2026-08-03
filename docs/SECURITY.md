@@ -106,6 +106,32 @@ on another device — decrypts that stored image and makes **no further third-pa
 no live/streaming map. Both hosts are named explicitly in the shipped CSP (§6.2) — `img-src` for the
 tile CDN, `connect-src` for the geocoder — so this egress is enumerated rather than incidental.
 
+### The guided video interview — no new exception at all
+
+The on-camera interview (`apps/client/src/ui/VideoInterview.tsx`) is worth stating explicitly because
+it *sounds* like it should leak something, and does not.
+
+- **The model never sees or hears an answer.** It is asked once, at the start of a session, to plan a
+  list of questions; that request carries the interview type's prompt and — as with the written
+  interview — excerpts of previous entries carrying the same label, under the same opt-in AI terms
+  above. The recorded clips are never sent anywhere for analysis. There is deliberately **no
+  speech-to-text**: the browser's `SpeechRecognition` API streams audio to Google/Apple servers, which
+  would be a silent, unconsented export of the most intimate content in the app.
+- **Recording is fully offline.** After the plan call the session makes no network requests at all.
+- **The relay sees no more than for any other entry.** The question texts, the pairing of question to
+  clip, and the interview type's name all live inside the encrypted entry body; the clips and the
+  rendered film are ordinary media rows, so the relay stores opaque chunks under random media ids.
+- **Stitching the film happens on the device.** `apps/client/src/video/` decodes, re-encodes and
+  muxes locally via WebCodecs (or a canvas + `MediaRecorder` fallback). No media service is involved,
+  nothing is uploaded to produce it, and it needs no new CSP directive — the existing
+  `worker-src 'self' blob:` and `media-src 'self' blob:` already cover it, and it requires no
+  COOP/COEP cross-origin isolation, so the wa-sqlite VFS choice (§6.2) is unaffected.
+
+The one operational consequence to be aware of is **size, not secrecy**: a rendered film is stored
+alongside the answer clips it was made from, so a session's footprint roughly doubles once rendered —
+relevant if the relay sets `QUOTA_BYTES_PER_OWNER` (§6.9). The card offers "Delete the source clips"
+for exactly this.
+
 ---
 
 ## 3. Cryptographic building blocks

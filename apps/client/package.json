@@ -33,6 +33,7 @@
     "fflate": "^0.8.3",
     "katex": "^0.16.47",
     "lowlight": "^3.3.0",
+    "mediabunny": "^1.52.2",
     "preact": "^10.25.4",
     "wa-sqlite": "^1.0.0"
   },

@@ -21,6 +21,8 @@ export const shell = {
   'shell.compose.emptyHint': 'Start with a blank page',
   'shell.compose.interview': 'AI interview',
   'shell.compose.interviewHint': 'Answer a few questions and get a draft',
+  'shell.compose.videoInterview': 'Video interview',
+  'shell.compose.videoInterviewHint': 'Answer on camera, one clip per question',
   'shell.compose.template': 'Use a template',
   'shell.compose.templateHint': 'Start from one of your templates',
 

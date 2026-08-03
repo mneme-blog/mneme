@@ -11,6 +11,7 @@ import { buildExtensions, docToText } from './doc';
 import { slashExtension, type SlashCommand, type SlashHandle } from './slash';
 import { mediaAttachmentNode, mediaGalleryNode, type MediaNodeHandlers } from './media';
 import { locationNode, type LocationNodeHandlers } from './location';
+import { videoInterviewNode, type VideoInterviewHandlers } from './videointerview';
 import type { MathHandle } from './math';
 import { wikiLinkSuggestion, type WikiLinkHandlers } from './wikilink';
 
@@ -30,6 +31,8 @@ export function useRichEditor(opts: {
   media?: MediaNodeHandlers;
   /** Enables the location/map node (required to open docs containing one). */
   location?: LocationNodeHandlers;
+  /** Enables the video-interview node (required to open docs containing one). */
+  videoInterview?: VideoInterviewHandlers;
   /** Enables click-to-edit on math nodes; the caller renders <MathDialog handle={...}>. */
   math?: MathHandle;
   /** Enables entry links: live titles + click-to-navigate, and (optionally) the
@@ -73,6 +76,7 @@ export function useRichEditor(opts: {
         ...(opts.slash ? [slashExtension(opts.slash.handle, opts.slash.commands)] : []),
         ...(opts.media ? [mediaAttachmentNode(opts.media), mediaGalleryNode(opts.media)] : []),
         ...(opts.location ? [locationNode(opts.location)] : []),
+        ...(opts.videoInterview ? [videoInterviewNode(opts.videoInterview)] : []),
         ...(opts.wiki?.suggest ? [wikiLinkSuggestion(opts.wiki.suggest.handle, opts.wiki.suggest.items)] : []),
       ],
       content: opts.initial,

@@ -99,6 +99,23 @@ export const editorx = {
   'editorx.location.distanceM': '{n} m',
   'editorx.location.distanceKm': '{n} km',
 
+  // Video interview card (the guided on-camera session's node).
+  'editorx.videoInterview.title': 'Video interview',
+  'editorx.videoInterview.questions#one': '{count} question',
+  'editorx.videoInterview.questions#other': '{count} questions',
+  'editorx.videoInterview.answered': '{n} of {total} answered',
+  'editorx.videoInterview.notRecorded': 'Not recorded',
+  'editorx.videoInterview.loadingClip': 'Loading answer…',
+  'editorx.videoInterview.retry': 'Not available yet — retry',
+  'editorx.videoInterview.film': 'Your film',
+  'editorx.videoInterview.delete': 'Delete interview',
+  'editorx.videoInterview.confirmTitle': 'Delete this video interview?',
+  'editorx.videoInterview.confirmBody':
+    'The {count} answer clips and the rendered film will be removed from this entry and deleted from this device and the sync server.',
+  'editorx.videoInterview.confirmBodyNoFilm':
+    'The {count} answer clips will be removed from this entry and deleted from this device and the sync server.',
+  'editorx.videoInterview.cannotUndo': 'This cannot be undone.',
+
   // Cross-entry links ("[[" picker chips).
   'editorx.wikilink.open': 'Open linked entry',
   'editorx.wikilink.missing': 'Linked entry no longer exists',
@@ -107,4 +124,5 @@ export const editorx = {
   'editorx.preview.audio': '🎙 audio',
   'editorx.preview.video': '🎬 video',
   'editorx.preview.location': 'Location',
+  'editorx.preview.videoInterview': 'Video interview',
 } as const;

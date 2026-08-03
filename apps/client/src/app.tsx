@@ -26,6 +26,7 @@ import { AiSettingsSheet } from './ui/AiSettings';
 import { AskJournalSheet } from './ui/AskJournal';
 import { GuidedInterviewSheet } from './ui/GuidedInterview';
 import { InterviewTypesSheet } from './ui/InterviewTypes';
+import { VideoInterviewSheet } from './ui/VideoInterview';
 import { ComposeChooser } from './ui/ComposeChooser';
 import type { InterviewType } from './sync/engine';
 import { t } from './i18n';
@@ -237,6 +238,10 @@ export function App(): VNode {
   const [askOpen, setAskOpen] = useState(false);
   const [interviewOpen, setInterviewOpen] = useState(false);
   const [interviewTypesOpen, setInterviewTypesOpen] = useState(false);
+  // The on-camera interview: same types, answered as video clips. Reached from
+  // the written interview's picker (and the mobile compose chooser), so it
+  // carries the type that was chosen there.
+  const [videoInterview, setVideoInterview] = useState<{ start?: InterviewType; journalId?: string } | null>(null);
   // Mobile compose chooser (the feather FAB) + the interview it picked (the
   // preselected start plus the notebook the FAB was in).
   const [composeOpen, setComposeOpen] = useState(false);
@@ -455,7 +460,8 @@ export function App(): VNode {
         <div style={{ flex: 1, minWidth: 0 }}>{screen}</div>
         {/* Non-modal companions: flex siblings, so the app stays usable beside them. */}
         {askOpen && <AskJournalSheet desk onClose={() => setAskOpen(false)} />}
-        {interviewOpen && <GuidedInterviewSheet desk onClose={() => setInterviewOpen(false)} onOpenEntry={openEntry} onManageTypes={() => setInterviewTypesOpen(true)} />}
+        {interviewOpen && <GuidedInterviewSheet desk onClose={() => setInterviewOpen(false)} onOpenEntry={openEntry} onManageTypes={() => setInterviewTypesOpen(true)} onVideo={(it) => setVideoInterview({ start: it })} />}
+        {videoInterview && <VideoInterviewSheet desk onClose={() => setVideoInterview(null)} onOpenEntry={openEntry} onManageTypes={() => setInterviewTypesOpen(true)} initial={videoInterview.start} journalId={videoInterview.journalId} />}
         {searchSheet}
         {deleteJournalSheet}
         {editJournalSheet}
@@ -489,6 +495,7 @@ export function App(): VNode {
           onClose={() => setComposeOpen(false)}
           onEmpty={() => { setComposeOpen(false); newEntry(flow === 'journal' ? openJournalObj?.id : undefined); }}
           onInterview={aiSettings?.enabled ? (start) => { setComposeOpen(false); setInterviewStart({ start, journalId: flow === 'journal' ? openJournalObj?.id : undefined }); setInterviewOpen(true); } : null}
+          onVideoInterview={aiSettings?.enabled ? (start) => { setComposeOpen(false); setVideoInterview({ start, journalId: flow === 'journal' ? openJournalObj?.id : undefined }); } : null}
           onTemplate={(tpl) => { setComposeOpen(false); newEntryFromTemplate(tpl, flow === 'journal' ? openJournalObj?.id : undefined); }}
         />
       )}
@@ -503,7 +510,8 @@ export function App(): VNode {
       {importOpen && <ImportDayOneSheet desk={false} onClose={() => setImportOpen(false)} />}
       {aiSettingsOpen && <AiSettingsSheet desk={false} onClose={() => setAiSettingsOpen(false)} />}
       {askOpen && <AskJournalSheet desk={false} onClose={() => setAskOpen(false)} />}
-      {interviewOpen && <GuidedInterviewSheet desk={false} onClose={() => { setInterviewOpen(false); setInterviewStart(null); }} onOpenEntry={openEntry} onManageTypes={() => setInterviewTypesOpen(true)} initial={interviewStart?.start} journalId={interviewStart?.journalId} />}
+      {interviewOpen && <GuidedInterviewSheet desk={false} onClose={() => { setInterviewOpen(false); setInterviewStart(null); }} onOpenEntry={openEntry} onManageTypes={() => setInterviewTypesOpen(true)} initial={interviewStart?.start} journalId={interviewStart?.journalId} onVideo={(it) => setVideoInterview({ start: it, journalId: interviewStart?.journalId })} />}
+      {videoInterview && <VideoInterviewSheet desk={false} onClose={() => setVideoInterview(null)} onOpenEntry={openEntry} onManageTypes={() => setInterviewTypesOpen(true)} initial={videoInterview.start} journalId={videoInterview.journalId} />}
       {interviewTypesOpen && <InterviewTypesSheet desk={false} onClose={() => setInterviewTypesOpen(false)} />}
     </div>
   );
