@@ -41,16 +41,25 @@ const schemaAssetName = "mneme-release.json"
 
 // versionInfo is the /admin/version payload.
 type versionInfo struct {
-	Current         string `json:"current"`                // running build (main.version)
-	Latest          string `json:"latest,omitempty"`       // newest release tag, when known
-	UpdateAvailable bool   `json:"update_available"`       // latest is a higher semver than current
-	HTMLURL         string `json:"html_url,omitempty"`     // release page to link to
-	Name            string `json:"name,omitempty"`         // release name/title
-	PublishedAt     string `json:"published_at,omitempty"` // release timestamp (RFC3339 from GitHub)
-	Notes           string `json:"notes,omitempty"`        // truncated release body
-	CheckedAt       string `json:"checked_at,omitempty"`   // when the relay last queried GitHub
-	Disabled        bool   `json:"disabled,omitempty"`     // UPDATE_CHECK=off — no call made
-	Error           string `json:"error,omitempty"`        // last check error, if any (non-fatal)
+	Current         string `json:"current"`          // running build (main.version)
+	Latest          string `json:"latest,omitempty"` // newest release tag, when known
+	UpdateAvailable bool   `json:"update_available"` // latest is a higher semver than current
+	// AheadOfLatest reports the opposite direction: the running build is NEWER
+	// than the latest release — a source build stamped past the tag by git
+	// describe ("v0.2.1-6-g31eddf5"), or a build of a tag the release feed has
+	// not caught up with. The dashboard still offers moving such a build onto
+	// the release channel, but that move is a *downgrade* and must be labelled
+	// as one; without this the button read "Update to v0.2.1" while running six
+	// commits past v0.2.1. False whenever the ordering is unknowable (a
+	// main-<sha> image, "dev").
+	AheadOfLatest bool   `json:"ahead_of_latest,omitempty"`
+	HTMLURL       string `json:"html_url,omitempty"`     // release page to link to
+	Name          string `json:"name,omitempty"`         // release name/title
+	PublishedAt   string `json:"published_at,omitempty"` // release timestamp (RFC3339 from GitHub)
+	Notes         string `json:"notes,omitempty"`        // truncated release body
+	CheckedAt     string `json:"checked_at,omitempty"`   // when the relay last queried GitHub
+	Disabled      bool   `json:"disabled,omitempty"`     // UPDATE_CHECK=off — no call made
+	Error         string `json:"error,omitempty"`        // last check error, if any (non-fatal)
 
 	// Schema is the migration head this build carries.
 	Schema int `json:"schema"`
@@ -188,6 +197,7 @@ func (u *updateChecker) fetch(ctx context.Context) versionInfo {
 	info.PublishedAt = rel.PublishedAt
 	info.Notes = truncateNotes(rel.Body)
 	info.UpdateAvailable = semverLess(u.current, rel.TagName)
+	info.AheadOfLatest = aheadOfRelease(u.current, rel.TagName)
 
 	for _, a := range rel.Assets {
 		if a.Name == schemaAssetName {
@@ -317,6 +327,39 @@ func rollbackCost(currentSchema, targetSchema, targetMinSafe int) string {
 		return "fast"
 	}
 	return "deep"
+}
+
+// describeRe splits a `git describe --tags` build stamp into the tag it was cut
+// from and the number of commits made since: "v0.2.1-6-g31eddf5" → ("v0.2.1", 6).
+var describeRe = regexp.MustCompile(`^(v?\d+\.\d+\.\d+)-(\d+)-g[0-9a-f]{7,40}(?:-dirty)?$`)
+
+// aheadOfRelease reports whether the running build is newer than the latest
+// release. Two shapes count: a build stamped past the tag (git describe leaves
+// the commits-since count in the version string), and a build of a tag that is
+// itself higher than the newest published release. Anything whose position
+// cannot be established — a main-<sha> image, "dev", an unparseable release
+// feed — is not "ahead"; it is simply unknown, and the caller keeps its
+// neutral wording.
+func aheadOfRelease(current, latest string) bool {
+	if _, ok := parseSemver(latest); !ok {
+		return false
+	}
+	base, ahead := current, 0
+	if m := describeRe.FindStringSubmatch(strings.TrimSpace(current)); m != nil {
+		base = m[1]
+		ahead, _ = strconv.Atoi(m[2])
+	}
+	if _, ok := parseSemver(base); !ok {
+		return false
+	}
+	switch {
+	case semverLess(latest, base):
+		return true // built from a tag newer than the newest release
+	case semverLess(base, latest):
+		return false // behind the release — a genuine update
+	default:
+		return ahead > 0 // same tag; ahead only if commits were made past it
+	}
 }
 
 // semverLess reports whether a is an older release than b. Both must be valid

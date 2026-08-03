@@ -664,6 +664,8 @@
     upState = {
       enabled: true, running,
       latest: v.latest || '',
+      current: st.installed || v.current || '',
+      ahead: !v.update_available && !!v.ahead_of_latest,
       mainTag: v.main_tag || '',
       mainUrl: v.main_html_url || '',
       cost: rb.cost || 'unknown',
@@ -708,12 +710,19 @@
     // plain release (a main build, a source build): the banner never nags such
     // builds, but moving them onto the latest release is a legitimate ask —
     // it is how a stint on the main channel ends.
+    //
+    // Only call that an *update* when the release is genuinely newer. Moving a
+    // non-release build onto the release channel is a switch, and when the build
+    // is ahead of the release (built past the tag) it is a downgrade — saying
+    // "Update to v0.2.1" while running six commits past v0.2.1 reads as a bug.
     const onRelease = /^v\d+\.\d+\.\d+$/.test(v.current || '');
     const canUpdate = !running && !!v.latest && (v.update_available || !onRelease);
     $('upApply').disabled = !canUpdate;
     $('upApply').textContent = running ? 'Working…'
-      : canUpdate ? 'Update to ' + v.latest
-      : 'Up to date';
+      : !canUpdate ? 'Up to date'
+      : v.update_available ? 'Update to ' + v.latest
+      : v.ahead_of_latest ? 'Downgrade to ' + v.latest
+      : 'Switch to ' + v.latest;
 
     // The development channel: the head of main, as a CI-published per-commit
     // image. Hidden entirely when the check can't see main (air-gapped).
@@ -738,6 +747,13 @@
     } else if (canUpdate && v.rollback_after_update === 'unknown') {
       warn = esc(v.latest) + ' published no schema manifest, so the cost of rolling back cannot be ' +
         'determined in advance. Assume it may need the pre-update backup.';
+    }
+    // Said first, because it changes what the button below even means.
+    if (canUpdate && v.ahead_of_latest) {
+      warn = '<strong>The running build is newer than ' + esc(v.latest) + '.</strong> ' +
+        esc(st.installed || v.current || 'It') + ' was built past that tag, so applying the release ' +
+        'moves the stack backwards — anything merged since is not in it. Useful to leave a ' +
+        'development build behind, not an update.' + (warn ? ' ' + warn : '');
     }
     $('upWarn').innerHTML = warn;
     $('upWarn').classList.toggle('hidden', !warn);
@@ -780,11 +796,20 @@
     updTag = tag || '';
     const isUpdate = action === 'update';
     const isMain = isUpdate && /^main-/.test(updTag);
+    // Going to the latest release from a build that is already past it: same
+    // wire verb, opposite direction. Name it before asking for a confirmation.
+    const isDowngrade = isUpdate && !isMain && upState.ahead;
     $('updTitle').textContent = isUpdate
-      ? (isMain ? 'Switch to ' : 'Update to ') + updTag + '?'
+      ? (isMain ? 'Switch to ' : isDowngrade ? 'Downgrade to ' : 'Update to ') + updTag + '?'
       : 'Roll back to the previous version?';
     $('updBody').innerHTML = isUpdate
-      ? (isMain
+      ? (isDowngrade
+          ? '<p><strong>This moves the stack backwards.</strong> The running build ' +
+            (upState.current ? '(' + esc(upState.current) + ') ' : '') + 'was built past ' +
+            esc(updTag) + ', so everything merged since that tag — fixes included — is not in the ' +
+            'release you are switching to.</p>'
+          : '') +
+        (isMain
           ? '<p><strong>' + esc(updTag) + ' is an unreleased development build</strong> — the head of the ' +
             'main branch' + (upState.mainUrl ? ' (<a href="' + esc(upState.mainUrl) + '" target="_blank" ' +
             'rel="noopener noreferrer">view the commit</a>)' : '') + '. It has passed CI, but nothing more: ' +

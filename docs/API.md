@@ -307,6 +307,7 @@ or applies anything itself; when one-click updates are enabled, applying is a ho
   "current": "v0.2.1",
   "latest": "v0.3.0",
   "update_available": true,
+  "ahead_of_latest": false,
   "html_url": "https://github.com/plasticparticle/mneme/releases/tag/v0.3.0",
   "name": "v0.3.0",
   "published_at": "2026-07-01T12:00:00Z",
@@ -325,6 +326,10 @@ or applies anything itself; when one-click updates are enabled, applying is a ho
 
 - `current` is stamped into the binary at build time (`-ldflags -X main.version`); source builds
   report `dev`, and a non-semver `current` is never flagged as out-of-date (`update_available:false`).
+- `ahead_of_latest` is the other direction: the running build is **newer** than the newest release —
+  a git-describe stamp past the tag (`v0.2.1-6-g31eddf5`) or a build of a higher tag than the release
+  feed knows. The dashboard still offers moving onto the release channel, but labels it a downgrade
+  rather than an update. False whenever the ordering is unknowable (a `main-<sha>` image, `dev`).
 - The relay queries `api.github.com` at most once per hour (cached; a failed check falls back to the
   last good result with an `error` field). It is the relay's **only** outbound destination: the
   latest release, and the head commit of main.
