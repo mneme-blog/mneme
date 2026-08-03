@@ -33,6 +33,48 @@ func TestSemverLess(t *testing.T) {
 	}
 }
 
+func TestAheadOfRelease(t *testing.T) {
+	cases := []struct {
+		current, latest string
+		want            bool
+	}{
+		{"v0.2.1-6-g31eddf5", "v0.2.1", true},       // source build past the tag
+		{"v0.2.1-1-g31eddf5-dirty", "v0.2.1", true}, // dirty tree, still past it
+		{"v0.3.0", "v0.2.1", true},                  // tag newer than the newest release
+		{"v0.3.0-2-gabcdef0", "v0.2.1", true},
+		{"v0.2.1", "v0.2.1", false},            // exactly the release
+		{"v0.2.0-6-g31eddf5", "v0.2.1", false}, // past an OLDER tag → a real update
+		{"v0.2.0", "v0.2.1", false},
+		{"main-31eddf5", "v0.2.1", false}, // image tag names no base → unknowable
+		{"dev", "v0.2.1", false},
+		{"", "v0.2.1", false},
+		{"v0.2.1-6-g31eddf5", "nightly", false}, // unparseable release → no claim
+		{"v0.2.1-rc1", "v0.2.1", false},         // prerelease of the release itself
+	}
+	for _, c := range cases {
+		if got := aheadOfRelease(c.current, c.latest); got != c.want {
+			t.Errorf("aheadOfRelease(%q, %q) = %v, want %v", c.current, c.latest, got, c.want)
+		}
+	}
+}
+
+func TestUpdateCheckerAheadOfLatest(t *testing.T) {
+	gh, _ := fakeGitHub(t, "v0.2.1", "https://example/releases/v0.2.1", "")
+	info := newTestChecker("v0.2.1-6-g31eddf5", true, gh.URL).info(context.Background())
+	if info.UpdateAvailable {
+		t.Errorf("a build past the tag must not report update_available")
+	}
+	if !info.AheadOfLatest {
+		t.Errorf("ahead_of_latest = false, want true for %q vs v0.2.1", info.Current)
+	}
+
+	// The behind case keeps reporting a plain update, never "ahead".
+	info = newTestChecker("v0.2.0-3-g31eddf5", true, gh.URL).info(context.Background())
+	if !info.UpdateAvailable || info.AheadOfLatest {
+		t.Errorf("behind the release: update=%v ahead=%v, want true/false", info.UpdateAvailable, info.AheadOfLatest)
+	}
+}
+
 // ghHits counts requests per fake endpoint.
 type ghHits struct{ releases, main int }
 
