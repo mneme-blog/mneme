@@ -73,9 +73,10 @@
 			# CSP_CONNECT_EXTRA (space-separated, e.g. "https://relay.example.com")
 			# adds connect-src origins. Not needed for this deployment — /v1/* is
 			# proxied under the app's own origin below, so 'self' covers the relay.
-			# You do need it for an Ollama that isn't on loopback.
+			# You do need it for an Ollama or transcription server that isn't on
+			# loopback (the localhost:* wildcards cover any loopback port).
 			header {
-				Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' blob: data: https://tile.openstreetmap.org; media-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'; connect-src 'self' blob: https://api.anthropic.com https://nominatim.openstreetmap.org http://localhost:11434 http://127.0.0.1:11434 {$CSP_CONNECT_EXTRA}; frame-ancestors 'none'"
+				Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' blob: data: https://tile.openstreetmap.org; media-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'; connect-src 'self' blob: https://api.anthropic.com https://nominatim.openstreetmap.org http://localhost:11434 http://127.0.0.1:11434 http://localhost:* http://127.0.0.1:* {$CSP_CONNECT_EXTRA}; frame-ancestors 'none'"
 				# No MIME sniffing: a blob served with the wrong type must not be
 				# reinterpreted as script.
 				X-Content-Type-Options "nosniff"

@@ -815,6 +815,20 @@ const hi: Partial<Record<MessageKey, string>> = {
   'assistant.video.fallback.q5': 'आप कल के लिए अपने साथ क्या ले जा रहे हैं?',
   'shell.compose.videoInterview': 'वीडियो साक्षात्कार',
   'shell.compose.videoInterviewHint': 'कैमरे पर उत्तर दें, हर प्रश्न के लिए एक क्लिप',
+  // Speech-to-text (transcription) for video/audio recordings.
+  'assistant.transcribe.title': 'ट्रांसक्रिप्शन',
+  'assistant.transcribe.hint': 'वैकल्पिक: वीडियो और ऑडियो रिकॉर्डिंग को ऐसे टेक्स्ट में बदलें जिसे आप खोज सकें और असिस्टेंट पढ़ सके। OpenAI ऑडियो-ट्रांसक्रिप्शन API बोलने वाले किसी भी सर्वर के साथ काम करता है — इसी डिवाइस पर एक Whisper सर्वर, या API कुंजी वाला क्लाउड एंडपॉइंट। बंद रखने के लिए URL खाली छोड़ें।',
+  'assistant.transcribe.effective': 'रिकॉर्डिंग {host} पर जाती हैं',
+  'assistant.transcribe.notLocal': 'वह पता यह डिवाइस नहीं है। ट्रांसक्राइब करते समय डिक्रिप्ट की गई रिकॉर्डिंग उस अनुरोध के लिए वहाँ भेजी जाती है — सादे HTTP पते पर यह आपके नेटवर्क में बिना एन्क्रिप्शन के जाती है।',
+  'assistant.transcribe.keyOptional': 'वैकल्पिक',
+  'assistant.transcribe.cspNote': 'सेल्फ़-होस्टेड वेब डिप्लॉयमेंट को गैर-लूपबैक सर्वर को Content-Security-Policy में भी अनुमति देनी होगी (CSP_CONNECT_EXTRA)।',
+  'media.transcribe.action': 'ट्रांसक्राइब करें',
+  'media.transcribe.busy': 'ट्रांसक्राइब हो रहा है…',
+  'media.transcribe.show': 'ट्रांसक्रिप्ट दिखाएँ',
+  'media.transcribe.hide': 'ट्रांसक्रिप्ट छिपाएँ',
+  'media.transcribe.failed': 'ट्रांसक्राइब नहीं हो सका: {message}',
+  'media.transcribe.answers': 'उत्तर ट्रांसक्राइब करें',
+  'media.transcribe.notConfigured': 'पहले AI सेटिंग्स में ट्रांसक्रिप्शन सेट करें।',
 };
 
 export default hi;

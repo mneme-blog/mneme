@@ -56,6 +56,19 @@ export const assistant = {
   'assistant.settings.keyNote':
     'The API key is encrypted with a key derived from your recovery phrase and is only readable while your journal is unlocked.',
 
+  // ── transcription (speech-to-text for video/audio recordings) ──
+  'assistant.transcribe.title': 'Transcription',
+  'assistant.transcribe.hint':
+    'Optional: turn video and audio recordings into text you can search and the assistant can read. Works with any server speaking the OpenAI audio-transcriptions API — a whisper server on this device, or a cloud endpoint with an API key. Leave the URL empty to keep it off.',
+  // Always shown when configured — this setting syncs between your devices, so
+  // the destination is never implicit (same rule as the Ollama URL).
+  'assistant.transcribe.effective': 'Recordings go to {host}',
+  'assistant.transcribe.notLocal':
+    'That address is not this device. Transcribing sends the decrypted recording there for that request — on a plain HTTP address it travels your network unencrypted.',
+  'assistant.transcribe.keyOptional': 'optional',
+  'assistant.transcribe.cspNote':
+    'Self-hosted web deployments must also allow a non-loopback server in the Content-Security-Policy (CSP_CONNECT_EXTRA).',
+
   // ── Ask my journal ──
   'assistant.ask.title': 'Ask my journal',
   'assistant.ask.emptyHint':

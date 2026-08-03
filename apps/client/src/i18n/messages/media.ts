@@ -99,4 +99,15 @@ export const media = {
   'media.film.deleteClipsTitle': 'Delete the source clips?',
   'media.film.deleteClipsBody':
     'The {count} answer clips will be deleted from this device and the sync server. The film stays, but you will not be able to re-render or retake.',
+
+  // Speech-to-text for recordings (ai/transcribe.ts). The transcript is stored
+  // inside the encrypted entry body, so search and the assistant can read what
+  // was said; transcripts survive "Delete the source clips".
+  'media.transcribe.action': 'Transcribe',
+  'media.transcribe.busy': 'Transcribing…',
+  'media.transcribe.show': 'Show transcript',
+  'media.transcribe.hide': 'Hide transcript',
+  'media.transcribe.failed': 'Could not transcribe: {message}',
+  'media.transcribe.answers': 'Transcribe answers',
+  'media.transcribe.notConfigured': 'Set up transcription in the AI settings first.',
 } as const;

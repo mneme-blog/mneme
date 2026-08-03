@@ -22,6 +22,9 @@ export interface MediaNodeHandlers {
   onRemoved: (att: MediaAttachment) => void;
   /** Maximize an image in the lightbox (navigates across the entry's images). */
   onOpenImage?: (att: MediaAttachment) => void;
+  /** Speech-to-text for a video/audio recording (ai/transcribe.ts). Present only
+   *  when a transcription server is configured — presence gates the affordance. */
+  transcribe?: (att: MediaAttachment) => Promise<string>;
 }
 
 export const MEDIA_NODE = 'mediaAttachment';
@@ -63,6 +66,7 @@ function nodeAttachment(attrs: Record<string, unknown>): MediaAttachment {
     width: typeof attrs.width === 'number' ? attrs.width : undefined,
     height: typeof attrs.height === 'number' ? attrs.height : undefined,
     createdAt: Number(attrs.createdAt ?? 0),
+    transcript: typeof attrs.transcript === 'string' && attrs.transcript ? attrs.transcript : undefined,
   };
 }
 
@@ -110,6 +114,7 @@ export function mediaAttachmentNode(handlers: MediaNodeHandlers): Node {
         width: { default: null },
         height: { default: null },
         createdAt: { default: 0 },
+        transcript: { default: null },
       };
     },
     parseHTML() {
@@ -131,12 +136,27 @@ export function mediaAttachmentNode(handlers: MediaNodeHandlers): Node {
           editor.chain().focus().deleteRange({ from: pos, to: pos + node.nodeSize }).run();
           handlers.onRemoved(att);
         };
+        // Transcribe the recording, then write the text into the node attrs —
+        // from the doc's CURRENT node at that position, not the captured one,
+        // so a concurrent attr change isn't resurrected.
+        const onTranscribe =
+          handlers.transcribe && (att.kind === 'video' || att.kind === 'audio')
+            ? async (): Promise<void> => {
+                const text = await handlers.transcribe!(att);
+                const pos = getPos();
+                if (typeof pos !== 'number') return;
+                const cur = editor.state.doc.nodeAt(pos);
+                if (!cur || cur.type.name !== MEDIA_NODE || cur.attrs.id !== att.id) return;
+                editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...cur.attrs, transcript: text }));
+              }
+            : undefined;
         render(
           <MediaCard
             att={att}
             resolve={handlers.resolve}
             onDelete={editor.isEditable ? onDelete : undefined}
             onOpen={att.kind === 'image' && handlers.onOpenImage ? () => handlers.onOpenImage?.(att) : undefined}
+            onTranscribe={editor.isEditable ? onTranscribe : undefined}
           />,
           dom,
         );

@@ -811,6 +811,20 @@ const nl: Partial<Record<MessageKey, string>> = {
   'assistant.video.fallback.q5': 'Wat neem je mee naar morgen?',
   'shell.compose.videoInterview': 'Video-interview',
   'shell.compose.videoInterviewHint': 'Beantwoord voor de camera, één clip per vraag',
+  // Speech-to-text (transcription) for video/audio recordings.
+  'assistant.transcribe.title': 'Transcriptie',
+  'assistant.transcribe.hint': 'Optioneel: zet video- en audio-opnamen om in tekst die je kunt doorzoeken en die de assistent kan lezen. Werkt met elke server die de OpenAI-audio-transcriptie-API spreekt — een Whisper-server op dit apparaat, of een cloud-endpoint met API-sleutel. Laat de URL leeg om het uit te laten.',
+  'assistant.transcribe.effective': 'Opnamen gaan naar {host}',
+  'assistant.transcribe.notLocal': 'Dat adres is niet dit apparaat. Bij het transcriberen wordt de ontsleutelde opname voor dat verzoek daarheen gestuurd — via een gewoon HTTP-adres reist hij onversleuteld door je netwerk.',
+  'assistant.transcribe.keyOptional': 'optioneel',
+  'assistant.transcribe.cspNote': 'Zelf gehoste webdeployments moeten een niet-loopback-server ook toestaan in de Content-Security-Policy (CSP_CONNECT_EXTRA).',
+  'media.transcribe.action': 'Transcriberen',
+  'media.transcribe.busy': 'Transcriberen…',
+  'media.transcribe.show': 'Transcript tonen',
+  'media.transcribe.hide': 'Transcript verbergen',
+  'media.transcribe.failed': 'Transcriberen mislukt: {message}',
+  'media.transcribe.answers': 'Antwoorden transcriberen',
+  'media.transcribe.notConfigured': 'Stel eerst transcriptie in bij de AI-instellingen.',
 };
 
 export default nl;

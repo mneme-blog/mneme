@@ -825,6 +825,20 @@ const de: Partial<Record<MessageKey, string>> = {
   'assistant.video.fallback.q5': 'Was nimmst du mit in den morgigen Tag?',
   'shell.compose.videoInterview': 'Video-Interview',
   'shell.compose.videoInterviewHint': 'Vor der Kamera antworten, ein Clip pro Frage',
+  // Speech-to-text (transcription) for video/audio recordings.
+  'assistant.transcribe.title': 'Transkription',
+  'assistant.transcribe.hint': 'Optional: Wandle Video- und Audioaufnahmen in Text um, den du durchsuchen und der Assistent lesen kann. Funktioniert mit jedem Server, der die OpenAI-Audio-Transkriptions-API spricht – ein Whisper-Server auf diesem Gerät oder ein Cloud-Endpunkt mit API-Schlüssel. Lass die URL leer, um es auszuschalten.',
+  'assistant.transcribe.effective': 'Aufnahmen gehen an {host}',
+  'assistant.transcribe.notLocal': 'Diese Adresse ist nicht dieses Gerät. Beim Transkribieren wird die entschlüsselte Aufnahme für diese Anfrage dorthin gesendet – über eine reine HTTP-Adresse unverschlüsselt durch dein Netzwerk.',
+  'assistant.transcribe.keyOptional': 'optional',
+  'assistant.transcribe.cspNote': 'Selbst gehostete Web-Deployments müssen einen Nicht-Loopback-Server zusätzlich in der Content-Security-Policy erlauben (CSP_CONNECT_EXTRA).',
+  'media.transcribe.action': 'Transkribieren',
+  'media.transcribe.busy': 'Transkribiere…',
+  'media.transcribe.show': 'Transkript anzeigen',
+  'media.transcribe.hide': 'Transkript ausblenden',
+  'media.transcribe.failed': 'Transkription fehlgeschlagen: {message}',
+  'media.transcribe.answers': 'Antworten transkribieren',
+  'media.transcribe.notConfigured': 'Richte zuerst die Transkription in den KI-Einstellungen ein.',
 };
 
 export default de;

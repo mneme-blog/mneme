@@ -11,7 +11,16 @@ import { t } from '../i18n';
 import { useAppData } from '../state/data';
 import { makeProvider } from '../ai/provider';
 import { ollamaHostLabel, ollamaScope } from '../ai/ollamaUrl';
-import { toAiError, defaultAiSettings, ANTHROPIC_MODELS, type AiSettings, type AiBackend } from '../ai/types';
+import {
+  toAiError,
+  defaultAiSettings,
+  defaultTranscriptionSettings,
+  ANTHROPIC_MODELS,
+  DEFAULT_TRANSCRIPTION_MODEL,
+  type AiSettings,
+  type AiBackend,
+  type TranscriptionSettings,
+} from '../ai/types';
 
 const pStyle: JSX.CSSProperties = { fontFamily: 'var(--ui)', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)', margin: 0 };
 const labelStyle: JSX.CSSProperties = { fontFamily: 'var(--ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5, display: 'block' };
@@ -52,11 +61,20 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
   const [error, setError] = useState('');
   // A stored key is shown masked; typing replaces it wholesale.
   const [keyDirty, setKeyDirty] = useState(!aiSettings?.anthropic.apiKey);
+  const [trKeyDirty, setTrKeyDirty] = useState(!aiSettings?.transcription?.apiKey);
 
   const patch = (p: Partial<AiSettings>): void => {
     setForm((f) => ({ ...f, ...p }));
     setTest({ state: 'idle' });
   };
+
+  // Records sealed before transcription existed lack the field — treat as defaults.
+  const tr = form.transcription ?? defaultTranscriptionSettings();
+  const patchTr = (p: Partial<TranscriptionSettings>): void => patch({ transcription: { ...tr, ...p } });
+  // Same honesty rules as the Ollama URL: this setting syncs across devices and
+  // decides where decrypted recordings go, so the badge must not be able to lie.
+  const trScope = ollamaScope(tr.baseUrl);
+  const trConfigured = tr.baseUrl.trim() !== '' && trScope !== 'invalid';
 
   const runTest = async (): Promise<void> => {
     setTest({ state: 'busy' });
@@ -221,6 +239,74 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
                 </select>
               </div>
             </div>,
+          )}
+
+          {/* Speech-to-text for video/audio recordings — optional; off while the
+              URL is empty. Any server speaking the OpenAI audio-transcriptions
+              shape works: a loopback whisper server keeps recordings on-device,
+              anything else is called out like the cloud chat backend. */}
+          {form.enabled && (
+            <div style={{ borderRadius: 14, border: '1px solid var(--line)', background: 'var(--paper)', padding: '13px 15px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontFamily: 'var(--ui)', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{t('assistant.transcribe.title')}</span>
+                {trConfigured &&
+                  (trScope === 'loopback' ? (
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--accent-ink)', background: 'var(--accent-soft)', border: '1px solid var(--accent-line)', borderRadius: 6, padding: '2px 7px' }}>{t('assistant.badge.local')}</span>
+                  ) : (
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--ink-3)', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 6, padding: '2px 7px' }}>{t('assistant.badge.network')}</span>
+                  ))}
+              </div>
+              <p style={pStyle}>{t('assistant.transcribe.hint')}</p>
+              <div>
+                <span style={labelStyle}>{t('assistant.settings.serverUrl')}</span>
+                <input
+                  style={inputStyle}
+                  value={tr.baseUrl}
+                  onInput={(e) => patchTr({ baseUrl: (e.target as HTMLInputElement).value })}
+                  placeholder="http://localhost:8000"
+                />
+                {trConfigured && (
+                  <p style={{ ...pStyle, fontSize: 11.5, marginTop: 6, color: trScope === 'loopback' ? 'var(--ink-3)' : 'var(--accent-ink)' }}>
+                    {t('assistant.transcribe.effective', { host: ollamaHostLabel(tr.baseUrl) })}
+                  </p>
+                )}
+                {trConfigured && trScope !== 'loopback' && (
+                  <p style={{ ...pStyle, fontSize: 11.5, marginTop: 4, color: 'var(--accent-ink)' }}>
+                    {t('assistant.transcribe.notLocal')}
+                  </p>
+                )}
+              </div>
+              {trConfigured && (
+                <>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <span style={labelStyle}>{t('assistant.settings.model')}</span>
+                      <input
+                        style={inputStyle}
+                        value={tr.model}
+                        onInput={(e) => patchTr({ model: (e.target as HTMLInputElement).value })}
+                        placeholder={DEFAULT_TRANSCRIPTION_MODEL}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <span style={labelStyle}>{t('assistant.settings.apiKey')}</span>
+                      <input
+                        style={inputStyle}
+                        type="password"
+                        autocomplete="off"
+                        value={trKeyDirty ? tr.apiKey : '••••••••••••' + tr.apiKey.slice(-4)}
+                        onFocus={() => { if (!trKeyDirty) { setTrKeyDirty(true); patchTr({ apiKey: '' }); } }}
+                        onInput={(e) => patchTr({ apiKey: (e.target as HTMLInputElement).value })}
+                        placeholder={t('assistant.transcribe.keyOptional')}
+                      />
+                    </div>
+                  </div>
+                  {trScope !== 'loopback' && (
+                    <p style={{ ...pStyle, fontSize: 11.5, color: 'var(--ink-3)' }}>{t('assistant.transcribe.cspNote')}</p>
+                  )}
+                </>
+              )}
+            </div>
           )}
 
           {form.enabled && (

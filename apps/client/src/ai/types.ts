@@ -52,6 +52,17 @@ export function toAiError(err: unknown): AiError {
   return new AiError('network', err instanceof Error ? err.message : 'request failed');
 }
 
+/**
+ * Speech-to-text for video/audio recordings: any server speaking the OpenAI
+ * `/v1/audio/transcriptions` shape (a local whisper server, or a cloud key).
+ * Optional on AiSettings — records sealed before the feature existed lack it.
+ */
+export interface TranscriptionSettings {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+}
+
 /** Decrypted settings — in memory only while the vault is unlocked. */
 export interface AiSettings {
   v: 1;
@@ -59,11 +70,17 @@ export interface AiSettings {
   backend: AiBackend;
   anthropic: { apiKey: string; model: string };
   ollama: { baseUrl: string; model: string };
+  transcription?: TranscriptionSettings;
 }
 
 export const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4-8';
 export const ANTHROPIC_MODELS = ['claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5'];
 export const DEFAULT_OLLAMA_URL = 'http://localhost:11434';
+export const DEFAULT_TRANSCRIPTION_MODEL = 'whisper-1';
+
+export function defaultTranscriptionSettings(): TranscriptionSettings {
+  return { baseUrl: '', apiKey: '', model: DEFAULT_TRANSCRIPTION_MODEL };
+}
 
 export function defaultAiSettings(): AiSettings {
   return {
@@ -72,5 +89,6 @@ export function defaultAiSettings(): AiSettings {
     backend: 'ollama',
     anthropic: { apiKey: '', model: DEFAULT_ANTHROPIC_MODEL },
     ollama: { baseUrl: DEFAULT_OLLAMA_URL, model: '' },
+    transcription: defaultTranscriptionSettings(),
   };
 }

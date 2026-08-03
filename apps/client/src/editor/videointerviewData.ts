@@ -14,6 +14,9 @@ export const VIDEO_INTERVIEW_NODE = 'videoInterview';
 export interface VideoInterviewCard {
   q: string;
   clip: MediaAttachment | null;
+  /** Speech-to-text of the answer. On the card, not the clip, so it survives
+   *  "Delete the source clips" — the searchable text outlives the bytes. */
+  transcript?: string;
 }
 
 export interface VideoInterviewData {
@@ -53,7 +56,11 @@ export function coerceVideoInterview(attrs: Record<string, unknown>): VideoInter
   if (!raw) return null;
   const cards: VideoInterviewCard[] = raw.map((c) => {
     const o = (c && typeof c === 'object' ? c : {}) as Record<string, unknown>;
-    return { q: typeof o.q === 'string' ? o.q : '', clip: coerceClip(o.clip) };
+    return {
+      q: typeof o.q === 'string' ? o.q : '',
+      clip: coerceClip(o.clip),
+      transcript: typeof o.transcript === 'string' && o.transcript ? o.transcript : undefined,
+    };
   });
   if (cards.length === 0) return null;
   return {

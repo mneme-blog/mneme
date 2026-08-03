@@ -35,6 +35,15 @@ export const EGRESS = {
    * is deliberate — the UI calls that backend "on this device".
    */
   ollama: ['http://localhost:11434', 'http://127.0.0.1:11434'],
+  /**
+   * Local speech-to-text servers for the transcription setting (ai/transcribe.ts).
+   * Wildcard PORT, loopback HOST only: whisper servers have no canonical port
+   * (faster-whisper/Speaches, whisper.cpp, LocalAI all default differently), and
+   * a loopback port wildcard adds no cross-origin egress an attacker could
+   * exfiltrate to — it reaches only services on the user's own machine. A LAN or
+   * cloud endpoint still needs CSP_CONNECT_EXTRA, deliberately.
+   */
+  whisper: ['http://localhost:*', 'http://127.0.0.1:*'],
 };
 
 /**
@@ -74,6 +83,7 @@ export function policy({ connectExtra = [], frameAncestors = false } = {}) {
       EGRESS.anthropic,
       EGRESS.nominatim,
       ...EGRESS.ollama,
+      ...EGRESS.whisper,
       ...connectExtra,
     ],
   };

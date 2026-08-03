@@ -814,6 +814,20 @@ const ja: Partial<Record<MessageKey, string>> = {
   'assistant.video.fallback.q5': '明日へ持っていきたいものは何ですか？',
   'shell.compose.videoInterview': 'ビデオインタビュー',
   'shell.compose.videoInterviewHint': 'カメラに向かって回答、質問ごとに 1 クリップ',
+  // Speech-to-text (transcription) for video/audio recordings.
+  'assistant.transcribe.title': '文字起こし',
+  'assistant.transcribe.hint': '任意: 動画・音声の録音を、検索でき、アシスタントも読めるテキストに変換します。OpenAI の音声文字起こし API を話すサーバーならどれでも使えます — この端末上の Whisper サーバー、または API キー付きのクラウドエンドポイント。URL を空のままにすればオフのままです。',
+  'assistant.transcribe.effective': '録音は {host} に送信されます',
+  'assistant.transcribe.notLocal': 'そのアドレスはこの端末ではありません。文字起こしの際、復号された録音がそのリクエストのためにそこへ送信されます — 素の HTTP アドレスでは、ネットワーク上を暗号化されずに流れます。',
+  'assistant.transcribe.keyOptional': '任意',
+  'assistant.transcribe.cspNote': 'セルフホストの Web デプロイでは、ループバック以外のサーバーを Content-Security-Policy でも許可する必要があります（CSP_CONNECT_EXTRA）。',
+  'media.transcribe.action': '文字起こし',
+  'media.transcribe.busy': '文字起こし中…',
+  'media.transcribe.show': '文字起こしを表示',
+  'media.transcribe.hide': '文字起こしを隠す',
+  'media.transcribe.failed': '文字起こしに失敗しました: {message}',
+  'media.transcribe.answers': '回答を文字起こし',
+  'media.transcribe.notConfigured': 'まず AI 設定で文字起こしを設定してください。',
 };
 
 export default ja;

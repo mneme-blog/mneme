@@ -815,6 +815,20 @@ const ar: Partial<Record<MessageKey, string>> = {
   'assistant.video.fallback.q5': 'ما الذي تحمله معك إلى الغد؟',
   'shell.compose.videoInterview': 'مقابلة بالفيديو',
   'shell.compose.videoInterviewHint': 'أجب أمام الكاميرا، مقطع واحد لكل سؤال',
+  // Speech-to-text (transcription) for video/audio recordings.
+  'assistant.transcribe.title': 'التفريغ النصي',
+  'assistant.transcribe.hint': 'اختياري: حوّل تسجيلات الفيديو والصوت إلى نص يمكنك البحث فيه ويستطيع المساعد قراءته. يعمل مع أي خادم يتحدث واجهة OpenAI لتفريغ الصوت — خادم Whisper على هذا الجهاز، أو نقطة نهاية سحابية بمفتاح API. اترك العنوان فارغًا لإبقائه معطّلًا.',
+  'assistant.transcribe.effective': 'تُرسل التسجيلات إلى {host}',
+  'assistant.transcribe.notLocal': 'هذا العنوان ليس هذا الجهاز. عند التفريغ يُرسل التسجيل المفكوك التشفير إلى هناك لذلك الطلب — وعبر عنوان HTTP عادي يمر في شبكتك دون تشفير.',
+  'assistant.transcribe.keyOptional': 'اختياري',
+  'assistant.transcribe.cspNote': 'عمليات النشر الذاتية على الويب يجب أن تسمح أيضًا بخادم غير محلي في Content-Security-Policy (CSP_CONNECT_EXTRA).',
+  'media.transcribe.action': 'تفريغ نصي',
+  'media.transcribe.busy': 'جارٍ التفريغ…',
+  'media.transcribe.show': 'إظهار النص المفرّغ',
+  'media.transcribe.hide': 'إخفاء النص المفرّغ',
+  'media.transcribe.failed': 'تعذّر التفريغ: {message}',
+  'media.transcribe.answers': 'تفريغ الإجابات',
+  'media.transcribe.notConfigured': 'قم أولًا بإعداد التفريغ في إعدادات الذكاء الاصطناعي.',
 };
 
 export default ar;

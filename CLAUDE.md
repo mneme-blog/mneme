@@ -347,6 +347,26 @@ deliberately mismatched clips (MKV/VP8/PCM 44.1 kHz mono 640×480@24 + WebM/VP8/
 1280×720@30) and assert 0 ms A/V drift — jsdom has no WebCodecs, so this is the only automated cover
 for the riskiest part.
 
+**Recording transcription** (extends the opt-in assistant; retroactive, works on any video/audio in
+the vault) is in: `ai/transcribe.ts` posts the decrypted recording browser → a user-configured
+speech-to-text server speaking the OpenAI `/v1/audio/transcriptions` shape (a loopback whisper
+server — faster-whisper/Speaches, whisper.cpp, LocalAI — stays fully on-device; any other endpoint
+gets the Ollama-style badge swap + warning and needs `CSP_CONNECT_EXTRA` in production; the shipped
+CSP newly allows **loopback on any port**, `http://localhost:* http://127.0.0.1:*` in csp.js +
+Caddyfile). Configured in Preferences → Assistant (`ui/AiSettings.tsx`, `AiSettings.transcription` —
+an optional field, so pre-feature sealed records still open; syncs with the AI settings record; no
+fallback URL: unconfigured reads as "off", `transcriptionConfig` gates every affordance). The
+transcript is **content, not a media row**: it lands in the node attrs inside the encrypted body —
+`transcript` on `mediaAttachment` nodes (a "Transcribe" strip on video/audio cards,
+`ui/Attachments.tsx TranscriptStrip`; legacy attachments-array entries too) and per card on
+`videoInterview` nodes ("Transcribe answers" runs clip-by-clip, transcripts render under each
+question and deliberately **survive "Delete the source clips"**). `docToText` surfaces transcripts,
+so vault search, previews, and Ask-my-journal context see what was said with no further plumbing.
+Regression check: `pnpm --filter client exec tsx scripts/transcribe-repro.ts` (mocked fetch — wire
+shape, config gating, docToText/coercion contracts, CSP). Deliberately NOT built: in-browser whisper
+(wasm model download vs. the CSP/bundle posture) and transcription of the stitched film (per-answer
+transcripts are strictly more useful).
+
 **Day One import** (§10 step 7, the first import path) is in: Preferences → Vault → "Import from
 Day One" (`ui/ImportDayOne.tsx`) takes a Day One **JSON export .zip** and rebuilds it locally as
 encrypted entries. `src/import/` does the work — `dayone.ts` unzips (fflate) and resolves each

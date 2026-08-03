@@ -18,7 +18,8 @@ import { render, type VNode } from 'preact';
 import { useState } from 'preact/hooks';
 import { t, tp } from '../i18n';
 import type { MediaAttachment } from '../sync/engine';
-import { useMediaUrl, type MediaResolver } from '../ui/Attachments';
+import { toAiError } from '../ai/types';
+import { TranscriptStrip, useMediaUrl, type MediaResolver } from '../ui/Attachments';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Icon } from '../ui/Icon';
 import {
@@ -40,6 +41,9 @@ export interface VideoInterviewHandlers {
   onRemoved: (att: MediaAttachment) => void;
   /** Open the render dialog for this session; omit to hide the render affordance. */
   onRender?: (data: VideoInterviewData) => void;
+  /** Speech-to-text for one answer clip (ai/transcribe.ts). Present only when a
+   *  transcription server is configured — presence gates the affordance. */
+  transcribe?: (att: MediaAttachment) => Promise<string>;
 }
 
 // Inserting an atom leaves it node-selected; a trailing paragraph parks the cursor after it.
@@ -86,6 +90,7 @@ export function VideoInterviewCardView({
   onRender,
   onDelete,
   onDropClips,
+  onTranscribe,
 }: {
   data: VideoInterviewData;
   resolve: MediaResolver;
@@ -95,12 +100,35 @@ export function VideoInterviewCardView({
   onDelete?: () => void;
   /** Called after the user confirmed dropping the answer clips, keeping the film. */
   onDropClips?: () => void;
+  /** Transcribe every untranscribed answer clip; transcripts land per card. */
+  onTranscribe?: () => Promise<void>;
 }): VNode {
   const [confirming, setConfirming] = useState(false);
   const [droppingClips, setDroppingClips] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcribeError, setTranscribeError] = useState('');
   const answered = data.cards.filter((c) => c.clip).length;
+  const untranscribed = data.cards.filter((c) => c.clip && !c.transcript).length;
   const stale = isFilmStale(data);
   const clipCount = answered;
+
+  // Transcripts appear under each question as they land (the node redraws per
+  // clip), so the running button needs no separate progress counter.
+  const runTranscribe = async (): Promise<void> => {
+    if (transcribing) return;
+    setTranscribing(true);
+    setTranscribeError('');
+    try {
+      await onTranscribe?.();
+    } catch (e) {
+      const err = toAiError(e);
+      setTranscribeError(
+        err.hint === 'auth' ? t('assistant.error.keyRejectedShort') : t('media.transcribe.failed', { message: err.message }),
+      );
+    } finally {
+      setTranscribing(false);
+    }
+  };
 
   return (
     <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
@@ -127,7 +155,7 @@ export function VideoInterviewCardView({
         )}
       </div>
 
-      {(data.film || onRender) && (
+      {(data.film || onRender || (onTranscribe && untranscribed > 0) || transcribeError) && (
         <div style={{ padding: '11px 11px 0' }}>
           {data.film && (
             <>
@@ -161,7 +189,19 @@ export function VideoInterviewCardView({
                 {t('media.film.deleteClips')}
               </button>
             )}
+            {onTranscribe && untranscribed > 0 && (
+              <button
+                onClick={() => void runTranscribe()}
+                disabled={transcribing}
+                style={{ fontFamily: 'var(--ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--accent-ink)', background: 'transparent', border: '1px solid var(--line)', borderRadius: 999, padding: '5px 13px', cursor: transcribing ? 'default' : 'pointer', opacity: transcribing ? 0.6 : 1 }}
+              >
+                {transcribing ? t('media.transcribe.busy') : t('media.transcribe.answers')}
+              </button>
+            )}
           </span>
+          {transcribeError && (
+            <p style={{ fontFamily: 'var(--ui)', fontSize: 11.5, color: 'var(--accent-ink)', margin: '7px 0 0' }}>{transcribeError}</p>
+          )}
         </div>
       )}
 
@@ -179,6 +219,9 @@ export function VideoInterviewCardView({
                 {t('editorx.videoInterview.notRecorded')}
               </span>
             )}
+            {/* The answer's transcript — kept even after the source clips were
+                dropped, since it is the searchable text of this answer. */}
+            {card.transcript && <TranscriptStrip transcript={card.transcript} />}
           </div>
         ))}
       </div>
@@ -281,12 +324,33 @@ export function videoInterviewNode(handlers: VideoInterviewHandlers): Node {
                 // node is stale and would resurrect the pre-update attrs.
                 tr.setNodeMarkup(pos, undefined, {
                   ...attrs,
-                  cards: data.cards.map((c) => ({ q: c.q, clip: null })),
+                  // Keep the transcripts: they are the searchable text of the
+                  // answers and must outlive the bytes being dropped here.
+                  cards: data.cards.map((c) => ({ q: c.q, clip: null, transcript: c.transcript })),
                 });
                 return true;
               })
               .run();
             for (const att of clips) handlers.onRemoved(att);
+          };
+          // Transcribe every untranscribed answer, one clip at a time, writing
+          // each transcript into the node as it lands (the per-card redraw is
+          // the progress display). Attrs are re-read from the doc's current
+          // node each round so the writes compose instead of clobbering.
+          const onTranscribe = async (): Promise<void> => {
+            for (let i = 0; i < data.cards.length; i++) {
+              const card = data.cards[i];
+              if (!card.clip || card.transcript) continue;
+              const text = await handlers.transcribe!(card.clip);
+              const pos = getPos();
+              if (typeof pos !== 'number') return;
+              const cur = editor.state.doc.nodeAt(pos);
+              if (!cur || cur.type.name !== VIDEO_INTERVIEW_NODE || cur.attrs.sessionId !== data.sessionId) return;
+              const cards = (cur.attrs.cards as Record<string, unknown>[]).map((c, j) =>
+                j === i ? { ...c, transcript: text } : c,
+              );
+              editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...cur.attrs, cards }));
+            }
           };
           render(
             <VideoInterviewCardView
@@ -295,6 +359,7 @@ export function videoInterviewNode(handlers: VideoInterviewHandlers): Node {
               onRender={handlers.onRender ? () => handlers.onRender?.(data) : undefined}
               onDelete={editor.isEditable ? onDelete : undefined}
               onDropClips={editor.isEditable ? onDropClips : undefined}
+              onTranscribe={handlers.transcribe && editor.isEditable ? onTranscribe : undefined}
             />,
             dom,
           );

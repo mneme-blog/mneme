@@ -14,6 +14,8 @@ import { t, fmtNumber } from '../i18n';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
 import { fmtDuration } from './VideoCapture';
+import { toAiError } from '../ai/types';
+import { transcribe, transcriptionConfig } from '../ai/transcribe';
 
 export type MediaResolver = (att: MediaAttachment) => Promise<Blob | null>;
 
@@ -116,12 +118,83 @@ export function ConfirmDeleteDialog({
   );
 }
 
+/**
+ * The transcript strip under a video/audio card: a collapsed "Show transcript"
+ * toggle once text exists, else (when a transcription server is configured —
+ * `onTranscribe` present) the retroactive "Transcribe" action with its busy and
+ * error states. The caller persists the resulting text (node attrs inside the
+ * encrypted body, or the legacy attachments array).
+ */
+export function TranscriptStrip({
+  transcript,
+  onTranscribe,
+}: {
+  transcript?: string;
+  onTranscribe?: () => Promise<void>;
+}): VNode | null {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  if (!transcript && !onTranscribe) return null;
+
+  const run = async (): Promise<void> => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      await onTranscribe?.();
+      setOpen(true);
+    } catch (e) {
+      const err = toAiError(e);
+      setError(
+        err.hint === 'auth' ? t('assistant.error.keyRejectedShort') : t('media.transcribe.failed', { message: err.message }),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div style={{ borderTop: '1px solid var(--line)', padding: '6px 11px 8px' }}>
+      {transcript ? (
+        <>
+          <button
+            onClick={() => setOpen((o) => !o)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'var(--ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}
+          >
+            <Icon name="quote" size={13} color="var(--ink-3)" />
+            {open ? t('media.transcribe.hide') : t('media.transcribe.show')}
+          </button>
+          {open && (
+            <p style={{ fontFamily: 'var(--serif)', fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-2)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', margin: '7px 0 0' }}>
+              {transcript}
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          <button
+            onClick={() => void run()}
+            disabled={busy}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--ui)', fontSize: 12, fontWeight: 600, color: 'var(--accent-ink)', background: 'transparent', border: '1px solid var(--line)', borderRadius: 999, padding: '4px 12px', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
+          >
+            <Icon name="quote" size={13} color="var(--accent-ink)" />
+            {busy ? t('media.transcribe.busy') : t('media.transcribe.action')}
+          </button>
+          {error && <p style={{ fontFamily: 'var(--ui)', fontSize: 11.5, color: 'var(--accent-ink)', margin: '6px 0 0' }}>{error}</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
 /** One attachment card (video, audio, image, or file): preview, caption, and confirmed delete. */
 export function MediaCard({
   att,
   resolve,
   onDelete,
   onOpen,
+  onTranscribe,
 }: {
   att: MediaAttachment;
   resolve: MediaResolver;
@@ -129,6 +202,8 @@ export function MediaCard({
   onDelete?: () => void;
   /** Images only: maximize in the lightbox. */
   onOpen?: () => void;
+  /** Video/audio only: transcribe the recording; the caller persists the text. */
+  onTranscribe?: () => Promise<void>;
 }): VNode {
   const { url, failed, retry } = useMediaUrl(att, resolve);
   const [confirming, setConfirming] = useState(false);
@@ -218,6 +293,9 @@ export function MediaCard({
         </span>
         {deleteBtn}
       </div>
+      {(att.kind === 'video' || att.kind === 'audio') && (
+        <TranscriptStrip transcript={att.transcript} onTranscribe={onTranscribe} />
+      )}
       {confirming && (
         <ConfirmDeleteDialog
           att={att}
@@ -348,9 +426,12 @@ export function ImageGallery({
  * recordings are inline mediaAttachment nodes and never reach this list.
  */
 export function AttachmentList({ entry }: { entry: JournalEntry }): VNode | null {
-  const { mediaBlob, updateEntry, removeMedia } = useAppData();
+  const { mediaBlob, updateEntry, removeMedia, aiSettings } = useAppData();
   const attachments = entry.attachments ?? [];
   if (!attachments.length) return null;
+  // Legacy attachments transcribe too; the text lands in the attachments array
+  // (their storage), which travels inside the encrypted entry like bodyJson.
+  const cfg = transcriptionConfig(aiSettings);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, margin: '18px 0 6px' }}>
       {attachments.map((att) => (
@@ -362,6 +443,18 @@ export function AttachmentList({ entry }: { entry: JournalEntry }): VNode | null
             updateEntry(entry.id, { attachments: attachments.filter((a) => a.id !== att.id) });
             removeMedia(att.id);
           }}
+          onTranscribe={
+            cfg
+              ? async () => {
+                  const blob = await mediaBlob(entry.id, att);
+                  if (!blob) throw new Error(t('media.retryUnavailable'));
+                  const text = await transcribe(cfg, blob, { mime: att.mime });
+                  updateEntry(entry.id, {
+                    attachments: attachments.map((a) => (a.id === att.id ? { ...a, transcript: text } : a)),
+                  });
+                }
+              : undefined
+          }
         />
       ))}
     </div>

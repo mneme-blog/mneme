@@ -90,6 +90,11 @@ export function docToText(doc: JSONContent): string {
       else if (kind === 'image') out.push(`🖼 image${name}`);
       else if (kind === 'file') out.push(`📎${name || ' file'}`);
       else out.push('🎬 video');
+      // A transcribed recording surfaces its speech-to-text — that is the whole
+      // point of transcripts: search, previews, and Ask-my-journal see them.
+      if (typeof node.attrs?.transcript === 'string' && node.attrs.transcript) {
+        out.push(`\n${node.attrs.transcript}\n`);
+      }
     }
     if (node.type === 'mediaGallery') {
       const n = Array.isArray(node.attrs?.images) ? node.attrs.images.length : 0;
@@ -103,14 +108,16 @@ export function docToText(doc: JSONContent): string {
     if (node.type === 'entryLink' && typeof node.attrs?.label === 'string') {
       out.push(`🔗 ${node.attrs.label}`);
     }
-    // A video interview surfaces its type name and every question — the answers
-    // are video, so the questions are the only text there is to search on.
+    // A video interview surfaces its type name and every question, plus each
+    // answer's transcript once one exists — until then the questions are the
+    // only text there is to search on.
     if (node.type === 'videoInterview') {
       const name = typeof node.attrs?.typeName === 'string' ? node.attrs.typeName : '';
       out.push(`🎬 ${name || 'video interview'}\n`);
       if (Array.isArray(node.attrs?.cards)) {
-        for (const c of node.attrs.cards as { q?: unknown }[]) {
+        for (const c of node.attrs.cards as { q?: unknown; transcript?: unknown }[]) {
           if (typeof c?.q === 'string' && c.q) out.push(`${c.q}\n`);
+          if (typeof c?.transcript === 'string' && c.transcript) out.push(`${c.transcript}\n`);
         }
       }
     }

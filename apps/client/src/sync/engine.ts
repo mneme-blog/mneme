@@ -22,6 +22,9 @@ export interface MediaAttachment {
   width?: number;
   height?: number;
   createdAt: number;
+  /** Speech-to-text of a video/audio recording (ai/transcribe.ts). Rides in the
+   *  node attrs inside the encrypted body — searchable, never seen by the relay. */
+  transcript?: string;
 }
 
 export interface JournalEntry {
