@@ -10,11 +10,9 @@
 // Run: node scripts/film-e2e.mjs        (needs google-chrome or chromium)
 import { build } from 'vite';
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
-// `resolve` is aliased: the request handler below sits inside a `new Promise`
-// whose own `resolve` parameter would otherwise shadow it.
-import { join, extname, resolve as resolvePath, sep } from 'node:path';
+import { join, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import preact from '@preact/preset-vite';
 
@@ -31,6 +29,17 @@ await build({
   build: { outDir, emptyOutDir: true, target: 'esnext' },
 });
 
+// URL path → absolute file, for everything Vite just emitted. Built once, from
+// the directory listing rather than from any request.
+const assets = new Map(
+  (await readdir(outDir, { recursive: true, withFileTypes: true }))
+    .filter((e) => e.isFile())
+    .map((e) => {
+      const abs = join(e.parentPath, e.name);
+      return [`/${abs.slice(outDir.length + 1).split(sep).join('/')}`, abs];
+    }),
+);
+
 const result = await new Promise((resolve, reject) => {
   const server = createServer(async (req, res) => {
     if (req.method === 'POST' && req.url === '/result') {
@@ -41,13 +50,15 @@ const result = await new Promise((resolve, reject) => {
       resolve(JSON.parse(body));
       return;
     }
-    // Resolve the request against the build directory and refuse anything that
-    // escapes it. Only this machine can reach the server, but a request path is
-    // still attacker-shaped input and `join` alone happily walks out with "..".
+    // Serve only from an allowlist built by walking the output directory, so a
+    // request path is never used to construct a filesystem path — it can only
+    // select an already-known build artifact, or nothing. Only this machine can
+    // reach the server, but "it's local" is not a reason to hand a request
+    // string to the filesystem.
     const requested = decodeURIComponent(req.url.split('?')[0]);
-    const file = resolvePath(outDir, `.${requested === '/' ? '/index.html' : requested}`);
-    if (file !== outDir && !file.startsWith(outDir + sep)) {
-      res.writeHead(403).end();
+    const file = assets.get(requested === '/' ? '/index.html' : requested);
+    if (!file) {
+      res.writeHead(404).end();
       return;
     }
     try {
