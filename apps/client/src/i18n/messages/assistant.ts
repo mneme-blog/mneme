@@ -97,6 +97,47 @@ export const assistant = {
   'assistant.interview.nothingWritten': '(nothing written)',
   'assistant.interview.save': 'Save entry',
 
+  // ── guided VIDEO interview (same types, answered on camera) ──
+  // The model plans every question up front: it cannot hear a recorded answer,
+  // so there is nothing to adapt to mid-session (see ai/prompts.ts).
+  'assistant.video.title': 'Video interview',
+  'assistant.video.pickIntro':
+    "Pick an interview. I'll plan the questions, then you answer them on camera — one clip per question.",
+  'assistant.video.recordInstead': 'Record on camera',
+  'assistant.video.planning': 'Planning your questions…',
+  'assistant.video.planTitle': 'Your questions',
+  'assistant.video.planHint': 'Edit, reorder, or remove any question before you start recording.',
+  'assistant.video.planFailed': "I couldn't plan questions just now — here is a general set instead.",
+  'assistant.video.questionPlaceholder': 'Your question…',
+  'assistant.video.addQuestion': 'Add a question',
+  'assistant.video.moveUp': 'Move up',
+  'assistant.video.moveDown': 'Move down',
+  'assistant.video.removeQuestion': 'Remove this question',
+  'assistant.video.start': 'Start recording',
+  'assistant.video.progress': 'Question {n} of {total}',
+  'assistant.video.record': 'Record answer',
+  'assistant.video.stop': 'Stop',
+  'assistant.video.retake': 'Retake',
+  'assistant.video.skip': 'Skip this one',
+  'assistant.video.back': 'Previous question',
+  'assistant.video.useAndNext': 'Use & next',
+  'assistant.video.finish': 'Finish & save',
+  'assistant.video.cameraUnavailable': 'Camera unavailable — check permissions and try again.',
+  'assistant.video.unsupported': 'This browser cannot record video.',
+  'assistant.video.savingClip': 'Saving answer {n} of {total}…',
+  'assistant.video.noClips': 'Record at least one answer to save.',
+  'assistant.video.maxLength': 'Up to {seconds}s per answer',
+  'assistant.video.discardTitle': 'Discard this interview?',
+  'assistant.video.discardBody': 'Your recorded answers have not been saved yet and will be lost.',
+  'assistant.video.discard': 'Discard',
+  // Used when the model is unreachable or returns nothing usable — the session
+  // must still work without it.
+  'assistant.video.fallback.q1': 'What happened today that you want to remember?',
+  'assistant.video.fallback.q2': 'What was the best part, and why did it land that way?',
+  'assistant.video.fallback.q3': 'What was hard, or did not go the way you hoped?',
+  'assistant.video.fallback.q4': 'Who did you spend time with, and how was it?',
+  'assistant.video.fallback.q5': 'What are you carrying into tomorrow?',
+
   // ── built-in interview types (data/interviews.ts seeds; pristine seeds follow
   //     the app language via localizeBuiltinInterview, like template built-ins) ──
   'assistant.interview.builtin.daily-checkin.name': 'Daily check-in',

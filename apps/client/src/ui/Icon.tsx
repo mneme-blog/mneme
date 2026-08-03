@@ -10,7 +10,7 @@ export type IconName =
   | 'pin' | 'clock' | 'copy' | 'eye' | 'eyeoff' | 'shield' | 'arrowR' | 'sun'
   | 'grid' | 'timeline' | 'x' | 'video' | 'olist' | 'code' | 'divider' | 'trash'
   | 'file' | 'download' | 'math' | 'monitor' | 'table' | 'link' | 'edit'
-  | 'rowplus' | 'colplus' | 'rowminus' | 'colminus' | 'key' | 'info';
+  | 'rowplus' | 'colplus' | 'rowminus' | 'colminus' | 'key' | 'info' | 'film';
 
 interface IconProps {
   name: IconName;
@@ -67,6 +67,7 @@ export function Icon({ name, size = 20, stroke = 1.7, style = {}, color = 'curre
     timeline: <><path d="M6 4v16" {...P} /><circle cx="6" cy="8" r="1.6" {...P} /><circle cx="6" cy="16" r="1.6" {...P} /><path d="M11 8h9M11 16h9" {...P} /></>,
     x: <><path d="M6 6l12 12M18 6L6 18" {...P} /></>,
     video: <><rect x="3" y="6.5" width="12.5" height="11" rx="2.5" {...P} /><path d="M15.5 10.8l5-3v8.4l-5-3" {...P} /></>,
+    film: <><rect x="3" y="4.5" width="18" height="15" rx="2.5" {...P} /><path d="M7.5 4.5v15M16.5 4.5v15M3 12h18M3 8.25h4.5M3 15.75h4.5M16.5 8.25H21M16.5 15.75H21" {...P} /></>,
     olist: <><path d="M10 6h10M10 12h10M10 18h10" {...P} /><path d="M4 6h1v4M4 10h2" {...P} /><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" {...P} /></>,
     code: <><path d="M9 8l-4 4 4 4M15 8l4 4-4 4" {...P} /></>,
     divider: <><path d="M4 12h16M9 6h6M9 18h6" {...P} /></>,

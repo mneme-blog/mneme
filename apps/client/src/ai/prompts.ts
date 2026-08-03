@@ -154,6 +154,62 @@ export function interviewSynthesisUserMessage(): string {
   return 'Now write up the journal entry from our conversation.';
 }
 
+// ── guided VIDEO interview (ui/VideoInterview.tsx) ──
+// One call, at the start of the session, and then nothing: the user answers on
+// camera and the model never hears those answers, so there is no transcript to
+// adapt to. That is why the whole question list is planned up front here rather
+// than one turn at a time as in the written interview above. The per-type
+// strategy (type.prompt) is reused verbatim — it describes what to cover, which
+// is true whether the answers are typed or spoken.
+
+/** Plan phase: the whole question list in one response, one question per line. */
+export function videoInterviewPlanPrompt(
+  type: { name: string; prompt: string },
+  historyText: string,
+  count: number,
+  fenceToken: string = newFenceToken(),
+): string {
+  return [
+    `You are a warm, attentive journaling companion planning a "${type.name}" video interview inside a private, end-to-end-encrypted journal. Today's date is ${today()}.`,
+    '',
+    'The user will answer your questions on camera, one recorded clip per question.',
+    'You will NOT see or hear their answers, so plan the entire set now — you get no chance to follow up.',
+    '',
+    'How to plan the questions:',
+    `- Write exactly ${count} questions.`,
+    '- Each must be answerable out loud in 30–90 seconds. Nothing that needs a list, a document, or a long think.',
+    '- One idea per question: a single sentence ending in one question mark. Never join two questions with "and" or ask a follow-up in the same line.',
+    '- No yes/no questions, and no greetings — the question is shown on its own as a title card, not spoken to.',
+    '- Order them so the session warms up gently and ends somewhere reflective.',
+    '- Never refer to an answer given during this session — the user answers all of these on camera and you will not have heard any of them.',
+    '- Keep each question short, warm, and specific, addressed to the user.',
+    `- Write them in ${currentLocale().english}.`,
+    '',
+    'Output format — this matters:',
+    `- Exactly ${count} lines, one question per line.`,
+    '- Begin every line with "Q: " and nothing else.',
+    '- No numbering, no progress markers, no headings, no preamble, no commentary after.',
+    '',
+    '## What this interview is about',
+    type.prompt,
+    historyText
+      ? '\n## Earlier entries from this interview type (most recent first)\n' +
+        'Use these to steer what is worth asking about this time: pick up threads worth revisiting, and avoid ' +
+        'asking again about something already covered at length. You may nod to one in a question when it makes ' +
+        'the session feel continuous ("you mentioned the move…"), but keep it to a short clause and never quote ' +
+        'at length.\n\n' +
+        fenceRules(fenceToken, ENTRY_FENCE) +
+        '\n\n' +
+        fenced(fenceToken, ENTRY_FENCE, historyText)
+      : '',
+  ].join('\n');
+}
+
+/** The user turn that asks for the plan. */
+export function videoInterviewPlanUserMessage(count: number): string {
+  return `Plan the ${count} questions for this video interview now.`;
+}
+
 /** Freeform draft: the user gives a one-line brief, the model drafts a whole entry. */
 export function freeformDraftPrompt(): string {
   return [

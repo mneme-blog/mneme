@@ -1,6 +1,8 @@
 node_modules/
 dist/
 *.log
+# Build output of the film encoder's browser test (scripts/film-e2e.mjs)
+/apps/client/filmtest-dist/
 .DS_Store
 .playwright-mcp/
 .env

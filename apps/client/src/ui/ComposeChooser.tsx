@@ -61,12 +61,13 @@ function Card({ name, snippet, dashed, onPick }: { name: string; snippet?: strin
   );
 }
 
-type Section = 'interview' | 'template';
+type Section = 'interview' | 'video' | 'template';
 
 export function ComposeChooser({
   onClose,
   onEmpty,
   onInterview,
+  onVideoInterview,
   onTemplate,
 }: {
   onClose: () => void;
@@ -74,6 +75,8 @@ export function ComposeChooser({
   onEmpty: () => void;
   /** Start a guided interview with the picked type (or the freeform brief). Null while the AI assistant is disabled — the row hides itself. */
   onInterview: ((start: InterviewType | 'freeform') => void) | null;
+  /** Answer the picked type on camera instead. Null while the AI assistant is disabled. */
+  onVideoInterview: ((start: InterviewType) => void) | null;
   /** Start a new entry pre-filled from the picked template. */
   onTemplate: (tpl: TemplateRecord) => void;
 }): VNode {
@@ -147,6 +150,24 @@ export function ComposeChooser({
     )),
   );
 
+  // Same types, answered on camera. No freeform card — a video session records
+  // against a planned question list, and a freeform brief has none.
+  const videoBody = carousel(
+    interviewCards
+      .filter((card) => card.type)
+      .map((card) => (
+        <Card
+          key={card.id}
+          name={card.type?.name || t('common.untitled')}
+          snippet={card.type?.intro ?? ''}
+          onPick={() => {
+            writeLast(LAST_INTERVIEW, card.id);
+            if (card.type) onVideoInterview?.(card.type);
+          }}
+        />
+      )),
+  );
+
   const templateBody =
     templateCards.length === 0 ? (
       <div style={{ fontFamily: 'var(--ui)', fontSize: 13, color: 'var(--ink-3)', textAlign: 'center', padding: '16px 14px', borderTop: '1px solid var(--line)' }}>
@@ -184,6 +205,7 @@ export function ComposeChooser({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           {section('feather', t('shell.compose.empty'), t('shell.compose.emptyHint'), { onPick: onEmpty })}
           {onInterview && section('mic', t('shell.compose.interview'), t('shell.compose.interviewHint'), { section: 'interview', body: interviewBody })}
+          {onVideoInterview && interviewCards.some((c) => c.type) && section('film', t('shell.compose.videoInterview'), t('shell.compose.videoInterviewHint'), { section: 'video', body: videoBody })}
           {section('copy', t('shell.compose.template'), t('shell.compose.templateHint'), { section: 'template', body: templateBody })}
         </div>
       </div>

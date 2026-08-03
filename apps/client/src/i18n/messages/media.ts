@@ -75,4 +75,28 @@ export const media = {
   'media.location.privacy':
     'Address search and the one-time map render contact OpenStreetMap. The map is then frozen into your encrypted entry — opening it later makes no further requests, and the sync server never sees the location.',
   'media.location.insert': 'Insert location',
+
+  // Stitching a video interview's answer clips into one film. The render runs
+  // on this device (WebCodecs, or a realtime fallback) — nothing is uploaded.
+  'media.film.render': 'Render film',
+  'media.film.rerender': 'Re-render film',
+  'media.film.stale': 'An answer changed since this film was made.',
+  'media.film.dialogTitle': 'Render your film',
+  'media.film.dialogBody':
+    'Your answers are stitched into one video, with the question shown as a title card before each one. This happens on this device — nothing is uploaded to do it.',
+  'media.film.estimate': 'About {duration} long',
+  'media.film.addedSize': 'The film is saved alongside your answer clips, so it adds to your vault.',
+  'media.film.slowWarning':
+    'This browser renders in real time, so it takes about as long as the film itself. Keep this tab open and the screen on.',
+  'media.film.rendering': 'Rendering… {pct}%',
+  'media.film.start': 'Render',
+  'media.film.failed': 'Could not render the film.',
+  'media.film.missingClips#one': "{count} answer isn't on this device yet — it was left out.",
+  'media.film.missingClips#other': "{count} answers aren't on this device yet — they were left out.",
+  'media.film.noClips': 'There are no answers to stitch together yet.',
+  'media.film.unsupported': 'This browser cannot render video.',
+  'media.film.deleteClips': 'Delete the source clips',
+  'media.film.deleteClipsTitle': 'Delete the source clips?',
+  'media.film.deleteClipsBody':
+    'The {count} answer clips will be deleted from this device and the sync server. The film stays, but you will not be able to re-render or retake.',
 } as const;

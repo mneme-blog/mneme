@@ -46,6 +46,7 @@ export function GuidedInterviewSheet({
   onManageTypes,
   journalId,
   initial,
+  onVideo,
 }: {
   desk: boolean;
   onClose: () => void;
@@ -58,6 +59,8 @@ export function GuidedInterviewSheet({
   journalId?: string;
   /** Preselected start (mobile compose chooser) — skips the pick phase. */
   initial?: InterviewType | 'freeform';
+  /** Answer this type on camera instead; omit to hide the affordance. */
+  onVideo?: (type: InterviewType) => void;
 }): VNode | null {
   const { entries, journals, interviewTypes, aiSettings, createEntry } = useAppData();
   const [phase, setPhase] = useState<Phase>('pick');
@@ -266,16 +269,33 @@ export function GuidedInterviewSheet({
         {t('assistant.interview.pickIntro')}
       </p>
       {alive.map((it) => (
-        <button
+        // The same type can be typed or filmed — the strategy text is
+        // mode-agnostic, so the choice is made here rather than baked into the
+        // record. The camera button hands off to the video sheet.
+        <div
           key={it.id}
-          onClick={() => startInterview(it)}
-          style={{ textAlign: 'start', cursor: 'pointer', padding: '12px 14px', borderRadius: 12, background: 'var(--paper)', border: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 3 }}
+          style={{ display: 'flex', alignItems: 'stretch', gap: 0, borderRadius: 12, background: 'var(--paper)', border: '1px solid var(--line)', overflow: 'hidden' }}
           onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent-line)')}
           onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--line)')}
         >
-          <span style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, color: 'var(--ink)' }}>{it.name || t('common.untitled')}</span>
-          {it.intro && <span style={{ ...pStyle, fontSize: 12.5, color: 'var(--ink-3)' }}>{it.intro}</span>}
-        </button>
+          <button
+            onClick={() => startInterview(it)}
+            style={{ flex: 1, minWidth: 0, textAlign: 'start', cursor: 'pointer', padding: '12px 14px', background: 'transparent', border: 'none', display: 'flex', flexDirection: 'column', gap: 3 }}
+          >
+            <span style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, color: 'var(--ink)' }}>{it.name || t('common.untitled')}</span>
+            {it.intro && <span style={{ ...pStyle, fontSize: 12.5, color: 'var(--ink-3)' }}>{it.intro}</span>}
+          </button>
+          {onVideo && (
+            <button
+              onClick={() => { onClose(); onVideo(it); }}
+              title={t('assistant.video.recordInstead')}
+              aria-label={t('assistant.video.recordInstead')}
+              style={{ flexShrink: 0, width: 46, background: 'transparent', border: 'none', borderInlineStart: '1px solid var(--line)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-3)' }}
+            >
+              <Icon name="video" size={17} color="var(--ink-3)" />
+            </button>
+          )}
+        </div>
       ))}
       <button
         onClick={() => { setType(null); setInput(''); setPhase('brief'); }}
