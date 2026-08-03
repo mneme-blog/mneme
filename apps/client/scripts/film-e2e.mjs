@@ -12,7 +12,9 @@ import { build } from 'vite';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
-import { join, extname } from 'node:path';
+// `resolve` is aliased: the request handler below sits inside a `new Promise`
+// whose own `resolve` parameter would otherwise shadow it.
+import { join, extname, resolve as resolvePath, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import preact from '@preact/preset-vite';
 
@@ -39,12 +41,20 @@ const result = await new Promise((resolve, reject) => {
       resolve(JSON.parse(body));
       return;
     }
-    const path = req.url === '/' ? '/index.html' : req.url.split('?')[0];
+    // Resolve the request against the build directory and refuse anything that
+    // escapes it. Only this machine can reach the server, but a request path is
+    // still attacker-shaped input and `join` alone happily walks out with "..".
+    const requested = decodeURIComponent(req.url.split('?')[0]);
+    const file = resolvePath(outDir, `.${requested === '/' ? '/index.html' : requested}`);
+    if (file !== outDir && !file.startsWith(outDir + sep)) {
+      res.writeHead(403).end();
+      return;
+    }
     try {
-      const data = await readFile(join(outDir, path));
+      const data = await readFile(file);
       // Same headers the app ships; notably NO COOP/COEP, so this also proves
       // the encoder needs no cross-origin isolation.
-      res.writeHead(200, { 'content-type': MIME[extname(path)] ?? 'application/octet-stream' }).end(data);
+      res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' }).end(data);
     } catch {
       res.writeHead(404).end();
     }
