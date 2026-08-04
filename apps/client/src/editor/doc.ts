@@ -194,6 +194,24 @@ function stripInline(s: string): string {
 }
 
 /**
+ * Split a leading `# ` title line off an AI-synthesized Markdown draft. The
+ * synthesis prompts ask for exactly one level-1 title line followed by the
+ * entry body (whose section headings are `## `); the title becomes the entry's
+ * title field instead of the date-time default. Returns `title: null` when the
+ * draft doesn't start with one (older provider output, model ignoring the
+ * instruction) so callers can keep the default-title fallback.
+ */
+export function splitMarkdownTitle(md: string): { title: string | null; body: string } {
+  const lines = md.replace(/\r\n?/g, '\n').split('\n');
+  const first = lines.findIndex((l) => l.trim() !== '');
+  if (first === -1) return { title: null, body: md };
+  const m = /^#\s+(.*)$/.exec(lines[first].trim());
+  const title = m ? stripInline(m[1]) : '';
+  if (!title) return { title: null, body: md };
+  return { title, body: lines.slice(first + 1).join('\n').trim() };
+}
+
+/**
  * Parse a small Markdown subset — the shape the AI surfaces emit — into a
  * ProseMirror doc: `#`/`##`/`###` headings (capped at the schema's level 3),
  * `-`/`*` bullet lists, `1.` ordered lists, `>` blockquotes, and blank-line-

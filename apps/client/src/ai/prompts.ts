@@ -145,7 +145,8 @@ export function interviewSynthesisPrompt(type: { name: string }): string {
     '- Use only what the user actually said — never invent events, feelings, or facts.',
     '- Organise it naturally with a few short "## " headings and short paragraphs; use "- " bullets where the user listed things.',
     '- Keep it warm and genuine, not clinical. Do not address the user as "you" and do not mention the interview or yourself.',
-    '- Output only the entry as simple Markdown (## headings, - bullets, > quotes). No title line, no preamble, no commentary.',
+    '- Start with exactly one "# " line: a short, specific title for the entry (a few words, no date). It becomes the entry\'s title.',
+    '- Output only the title line and the entry as simple Markdown (## headings, - bullets, > quotes). No preamble, no commentary.',
   ].join('\n');
 }
 
@@ -217,6 +218,7 @@ export function freeformDraftPrompt(): string {
     'The user will describe what they want the entry to be about. Write one first-person journal entry in their voice.',
     `- First person, in ${currentLocale().english}; draw only on what they tell you — don't invent specifics they didn't give.`,
     '- Organise it naturally with a few short "## " headings and short paragraphs; use "- " bullets for lists.',
-    '- Output only the entry as simple Markdown. No title line, no preamble, no commentary.',
+    '- Start with exactly one "# " line: a short, specific title for the entry (a few words, no date). It becomes the entry\'s title.',
+    '- Output only the title line and the entry as simple Markdown. No preamble, no commentary.',
   ].join('\n');
 }
