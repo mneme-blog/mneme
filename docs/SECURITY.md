@@ -506,7 +506,18 @@ The escalation is bounded by construction rather than by trust in the relay:
 Residual risks worth naming: a downgrade attack as above (mitigated only by protecting `ADMIN_TOKEN`
 — rotate it, and consider leaving updates off on an internet-reachable relay); images are pulled by
 **tag, not digest**, so the registry and the transport are trusted (GHCR over TLS); and the agent runs
-as root, so a bug in the agent script is a host-level bug. The conservative posture is unchanged and
+as root, so a bug in the agent script is a host-level bug.
+
+**The checkout is a root-privileged input.** The agent's own script is installed root-owned under
+`/usr/local/lib`, but what it *runs* is `$REPO_DIR/deploy/prod.sh` — which sources
+`deploy/version.env` — and that lives wherever the operator cloned the repository. In the documented
+homelab layout that is a home directory owned by a non-root account, so **whoever can write the
+checkout can execute code as root at the next update**. It is a smaller step than it sounds (the same
+account is normally in the `docker` group, which is already root-equivalent), and it is not made a
+hard failure for that reason — but it is now stated at install time and repeated in the agent's log
+on every run, with the fix: `chown -R root:root <repo>/deploy && chmod -R go-w <repo>/deploy`, after
+which editing `deploy/` needs sudo. A relay-side compromise gains nothing from this either way; it is
+a local-user escalation on the host. The conservative posture is unchanged and
 fully supported: leave `UPDATE_SPOOL_DIR` unset and update on the host by hand.
 
 Note also that a server-side rollback does **not** roll back client-side state: local device databases

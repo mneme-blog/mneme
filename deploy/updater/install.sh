@@ -104,6 +104,42 @@ chmod 0644 "$DROPIN"
 systemctl daemon-reload
 systemctl enable --now mneme-updater.path
 
+# The agent's own script is installed root-owned under /usr/local/lib, but the
+# thing it runs — deploy/prod.sh, which in turn sources deploy/version.env — stays
+# in the checkout, wherever that is. A checkout under a home directory is the
+# documented normal case, and it is owned by the operator's account, not root. So
+# say plainly what that means: writing those files is equivalent to running code
+# as root at the next update. Not fatal (docker-group membership is already
+# root-equivalent on most hosts, and refusing to install would help nobody), but
+# it must not be something you have to work out for yourself.
+unsafe=()
+for p in "$REPO_DIR" "$REPO_DIR/deploy" "$REPO_DIR/deploy/prod.sh" "$REPO_DIR/deploy/version.env"; do
+  [[ -e $p ]] || continue
+  owner=$(stat -c %u "$p")
+  perms=$(stat -c %a "$p")
+  if ((owner != 0)) || ((8#$perms & 8#022)); then
+    unsafe+=("$p ($(stat -c '%U %a' "$p"))")
+  fi
+done
+if ((${#unsafe[@]})); then
+  cat >&2 <<EOF
+
+⚠️  This agent runs as root and executes files from the checkout, which root does
+    not exclusively own:
+
+$(printf '      %s\n' "${unsafe[@]}")
+
+    Anyone who can write those paths can run code as root the next time an
+    update is applied. To close that:
+
+        sudo chown -R root:root $REPO_DIR/deploy
+        sudo chmod -R go-w $REPO_DIR/deploy
+
+    (You will then need sudo to edit deploy/ — which is the point.) The agent
+    repeats this warning in its own log on every run. See docs/SECURITY.md §6.17.
+EOF
+fi
+
 # Prove the service can actually reach the checkout from inside its sandbox. With
 # no request in the spool the agent runs its preflight and exits, so this is safe
 # to run here — and it turns a misconfigured path into an install-time error
