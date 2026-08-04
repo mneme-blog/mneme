@@ -46,6 +46,10 @@ func (s *Server) handleAdminPage(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
+	// Overrides the API-wide default-src 'none' from secureHeaders: this is the
+	// one response that is a document. Hash-pinned inline script, no external
+	// origin, not framable — see headers.go.
+	w.Header().Set("Content-Security-Policy", dashboardCSP)
 	_, _ = w.Write(dashboardHTML)
 }
 

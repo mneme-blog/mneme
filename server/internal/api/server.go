@@ -107,7 +107,7 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("POST /admin/update", s.adminAuth(http.HandlerFunc(s.handleAdminUpdate)))
 	mux.Handle("POST /admin/update/rollback", s.adminAuth(http.HandlerFunc(s.handleAdminRollback)))
 
-	return s.cors(s.logging(mux))
+	return s.secureHeaders(s.cors(s.logging(mux)))
 }
 
 // ── auth context ────────────────────────────────────────────────────────────
