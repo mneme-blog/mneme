@@ -762,6 +762,7 @@ const de: Partial<Record<MessageKey, string>> = {
   'editorx.videoInterview.questions#other': '{count} Fragen',
   'editorx.videoInterview.answered': '{n} von {total} beantwortet',
   'editorx.videoInterview.notRecorded': 'Nicht aufgenommen',
+  'editorx.videoInterview.clipRemoved': 'Beantwortet – Quellclip gelöscht',
   'editorx.videoInterview.loadingClip': 'Antwort wird geladen…',
   'editorx.videoInterview.retry': 'Noch nicht verfügbar – erneut versuchen',
   'editorx.videoInterview.film': 'Dein Film',

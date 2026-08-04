@@ -696,6 +696,7 @@ const ko: Partial<Record<MessageKey, string>> = {
   'editorx.videoInterview.questions#other': '질문 {count}개',
   'editorx.videoInterview.answered': '{total}개 중 {n}개 답변함',
   'editorx.videoInterview.notRecorded': '녹화하지 않음',
+  'editorx.videoInterview.clipRemoved': '답변함 — 원본 클립 삭제됨',
   'editorx.videoInterview.loadingClip': '답변을 불러오는 중…',
   'editorx.videoInterview.retry': '아직 사용할 수 없음 — 다시 시도',
   'editorx.videoInterview.film': '내 영상',

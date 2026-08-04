@@ -751,6 +751,7 @@ const ja: Partial<Record<MessageKey, string>> = {
   'editorx.videoInterview.questions#other': '{count} 件の質問',
   'editorx.videoInterview.answered': '{total} 件中 {n} 件回答済み',
   'editorx.videoInterview.notRecorded': '未録画',
+  'editorx.videoInterview.clipRemoved': '回答済み — 元のクリップは削除済み',
   'editorx.videoInterview.loadingClip': '回答を読み込み中…',
   'editorx.videoInterview.retry': 'まだ利用できません — 再試行',
   'editorx.videoInterview.film': 'あなたの映像',

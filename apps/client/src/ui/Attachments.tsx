@@ -7,7 +7,7 @@
 // <AttachmentList> below for legacy entries whose attachments predate inline
 // media and live only in the entry's attachments array.
 import type { VNode } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { JournalEntry, MediaAttachment } from '../sync/engine';
 import { useAppData } from '../state/data';
 import { t, fmtNumber } from '../i18n';
@@ -41,6 +41,11 @@ function mediaIcon(kind: MediaAttachment['kind']): 'mic' | 'video' | 'image' | '
   return 'file';
 }
 
+// The most common "not reachable yet" case is bytes another device is still
+// uploading (a freshly rendered film takes a while); they usually land within
+// minutes, so retry quietly a few times before leaving it to the button.
+const AUTO_RETRY_DELAYS_MS = [8_000, 30_000, 90_000];
+
 // Resolve an attachment to a playable object URL; `failed` flips on when the
 // bytes aren't reachable yet (e.g. recorded on another device, not uploaded).
 export function useMediaUrl(att: MediaAttachment, resolve: MediaResolver): { url: string | null; failed: boolean; retry: () => void } {
@@ -48,6 +53,13 @@ export function useMediaUrl(att: MediaAttachment, resolve: MediaResolver): { url
   const [failed, setFailed] = useState(false);
   // Bump to retry a failed load.
   const [attempt, setAttempt] = useState(0);
+  // Background retries spent on the current attachment (capped, cheap: each is
+  // one metadata GET against the relay while the card is mounted and failed).
+  const autoTries = useRef(0);
+
+  useEffect(() => {
+    autoTries.current = 0;
+  }, [att.id]);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -68,7 +80,24 @@ export function useMediaUrl(att: MediaAttachment, resolve: MediaResolver): { url
     };
   }, [att.id, attempt]);
 
-  return { url, failed, retry: () => setAttempt((n) => n + 1) };
+  useEffect(() => {
+    if (!failed || autoTries.current >= AUTO_RETRY_DELAYS_MS.length) return;
+    const timer = setTimeout(() => {
+      autoTries.current += 1;
+      setAttempt((n) => n + 1);
+    }, AUTO_RETRY_DELAYS_MS[autoTries.current]);
+    return () => clearTimeout(timer);
+  }, [failed, attempt]);
+
+  // A manual retry restores the automatic budget — the user is watching again.
+  return {
+    url,
+    failed,
+    retry: () => {
+      autoTries.current = 0;
+      setAttempt((n) => n + 1);
+    },
+  };
 }
 
 // Deleting a media item is destructive and unrecoverable (no relay-side copy the

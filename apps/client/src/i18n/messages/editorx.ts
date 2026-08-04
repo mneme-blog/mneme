@@ -105,6 +105,7 @@ export const editorx = {
   'editorx.videoInterview.questions#other': '{count} questions',
   'editorx.videoInterview.answered': '{n} of {total} answered',
   'editorx.videoInterview.notRecorded': 'Not recorded',
+  'editorx.videoInterview.clipRemoved': 'Answered — source clip deleted',
   'editorx.videoInterview.loadingClip': 'Loading answer…',
   'editorx.videoInterview.retry': 'Not available yet — retry',
   'editorx.videoInterview.film': 'Your film',

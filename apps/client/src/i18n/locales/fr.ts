@@ -750,6 +750,7 @@ const fr: Partial<Record<MessageKey, string>> = {
   'editorx.videoInterview.questions#other': '{count} questions',
   'editorx.videoInterview.answered': '{n} sur {total} répondues',
   'editorx.videoInterview.notRecorded': 'Non enregistrée',
+  'editorx.videoInterview.clipRemoved': 'Répondue — clip source supprimé',
   'editorx.videoInterview.loadingClip': 'Chargement de la réponse…',
   'editorx.videoInterview.retry': 'Pas encore disponible — réessayer',
   'editorx.videoInterview.film': 'Votre film',

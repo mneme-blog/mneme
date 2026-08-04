@@ -752,6 +752,7 @@ const hi: Partial<Record<MessageKey, string>> = {
   'editorx.videoInterview.questions#other': '{count} प्रश्न',
   'editorx.videoInterview.answered': '{total} में से {n} के उत्तर',
   'editorx.videoInterview.notRecorded': 'रिकॉर्ड नहीं किया गया',
+  'editorx.videoInterview.clipRemoved': 'उत्तर दिया गया — मूल क्लिप हटा दी गई',
   'editorx.videoInterview.loadingClip': 'उत्तर लोड हो रहा है…',
   'editorx.videoInterview.retry': 'अभी उपलब्ध नहीं — पुनः प्रयास करें',
   'editorx.videoInterview.film': 'आपकी फ़िल्म',
