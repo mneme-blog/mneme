@@ -287,7 +287,7 @@ function JournalCard({ j, onOpen, syncing }: { j: Journal; onOpen: (j: Journal) 
   );
 }
 
-export function JournalsScreen({ desk, journals, onOpen, onNew, onEdit, onDelete, onSearch, syncing }: { desk: boolean; journals: Journal[]; onOpen: (j: Journal) => void; onNew: () => void; onEdit: (j: Journal) => void; onDelete: (j: Journal) => void; onSearch: () => void; syncing?: boolean }): VNode {
+export function JournalsScreen({ desk, journals, onOpen, onNew, onEdit, onDelete, onSearch, onSettings, syncing }: { desk: boolean; journals: Journal[]; onOpen: (j: Journal) => void; onNew: () => void; onEdit: (j: Journal) => void; onDelete: (j: Journal) => void; onSearch: () => void; onSettings: () => void; syncing?: boolean }): VNode {
   const { pendingCount, pendingJournalIds } = useAppData();
   // `syncing` (the first-sync pull) shows the download banner; an outbox with
   // records still to push (e.g. straight after a Day One import) shows an upload
@@ -390,7 +390,7 @@ export function JournalsScreen({ desk, journals, onOpen, onNew, onEdit, onDelete
           <AccountChip />
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <SyncBadge />
-            <button aria-label={t('common.settings')} style={{ width: 38, height: 38, borderRadius: 999, border: '1px solid var(--line)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <button onClick={onSettings} aria-label={t('common.settings')} style={{ width: 38, height: 38, borderRadius: 999, border: '1px solid var(--line)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <Icon name="settings" size={19} color="var(--ink-2)" />
             </button>
           </div>

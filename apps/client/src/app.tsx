@@ -409,7 +409,7 @@ export function App(): VNode {
         />
       );
     }
-    return <JournalsScreen desk={desk} journals={journals} onOpen={openJournal} onNew={() => setModal(true)} onEdit={(j) => setEditJournalId(j.id)} onDelete={(j) => setDeleteJournalId(j.id)} onSearch={() => setSearchOpen(true)} syncing={bootstrapping} />;
+    return <JournalsScreen desk={desk} journals={journals} onOpen={openJournal} onNew={() => setModal(true)} onEdit={(j) => setEditJournalId(j.id)} onDelete={(j) => setDeleteJournalId(j.id)} onSearch={() => setSearchOpen(true)} onSettings={() => setPrefsOpen(true)} syncing={bootstrapping} />;
   })();
 
   // A picked result closes the palette and opens the entry in the editor.
