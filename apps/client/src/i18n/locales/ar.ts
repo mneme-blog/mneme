@@ -849,6 +849,8 @@ const ar: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busy': 'جارٍ التفريغ…',
   'media.transcribe.show': 'إظهار النص المفرّغ',
   'media.transcribe.hide': 'إخفاء النص المفرّغ',
+  'media.transcribe.edit': 'تحرير',
+  'media.transcribe.editHint': 'أفرغ الحقل لإزالة النص المفرّغ.',
   'media.transcribe.failed': 'تعذّر التفريغ: {message}',
   'media.transcribe.modelMissing':
     'لا يملك خادم التفريغ نموذجًا بعد. في التثبيت الجديد يجري تنزيل واحد الآن، ويستغرق ذلك بضع دقائق. وإلا فافتح إعدادات الذكاء الاصطناعي واستخدم «فحص الخادم».',

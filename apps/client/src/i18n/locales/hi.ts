@@ -849,6 +849,8 @@ const hi: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busy': 'ट्रांसक्राइब हो रहा है…',
   'media.transcribe.show': 'ट्रांसक्रिप्ट दिखाएँ',
   'media.transcribe.hide': 'ट्रांसक्रिप्ट छिपाएँ',
+  'media.transcribe.edit': 'संपादित करें',
+  'media.transcribe.editHint': 'ट्रांसक्रिप्ट हटाने के लिए बॉक्स खाली कर दें।',
   'media.transcribe.failed': 'ट्रांसक्राइब नहीं हो सका: {message}',
   'media.transcribe.modelMissing':
     'ट्रांसक्रिप्शन सर्वर पर अभी कोई मॉडल नहीं है। नई इंस्टॉलेशन में वह अभी डाउनलोड हो रहा है, जिसमें कुछ मिनट लगते हैं। अन्यथा AI सेटिंग्स खोलें और "सर्वर जाँचें" का उपयोग करें।',

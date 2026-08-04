@@ -97,6 +97,7 @@ export function VideoInterviewCardView({
   onDelete,
   onDropClips,
   onTranscribe,
+  onSaveTranscript,
   transcribeDest,
 }: {
   data: VideoInterviewData;
@@ -109,6 +110,8 @@ export function VideoInterviewCardView({
   onDropClips?: () => void;
   /** Transcribe every untranscribed answer clip; transcripts land per card. */
   onTranscribe?: () => Promise<void>;
+  /** Persist a hand-edited transcript for one answer ('' clears it). */
+  onSaveTranscript?: (cardIndex: number, text: string) => void;
   /** Where transcription goes — non-local destinations confirm first. */
   transcribeDest?: TranscribeDestination;
 }): VNode {
@@ -241,7 +244,12 @@ export function VideoInterviewCardView({
             )}
             {/* The answer's transcript — kept even after the source clips were
                 dropped, since it is the searchable text of this answer. */}
-            {card.transcript && <TranscriptStrip transcript={card.transcript} />}
+            {card.transcript && (
+              <TranscriptStrip
+                transcript={card.transcript}
+                onSave={onSaveTranscript ? (text) => onSaveTranscript(i, text) : undefined}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -301,7 +309,9 @@ export function VideoInterviewCardView({
 // Keep ProseMirror's hands off interactions with the players, buttons, and dialog.
 function stopEvent(event: Event): boolean {
   const el = event.target as HTMLElement | null;
-  return !!el?.closest('video, a, button, [role="dialog"]');
+  // `textarea` is the transcript editor: without it ProseMirror handles the
+  // keystrokes and typing into the box moves the document instead.
+  return !!el?.closest('video, a, button, textarea, [role="dialog"]');
 }
 
 export function videoInterviewNode(handlers: VideoInterviewHandlers): Node {
@@ -379,19 +389,31 @@ export function videoInterviewNode(handlers: VideoInterviewHandlers): Node {
           // each transcript into the node as it lands (the per-card redraw is
           // the progress display). Attrs are re-read from the doc's current
           // node each round so the writes compose instead of clobbering.
+          // Returns false when this node is gone from the doc — the caller's
+          // signal to stop (a batch transcription must not keep running for a
+          // card nobody can see any more).
+          const writeTranscript = (cardIndex: number, text: string): boolean => {
+            const pos = getPos();
+            if (typeof pos !== 'number') return false;
+            const cur = editor.state.doc.nodeAt(pos);
+            if (!cur || cur.type.name !== VIDEO_INTERVIEW_NODE || cur.attrs.sessionId !== data.sessionId) return false;
+            const cards = (cur.attrs.cards as Record<string, unknown>[]).map((c, j) =>
+              // An emptied box clears the transcript rather than storing '' —
+              // coerceVideoInterview treats both alike, but a cleared card is
+              // what puts it back into the "Transcribe answers" count.
+              j === cardIndex ? { ...c, transcript: text || undefined } : c,
+            );
+            editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...cur.attrs, cards }));
+            return true;
+          };
           const onTranscribe = async (): Promise<void> => {
             for (let i = 0; i < data.cards.length; i++) {
               const card = data.cards[i];
               if (!card.clip || card.transcript) continue;
+              // data.lang is the language this session was recorded in; absent
+              // on pre-picker sessions, which means auto-detect.
               const text = await handlers.transcribe!(card.clip, data.lang);
-              const pos = getPos();
-              if (typeof pos !== 'number') return;
-              const cur = editor.state.doc.nodeAt(pos);
-              if (!cur || cur.type.name !== VIDEO_INTERVIEW_NODE || cur.attrs.sessionId !== data.sessionId) return;
-              const cards = (cur.attrs.cards as Record<string, unknown>[]).map((c, j) =>
-                j === i ? { ...c, transcript: text } : c,
-              );
-              editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...cur.attrs, cards }));
+              if (!writeTranscript(i, text)) return;
             }
           };
           render(
@@ -402,6 +424,7 @@ export function videoInterviewNode(handlers: VideoInterviewHandlers): Node {
               onDelete={editor.isEditable ? onDelete : undefined}
               onDropClips={editor.isEditable ? onDropClips : undefined}
               onTranscribe={handlers.transcribe && editor.isEditable ? onTranscribe : undefined}
+              onSaveTranscript={editor.isEditable ? (i, text) => void writeTranscript(i, text) : undefined}
               transcribeDest={handlers.transcribeDest}
             />,
             dom,

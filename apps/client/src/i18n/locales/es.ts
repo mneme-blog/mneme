@@ -859,6 +859,8 @@ const es: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busy': 'Transcribiendo…',
   'media.transcribe.show': 'Mostrar transcripción',
   'media.transcribe.hide': 'Ocultar transcripción',
+  'media.transcribe.edit': 'Editar',
+  'media.transcribe.editHint': 'Vacía el campo para eliminar la transcripción.',
   'media.transcribe.failed': 'No se pudo transcribir: {message}',
   'media.transcribe.modelMissing':
     'El servidor de transcripción aún no tiene modelo. En una instalación nueva lo está descargando, lo que tarda unos minutos. Si no, abre los ajustes de IA y usa «Comprobar servidor».',

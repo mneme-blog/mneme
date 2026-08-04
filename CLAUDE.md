@@ -135,6 +135,10 @@ project. Scaffolded so far:
   build-time `VITE_RELAY_URL` origin is added automatically; anything else (split-host relay, non-loopback
   Ollama) needs `CSP_CONNECT_EXTRA`. Caddy also sends nosniff / `X-Frame-Options: DENY` / `Referrer-Policy:
   no-referrer` / `Permissions-Policy` (camera+mic+geolocation `self`, rest denied) and strips `Server`.
+  `font-src 'self'` has a build-side counterpart: `build.assetsInlineLimit` in `vite.config.ts` keeps
+  **fonts out of the inlining path**, because Vite's default inlines every asset under 4 kB as a
+  `data:` URI and the policy blocks a `data:` font outright — the small faces (some Hanken Grotesk
+  unicode ranges, most KaTeX ones) silently fell back to system fonts in production until this.
 
 Media (§10 step 5) is in for **video, audio, images, and file attachments**: video/audio record via
 `getUserMedia`+MediaRecorder in the editor (`ui/VideoCapture.tsx`, `ui/AudioCapture.tsx`, inserted via the `/` slash menu; `addMedia`
@@ -386,7 +390,13 @@ on-device case would train click-through. The transcript is **content, not a med
 inside the encrypted body — `transcript` on `mediaAttachment` nodes (Transcribe strip on video/audio
 cards; legacy attachments too) and per card on `videoInterview` nodes ("Transcribe answers" runs
 clip-by-clip; transcripts **survive "Delete the source clips"**). `docToText` surfaces them, so
-search, previews, and Ask-my-journal see what was said. The **video interview offers auto-transcribe
+search, previews, and Ask-my-journal see what was said. Being content, they are **editable by hand**:
+`TranscriptStrip`'s `onSave` turns the shown text into a textarea, and each caller writes it back its
+own way — node attrs re-read from the doc's *current* node (both node views, so a concurrent
+transcription isn't resurrected), or the legacy attachments array. An emptied box stores
+`undefined`/`null` rather than `''`, which is what puts a card back into the "Transcribe" /
+"Transcribe answers" counts. Both node views' `stopEvent` must keep matching `textarea` — without it
+ProseMirror handles the keystrokes and typing moves the document instead of filling the box. The **video interview offers auto-transcribe
 at start** (toggle in the plan step, default off, carries the destination copy): after save a
 detached loop transcribes clip-by-clip and writes back via `setTranscriptAttr`/`attachTranscript`
 (the `setFilmAttr` pattern — the sheet is gone when results land). Whisper's `language` is a
@@ -474,7 +484,11 @@ HTML, the wa-sqlite wasm, the bundled fonts, and the icons — and injects a `re
 service worker (`apps/client/vite.config.ts`), so paired with the existing
 `public/manifest.webmanifest` the app satisfies Chrome/Android installability and runs offline. The SW
 is disabled in ordinary `pnpm dev` (keeps day-to-day dev free of asset caching) and turns on only in
-the HTTPS "test the install" mode. Because a service worker + install need a **secure context**
+the HTTPS "test the install" mode. `navigateFallback` is **relative** (`index.html`, the plugin's own
+default) and must stay that way: precache keys resolve against the service worker's URL, so the
+sub-path production image (`--base=/mneme/`) caches the shell as `/mneme/index.html` and a
+leading-slash fallback would name a URL that was never precached — every navigation throwing
+`non-precached-url` instead of being served offline. Because a service worker + install need a **secure context**
 (HTTPS or `localhost` — a `http://LAN-IP` dev URL is never installable on a phone), dev HTTPS is
 opt-in: `pnpm --filter client dev:https` (self-signed via `@vitejs/plugin-basic-ssl`, good for
 localhost) or `DEV_TLS_CERT`/`DEV_TLS_KEY` pointing at a locally-trusted `mkcert` cert (the only thing

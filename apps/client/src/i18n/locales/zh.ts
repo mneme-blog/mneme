@@ -793,6 +793,8 @@ const zh: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busy': '转写中…',
   'media.transcribe.show': '显示转写文本',
   'media.transcribe.hide': '隐藏转写文本',
+  'media.transcribe.edit': '编辑',
+  'media.transcribe.editHint': '清空文本框即可删除转写文本。',
   'media.transcribe.failed': '转写失败：{message}',
   'media.transcribe.modelMissing':
     '转录服务器还没有模型。全新安装时它正在下载模型，需要几分钟。否则请打开 AI 设置并使用"检查服务器"。',

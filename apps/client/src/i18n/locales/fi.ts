@@ -854,6 +854,8 @@ const fi: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busy': 'Litteroidaan…',
   'media.transcribe.show': 'Näytä litterointi',
   'media.transcribe.hide': 'Piilota litterointi',
+  'media.transcribe.edit': 'Muokkaa',
+  'media.transcribe.editHint': 'Tyhjennä kenttä, niin litterointi poistetaan.',
   'media.transcribe.failed': 'Litterointi epäonnistui: {message}',
   'media.transcribe.modelMissing':
     'Litterointipalvelimella ei ole vielä mallia. Uudessa asennuksessa se lataa mallia parhaillaan, mihin menee muutama minuutti. Muussa tapauksessa avaa tekoälyasetukset ja käytä Tarkista palvelin -painiketta.',

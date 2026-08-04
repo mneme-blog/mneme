@@ -793,6 +793,8 @@ const ko: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busy': '전사 중…',
   'media.transcribe.show': '전사 텍스트 보기',
   'media.transcribe.hide': '전사 텍스트 숨기기',
+  'media.transcribe.edit': '편집',
+  'media.transcribe.editHint': '입력란을 비우면 전사 텍스트가 삭제됩니다.',
   'media.transcribe.failed': '전사하지 못했습니다: {message}',
   'media.transcribe.modelMissing':
     '전사 서버에 아직 모델이 없습니다. 새로 설치한 경우 지금 내려받는 중이며 몇 분 걸립니다. 그렇지 않다면 AI 설정에서 "서버 확인"을 사용하세요.',

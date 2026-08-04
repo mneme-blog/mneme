@@ -845,6 +845,8 @@ const nl: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busy': 'Transcriberen…',
   'media.transcribe.show': 'Transcript tonen',
   'media.transcribe.hide': 'Transcript verbergen',
+  'media.transcribe.edit': 'Bewerken',
+  'media.transcribe.editHint': 'Maak het veld leeg om het transcript te verwijderen.',
   'media.transcribe.failed': 'Transcriberen mislukt: {message}',
   'media.transcribe.modelMissing':
     'De transcriptieserver heeft nog geen model. Bij een nieuwe installatie wordt er nu een gedownload, wat een paar minuten duurt. Open anders de AI-instellingen en gebruik "Server controleren".',

@@ -369,6 +369,8 @@
   "media.transcribe.busy": "Transcribing…",
   "media.transcribe.show": "Show transcript",
   "media.transcribe.hide": "Hide transcript",
+  "media.transcribe.edit": "Edit",
+  "media.transcribe.editHint": "Empty the box to remove the transcript.",
   "media.transcribe.failed": "Could not transcribe: {message}",
   "media.transcribe.modelMissing": "The transcription server has no model yet. On a new install it is still downloading one, which takes a few minutes. Otherwise open the AI settings and use \"Check server\".",
   "media.transcribe.answers": "Transcribe answers",
