@@ -316,6 +316,22 @@ async function main(): Promise<void> {
   localStorage.removeItem('mneme.videoInterview.maxSeconds');
   console.log('ok: answer countdown (rounds up, clamps at zero, limit fallback)');
 
+  // ── the spoken language is chosen and remembered, not inferred ──
+  // It used to be the app's UI language. Whisper treats `language` as a hard
+  // constraint, so an English UI over German speech produced fluent nonsense
+  // rather than an error — the failure this preference exists to end.
+  const { spokenLanguage, setSpokenLanguage, spokenLanguageChosen } = await import('../src/ai/transcribe');
+  localStorage.removeItem('mneme.transcribe.language');
+  assert(!spokenLanguageChosen() && spokenLanguage() === '', 'unset reads as auto-detect and as un-chosen');
+  setSpokenLanguage('de');
+  assert(spokenLanguage() === 'de' && spokenLanguageChosen(), 'a choice round-trips through localStorage');
+  setSpokenLanguage('');
+  assert(spokenLanguage() === '' && spokenLanguageChosen(), 'auto-detect is storable, and distinct from never having chosen');
+  setSpokenLanguage('klingon');
+  assert(spokenLanguage() === '', 'an unknown code falls back to auto-detect rather than reaching whisper');
+  localStorage.removeItem('mneme.transcribe.language');
+  console.log('ok: spoken language (remembered, auto-detect distinct from unset)');
+
   // ── timeline: whole frames, no drift across segments ──
   const { planTimeline, estimateSeconds, CARD_SECONDS, FILM_FPS: FPS } = await import('../src/video/timeline');
   const durations = [42.0, 17.5, 63.2, 8.4, 91.9];

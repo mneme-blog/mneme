@@ -794,7 +794,8 @@ const ko: Partial<Record<MessageKey, string>> = {
   'media.transcribe.show': '전사 텍스트 보기',
   'media.transcribe.hide': '전사 텍스트 숨기기',
   'media.transcribe.failed': '전사하지 못했습니다: {message}',
-  'media.transcribe.modelMissing': '전사 서버에 모델이 설치되어 있지 않습니다. AI 설정을 열고 ‘서버 확인’을 사용하세요.',
+  'media.transcribe.modelMissing':
+    '전사 서버에 아직 모델이 없습니다. 새로 설치한 경우 지금 내려받는 중이며 몇 분 걸립니다. 그렇지 않다면 AI 설정에서 "서버 확인"을 사용하세요.',
   'media.transcribe.answers': '답변 전사하기',
   'media.transcribe.notConfigured': '먼저 AI 설정에서 전사를 설정하세요.',
   'media.transcribe.confirmTitle': '전사를 위해 전송할까요?',
@@ -803,6 +804,8 @@ const ko: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribe': '저장 후 내 답변 전사하기',
   'assistant.video.transcribeLocal': '저장 후 음성 인식이 이 기기에서 실행됩니다.',
   'assistant.video.transcribeRemote': '저장 후 답변이 복호화된 상태로 {host}(으)로 전송되어 텍스트로 변환됩니다.',
+  'assistant.video.spokenLanguage': '말하는 언어',
+  'assistant.video.autoDetect': '자동 감지',
 };
 
 export default ko;

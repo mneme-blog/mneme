@@ -860,7 +860,8 @@ const es: Partial<Record<MessageKey, string>> = {
   'media.transcribe.show': 'Mostrar transcripción',
   'media.transcribe.hide': 'Ocultar transcripción',
   'media.transcribe.failed': 'No se pudo transcribir: {message}',
-  'media.transcribe.modelMissing': 'El servidor de transcripción no tiene su modelo instalado. Abre los ajustes de IA y usa «Comprobar servidor».',
+  'media.transcribe.modelMissing':
+    'El servidor de transcripción aún no tiene modelo. En una instalación nueva lo está descargando, lo que tarda unos minutos. Si no, abre los ajustes de IA y usa «Comprobar servidor».',
   'media.transcribe.answers': 'Transcribir respuestas',
   'media.transcribe.notConfigured': 'Configura primero la transcripción en los ajustes de IA.',
   'media.transcribe.confirmTitle': '¿Enviar para transcribir?',
@@ -869,6 +870,8 @@ const es: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribe': 'Transcribir mis respuestas después',
   'assistant.video.transcribeLocal': 'La conversión a texto se ejecuta en este dispositivo tras guardar.',
   'assistant.video.transcribeRemote': 'Tras guardar, tus respuestas se envían descifradas a {host} para convertirlas en texto.',
+  'assistant.video.spokenLanguage': 'Idioma hablado',
+  'assistant.video.autoDetect': 'Detectar automáticamente',
 };
 
 export default es;

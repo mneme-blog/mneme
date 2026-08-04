@@ -32,7 +32,16 @@ import { buildVideoInterviewDoc, type VideoInterviewCard } from '../editor/video
 import { docToText } from '../editor/doc';
 import { newMediaId } from '../sync/ids';
 import { toAiError } from '../ai/types';
-import { transcribe, transcriptionConfig, transcriptionDestination } from '../ai/transcribe';
+import {
+  transcribe,
+  transcriptionConfig,
+  transcriptionDestination,
+  languageName,
+  spokenLanguage,
+  spokenLanguageChosen,
+  setSpokenLanguage,
+  SPOKEN_LANGUAGES,
+} from '../ai/transcribe';
 import { currentLocale } from '../i18n';
 
 const pStyle: JSX.CSSProperties = { fontFamily: 'var(--ui)', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)', margin: 0 };
@@ -80,6 +89,18 @@ export function VideoInterviewSheet({
   // is), so consent lands at the moment of choice.
   const trCfg = transcriptionConfig(aiSettings);
   const [autoTranscribe, setAutoTranscribe] = useState(false);
+  // The language the answers will be SPOKEN in — not the app's UI language,
+  // which is what this used to assume. '' is auto-detect. Until the user has
+  // picked once, the UI language is the opening guess (it is often right, and
+  // it keeps behaviour unchanged for people it was already right for); after
+  // that the choice is remembered per device.
+  const [spokenLang, setSpokenLang] = useState<string>(() =>
+    spokenLanguageChosen() ? spokenLanguage() : currentLocale().id,
+  );
+  const chooseSpokenLang = (code: string): void => {
+    setSpokenLang(code);
+    setSpokenLanguage(code);
+  };
   const [type, setType] = useState<InterviewType | null>(null);
   const [questions, setQuestions] = useState<string[]>([]);
   const [planFallback, setPlanFallback] = useState(false);
@@ -105,6 +126,14 @@ export function VideoInterviewSheet({
   const alive = useMemo(() => interviewTypes.filter((it) => !it.deleted), [interviewTypes]);
   const vp = useVisualViewport();
   const limit = useMemo(() => answerLimitSeconds(), []);
+  // Names in the reader's own language, sorted the way that language sorts —
+  // so the list needs no translation of its own.
+  const langOptions = useMemo(() => {
+    const loc = currentLocale().id;
+    return SPOKEN_LANGUAGES.map((code) => ({ code, name: languageName(code, loc) })).sort((a, b) =>
+      a.name.localeCompare(b.name, loc),
+    );
+  }, []);
 
   // Release the camera and cancel any in-flight plan request on unmount.
   useEffect(
@@ -320,16 +349,19 @@ export function VideoInterviewSheet({
       cards,
       film: null,
       renderedAt: null,
+      // Stored so a later "Transcribe answers" — another day, another device,
+      // possibly another UI language — still knows what was spoken here.
+      lang: spokenLang || undefined,
     });
     updateEntry(entry.id, { bodyJson: JSON.stringify(doc), bodyText: docToText(doc) });
     // Opted-in auto-transcription runs detached — the sheet closes now, and the
     // stable context callbacks (mediaBlob/attachTranscript) outlive it. Clips
     // go one at a time; each transcript lands via the sessionId-addressed
-    // write-back the film render also uses. The language is pinned to the app
-    // locale: the questions were asked in it, so the answers follow it — this
-    // is the one place the whisper `language` constraint is justified.
+    // write-back the film render also uses. The language is the one the user
+    // picked before recording; empty means auto-detect, and `transcribe` then
+    // sends no constraint at all.
     if (autoTranscribe && trCfg) {
-      const language = currentLocale().id;
+      const language = spokenLang || undefined;
       void (async () => {
         for (let i = 0; i < cards.length; i++) {
           const clip = cards[i].clip;
@@ -465,6 +497,7 @@ export function VideoInterviewSheet({
             {trCfg && (() => {
               const dest = transcriptionDestination(trCfg);
               return (
+                <>
                 <button
                   onClick={() => setAutoTranscribe((v) => !v)}
                   style={{ marginTop: 12, width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, background: 'var(--surface-2)', border: '1px solid var(--line)', cursor: 'pointer', textAlign: 'start' }}
@@ -483,6 +516,27 @@ export function VideoInterviewSheet({
                     <span style={{ position: 'absolute', top: 2, left: autoTranscribe ? 16 : 2, width: 16, height: 16, borderRadius: 99, background: 'var(--surface)', transition: 'left .15s' }} />
                   </span>
                 </button>
+                {/* Asked, not inferred: whisper treats the language as a
+                    constraint, so guessing it from the UI language turns a
+                    German answer under an English UI into fluent nonsense. The
+                    choice is remembered, and stored on the session so a later
+                    "Transcribe answers" uses it too. */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, padding: '9px 12px', borderRadius: 12, background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
+                  <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-2)' }}>
+                    {t('assistant.video.spokenLanguage')}
+                  </span>
+                  <select
+                    value={spokenLang}
+                    onChange={(e) => chooseSpokenLang((e.target as HTMLSelectElement).value)}
+                    style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink)', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 9, padding: '5px 7px', maxWidth: '55%' }}
+                  >
+                    <option value="">{t('assistant.video.autoDetect')}</option>
+                    {langOptions.map((l) => (
+                      <option key={l.code} value={l.code}>{l.name}</option>
+                    ))}
+                  </select>
+                </label>
+                </>
               );
             })()}
           </>

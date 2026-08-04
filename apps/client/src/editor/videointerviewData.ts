@@ -34,6 +34,15 @@ export interface VideoInterviewData {
   film: MediaAttachment | null;
   /** When the film was rendered; older than a clip's createdAt ⇒ stale. */
   renderedAt: number | null;
+  /**
+   * ISO-639-1 the answers were spoken in, as chosen when the session started;
+   * undefined means auto-detect. Recorded on the session rather than read from
+   * the device at transcription time so that "Transcribe answers" months later,
+   * or on another device with another UI language, still constrains whisper to
+   * the language actually spoken. Ordinary node content — it rides inside the
+   * encrypted body like everything else here.
+   */
+  lang?: string;
 }
 
 // Attrs round-trip through JSON, and a doc can be older than the code reading
@@ -75,6 +84,8 @@ export function coerceVideoInterview(attrs: Record<string, unknown>): VideoInter
     cards,
     film: coerceClip(attrs.film),
     renderedAt: typeof attrs.renderedAt === 'number' ? attrs.renderedAt : null,
+    // Absent on every session recorded before the language was asked for.
+    lang: typeof attrs.lang === 'string' && attrs.lang ? attrs.lang : undefined,
   };
 }
 
