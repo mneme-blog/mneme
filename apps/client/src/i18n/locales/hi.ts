@@ -106,6 +106,8 @@ const hi: Partial<Record<MessageKey, string>> = {
   'journals.create': 'पत्रिका बनाएँ',
   'journals.saveChanges': 'परिवर्तन सहेजें',
   'journals.name.placeholder': 'अपनी पत्रिका को नाम दें',
+  'journals.subtitle.placeholder': 'विवरण जोड़ें',
+  'journals.field.subtitle': 'विवरण',
   'journals.field.colour': 'रंग',
   'journals.field.cover': 'आवरण',
   'journals.field.startFrom': 'यहाँ से शुरू करें',

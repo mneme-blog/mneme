@@ -105,6 +105,8 @@ const ja: Partial<Record<MessageKey, string>> = {
   'journals.create': 'ジャーナルを作成',
   'journals.saveChanges': '変更を保存',
   'journals.name.placeholder': 'ジャーナルに名前を付ける',
+  'journals.subtitle.placeholder': '説明を追加',
+  'journals.field.subtitle': '説明',
   'journals.field.colour': '色',
   'journals.field.cover': 'カバー',
   'journals.field.startFrom': '開始のもと',

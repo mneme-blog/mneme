@@ -11,7 +11,9 @@ export const journals = {
   'journals.create': 'Create journal',
   'journals.saveChanges': 'Save changes',
   'journals.name.placeholder': 'Name your journal',
+  'journals.subtitle.placeholder': 'Add a description',
 
+  'journals.field.subtitle': 'Description',
   'journals.field.colour': 'Colour',
   'journals.field.cover': 'Cover',
   'journals.field.startFrom': 'Start from',

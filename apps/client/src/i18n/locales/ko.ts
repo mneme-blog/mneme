@@ -96,6 +96,8 @@ const ko: Partial<Record<MessageKey, string>> = {
   'journals.create': '일기 만들기',
   'journals.saveChanges': '변경 사항 저장',
   'journals.name.placeholder': '일기 이름 짓기',
+  'journals.subtitle.placeholder': '설명 추가',
+  'journals.field.subtitle': '설명',
   'journals.field.colour': '색상',
   'journals.field.cover': '표지',
   'journals.field.startFrom': '시작 서식',

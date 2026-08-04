@@ -106,6 +106,8 @@ const fr: Partial<Record<MessageKey, string>> = {
   'journals.create': 'Créer le journal',
   'journals.saveChanges': 'Enregistrer les modifications',
   'journals.name.placeholder': 'Nommez votre journal',
+  'journals.subtitle.placeholder': 'Ajouter une description',
+  'journals.field.subtitle': 'Description',
   'journals.field.colour': 'Couleur',
   'journals.field.cover': 'Couverture',
   'journals.field.startFrom': 'Partir de',

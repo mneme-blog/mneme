@@ -143,13 +143,17 @@ export function EditJournalSheet({
   /** The notebook being restyled — seeds the form. */
   journal: Journal;
   onClose: () => void;
-  /** Persists the new name/colour/cover; the caller closes the sheet. */
-  onSave: (patch: { name: string; color: string; cover: CoverPattern }) => void;
+  /** Persists the new name/subtitle/colour/cover; the caller closes the sheet. */
+  onSave: (patch: { name: string; subtitle: string; color: string; cover: CoverPattern }) => void;
 }): VNode {
   const [name, setName] = useState(journal.name);
+  // The line under the title on the card — seeded by the sample notebooks and
+  // by the Day One import ("Imported from Day One"), and until now unreachable
+  // once set. Free text, blank allowed: the card simply renders nothing.
+  const [subtitle, setSubtitle] = useState(journal.subtitle);
   const [color, setColor] = useState(journal.color);
   const [cover, setCover] = useState<CoverPattern>(journal.cover);
-  const draft: Journal = { ...journal, name: name || t('journals.untitled'), color, cover };
+  const draft: Journal = { ...journal, name: name || t('journals.untitled'), subtitle, color, cover };
 
   const body = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -164,6 +168,16 @@ export function EditJournalSheet({
             style={{ width: '100%', boxSizing: 'border-box', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'var(--serif)', fontSize: 22, color: 'var(--ink)', fontWeight: 500 }}
           />
           <div style={{ height: 1, background: 'var(--line)', marginTop: 4 }} />
+          {/* Styled to match how the card renders it, so the field reads as the
+              line it edits rather than as a generic text input. */}
+          <input
+            value={subtitle}
+            onInput={(e) => setSubtitle((e.target as HTMLInputElement).value)}
+            placeholder={t('journals.subtitle.placeholder')}
+            aria-label={t('journals.field.subtitle')}
+            style={{ width: '100%', boxSizing: 'border-box', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'var(--ui)', fontSize: 13, color: 'var(--ink-2)', marginTop: 7 }}
+          />
+          <div style={{ height: 1, background: 'var(--line)', marginTop: 3 }} />
         </div>
       </div>
 
@@ -199,7 +213,7 @@ export function EditJournalSheet({
         <Btn
           kind="primary"
           size="md"
-          onClick={() => onSave({ name: name.trim() || t('journals.untitled'), color, cover })}
+          onClick={() => onSave({ name: name.trim() || t('journals.untitled'), subtitle: subtitle.trim(), color, cover })}
           style={{ flex: 2 }}
         >
           {t('journals.saveChanges')}

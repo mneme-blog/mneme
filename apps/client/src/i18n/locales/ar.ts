@@ -106,6 +106,8 @@ const ar: Partial<Record<MessageKey, string>> = {
   'journals.create': 'إنشاء يوميات',
   'journals.saveChanges': 'حفظ التغييرات',
   'journals.name.placeholder': 'سمِّ يومياتك',
+  'journals.subtitle.placeholder': 'أضف وصفًا',
+  'journals.field.subtitle': 'الوصف',
   'journals.field.colour': 'اللون',
   'journals.field.cover': 'الغلاف',
   'journals.field.startFrom': 'ابدأ من',
