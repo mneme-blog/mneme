@@ -58,6 +58,7 @@ Errors are `{ "error": "message" }` with an appropriate status (400/401/404/500)
 | Push batch | 500 entries | – | `/v1/sync/push` → `413` |
 | Request body | 32 MiB | – | any JSON endpoint |
 | Media chunk | 2 MiB | – | `PUT /v1/media/{id}/chunks/{n}` |
+| Record id | 1–128 chars of `[A-Za-z0-9_.:-]` | – | `entry_id` on `sync/push`, `reminder_id` on `PUT /v1/reminders` → `400` |
 
 The three auth endpoints are unauthenticated and are the only way in, so they are throttled per
 client IP (token bucket, in-process — a distributed attacker is the reverse proxy's job). A normal

@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/base64"
 	"net/http"
+	"regexp"
 
 	"github.com/plasticparticle/mneme/server/internal/store"
 )
@@ -14,6 +15,19 @@ const maxPullLimit = 500
 // loop — capping the count mirrors maxPullLimit and keeps one request from
 // turning into an unbounded burst of sequential writes.
 const maxPushEntries = 500
+
+// recordIDRe constrains the oplog's primary key. media_id has always been
+// validated because it becomes an object-storage key; entry_id — which is
+// stored, indexed, and echoed back on every pull — only had a non-empty check,
+// so an authenticated owner could key records by megabyte-long ids (up to the
+// 32 MiB body limit, 500 per request) and grow a column the storage quota's
+// ciphertext accounting never sees.
+//
+// Deliberately wider than the ids the client mints (random 128-bit hex): a
+// record pushed by an older build must keep pushing, so anything that has ever
+// been a plausible id — the sample entries' "e1", a notebook's "j-tutorial" —
+// still passes. It is a bound, not a format.
+var recordIDRe = regexp.MustCompile(`^[A-Za-z0-9_.:-]{1,128}$`)
 
 // POST /v1/sync/push — upload encrypted entry blobs. Last-write-wins per entry on
 // lww_clock. The server treats ciphertext as opaque bytes.
@@ -58,8 +72,8 @@ func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
 	var created, updated, deleted int64
 
 	for _, e := range req.Entries {
-		if e.EntryID == "" {
-			writeError(w, http.StatusBadRequest, "entry_id is required")
+		if !recordIDRe.MatchString(e.EntryID) {
+			writeError(w, http.StatusBadRequest, "entry_id must be 1-128 characters of [A-Za-z0-9_.:-]")
 			return
 		}
 		ct, err := base64.StdEncoding.DecodeString(e.Ciphertext)

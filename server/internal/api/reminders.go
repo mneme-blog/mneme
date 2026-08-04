@@ -43,8 +43,10 @@ func (s *Server) handlePutReminder(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	if req.ReminderID == "" {
-		writeError(w, http.StatusBadRequest, "reminder_id is required")
+	// Same bound as the oplog's entry_id (sync.go): this is a stored, indexed
+	// primary key, and an unvalidated one is free storage for an owner.
+	if !recordIDRe.MatchString(req.ReminderID) {
+		writeError(w, http.StatusBadRequest, "reminder_id must be 1-128 characters of [A-Za-z0-9_.:-]")
 		return
 	}
 	fireAt, err := time.Parse(time.RFC3339, req.FireAt)
