@@ -504,6 +504,29 @@ fully supported: leave `UPDATE_SPOOL_DIR` unset and update on the host by hand.
 Note also that a server-side rollback does **not** roll back client-side state: local device databases
 migrate forward-only too, so a device that has opened the newer client stays migrated (§11).
 
+### 6.18 The bundled speech-to-text service — ⚠️ Accepted (unauthenticated compute, allowlisted)
+The deployment ships a whisper server (the `whisper` compose service) and Caddy proxies it at
+`/whisper` so the client's default transcription endpoint is same-origin — which is what makes it
+work with no CSP or CORS configuration. **That route is unauthenticated, and it cannot be otherwise:**
+the relay's device auth belongs to the relay, and the client posts audio here directly (browser →
+whisper, never through the relay — §2). Nothing about E2EE changes: the recording is decrypted on the
+device that owns it, sent to a server the deployment itself runs, and the transcript comes back into
+the encrypted entry body. But it means the origin exposes one endpoint that is **not** owner-scoped,
+throttled, or quota'd.
+
+What is done about it: the proxy forwards only the three endpoints the app calls — `POST
+/v1/audio/transcriptions` (with a 512 MB body cap), `GET /v1/models`, and `POST /v1/models/{id}`
+**restricted to the single model the deployment configures** (`WHISPER_MODEL`). Everything else the
+image serves — model deletion, text-to-speech, its own UI — is a 404. Without that allowlist, the
+install endpoint alone is "fetch any Hugging Face repository onto my server" for any passer-by, and
+the transcription endpoint is a CPU-exhaustion primitive with no token bucket in front of it.
+
+What remains, and is accepted: **anyone who can reach the site can spend transcription CPU.** On the
+intended LAN deployment that is the same trust boundary as everything else on the origin. A site
+reachable from the internet should put authentication in front of `/whisper`, or drop the `whisper`
+and `whisper-model` services and point the client's transcription setting at a server of its own —
+the feature degrades cleanly to "off" when the endpoint is absent.
+
 ---
 
 ## 7. Known weaknesses / hardening backlog

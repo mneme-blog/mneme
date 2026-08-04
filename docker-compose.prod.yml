@@ -192,6 +192,11 @@ services:
       SITE_ADDRESS: ${SITE_ADDRESS:?set in .env.prod}
       # Served to clients that connect by bare IP (no SNI in the handshake).
       DEFAULT_SNI: ${DEFAULT_SNI:?set in .env.prod}
+      # The one model the /whisper proxy will accept an install request for.
+      # Keep it equal to the whisper-model service's model above — the proxy
+      # allowlists this exact path so an open install endpoint can't be used to
+      # pull arbitrary Hugging Face repositories onto the host.
+      WHISPER_MODEL: ${WHISPER_MODEL:-deepdml/faster-whisper-large-v3-turbo-ct2}
     ports:
       - "80:80" # redirects to https
       - "443:443"

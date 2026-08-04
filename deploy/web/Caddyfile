@@ -59,12 +59,67 @@
 		# the app's own origin so the client's default transcription URL needs
 		# no CSP or CORS configuration; handle_path strips the prefix, so the
 		# service sees the bare OpenAI-style /v1/audio/transcriptions path.
-		# Audio can be long — give slow CPU transcriptions room to finish.
+		#
+		# ⚠️ SECURITY: this route is UNAUTHENTICATED — the relay's device auth
+		# does not apply to it, and it cannot: the client posts here before it
+		# has anything the whisper server could check. Everything else on this
+		# origin is owner-scoped, throttled and quota'd; this is not. So the
+		# proxy forwards only the three endpoints the app actually calls, and
+		# 404s the rest of the image's API (model deletion, text-to-speech, its
+		# own UI). Without that allowlist anyone who can reach the site could
+		# spend the host's CPU at will, delete its models, or make it download
+		# arbitrary Hugging Face repositories through the install endpoint.
+		#
+		# It is still an open compute endpoint for anyone on the network. On a
+		# LAN that is the intended trade (see docs/SECURITY.md §6.18); a site
+		# reachable from the internet needs authentication in front of it, or
+		# the two whisper services removed.
 		handle_path /whisper/* {
-			reverse_proxy whisper:8000 {
-				transport http {
-					response_header_timeout 600s
+			# Transcribe one recording. Audio can be long — give slow CPU
+			# transcriptions room to finish, and cap what may be uploaded.
+			@transcribe {
+				method POST
+				path /v1/audio/transcriptions
+			}
+			handle @transcribe {
+				request_body {
+					max_size 512MB
 				}
+				reverse_proxy whisper:8000 {
+					transport http {
+						response_header_timeout 600s
+					}
+				}
+			}
+
+			# The installed-model listing, behind AI settings → "Check server".
+			@models {
+				method GET
+				path /v1/models /v1/models/*
+			}
+			handle @models {
+				reverse_proxy whisper:8000
+			}
+
+			# "Download model" — Speaches' install endpoint. Restricted to the
+			# model this deployment configures (WHISPER_MODEL, kept in step with
+			# the client's DEFAULT_TRANSCRIPTION_MODEL): the id is a Hugging Face
+			# repo path, so an unrestricted POST here is "fetch anything from
+			# huggingface.co onto my server" for any passer-by.
+			@install {
+				method POST
+				path /v1/models/{$WHISPER_MODEL:deepdml/faster-whisper-large-v3-turbo-ct2}
+			}
+			handle @install {
+				reverse_proxy whisper:8000 {
+					transport http {
+						response_header_timeout 7200s
+					}
+				}
+			}
+
+			handle {
+				respond 404
 			}
 		}
 
