@@ -687,6 +687,17 @@ const fr: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interview': 'Entretien quotidien',
   'prefs.assistant.interviewTypes': 'Types d’entretien',
   'prefs.assistant.ai': 'Assistant IA',
+
+  'prefs.video.section': 'Enregistrement vidéo',
+  'prefs.video.quality': 'Qualité',
+  'prefs.video.quality.low': 'Petite',
+  'prefs.video.quality.medium': 'Équilibrée',
+  'prefs.video.quality.high': 'Nette',
+  'prefs.video.perMinute': '≈{mb} Mo/min',
+  'prefs.video.quality.hint': 'S’applique aux nouveaux enregistrements — les clips déjà réalisés conservent leur taille. Un film assemblé reprend la taille de son premier clip.',
+  'prefs.video.limit': 'Durée maximale par réponse',
+  'prefs.video.limit.hint': 'Combien de temps une seule réponse d’entretien vidéo peut durer avant que l’enregistrement ne s’arrête de lui-même.',
+
   'prefs.vault.section': 'Coffre',
   'prefs.vault.yourVault': 'Votre coffre',
   'prefs.vault.idLabel': 'id du coffre',

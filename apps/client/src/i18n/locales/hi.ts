@@ -689,6 +689,17 @@ const hi: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interview': 'दैनिक साक्षात्कार',
   'prefs.assistant.interviewTypes': 'साक्षात्कार प्रकार',
   'prefs.assistant.ai': 'AI सहायक',
+
+  'prefs.video.section': 'वीडियो रिकॉर्डिंग',
+  'prefs.video.quality': 'गुणवत्ता',
+  'prefs.video.quality.low': 'छोटी',
+  'prefs.video.quality.medium': 'संतुलित',
+  'prefs.video.quality.high': 'स्पष्ट',
+  'prefs.video.perMinute': '≈{mb} MB/मिनट',
+  'prefs.video.quality.hint': 'यह नई रिकॉर्डिंग पर लागू होता है — पहले से रिकॉर्ड किए गए क्लिप अपने आकार में ही रहते हैं। जोड़ी गई फ़िल्म अपने पहले क्लिप का आकार अपनाती है।',
+  'prefs.video.limit': 'उत्तर की समय-सीमा',
+  'prefs.video.limit.hint': 'वीडियो इंटरव्यू में एक उत्तर कितनी देर चल सकता है, उसके बाद रिकॉर्डिंग अपने आप रुक जाती है।',
+
   'prefs.vault.section': 'तिजोरी',
   'prefs.vault.yourVault': 'आपकी तिजोरी',
   'prefs.vault.idLabel': 'तिजोरी आईडी',

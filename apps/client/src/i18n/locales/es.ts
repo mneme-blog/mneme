@@ -699,6 +699,17 @@ const es: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interview': 'Entrevista diaria',
   'prefs.assistant.interviewTypes': 'Tipos de entrevista',
   'prefs.assistant.ai': 'Asistente de IA',
+
+  'prefs.video.section': 'Grabación de vídeo',
+  'prefs.video.quality': 'Calidad',
+  'prefs.video.quality.low': 'Pequeña',
+  'prefs.video.quality.medium': 'Equilibrada',
+  'prefs.video.quality.high': 'Nítida',
+  'prefs.video.perMinute': '≈{mb} MB/min',
+  'prefs.video.quality.hint': 'Se aplica a las grabaciones nuevas: los clips ya grabados conservan su tamaño. Una película unida adopta el tamaño de su primer clip.',
+  'prefs.video.limit': 'Tiempo máximo por respuesta',
+  'prefs.video.limit.hint': 'Cuánto puede durar una sola respuesta de la entrevista en vídeo antes de que la grabación se detenga sola.',
+
   'prefs.vault.section': 'Bóveda',
   'prefs.vault.yourVault': 'Tu bóveda',
   'prefs.vault.idLabel': 'id de la bóveda',

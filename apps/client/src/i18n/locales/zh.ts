@@ -634,6 +634,17 @@ const zh: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interview': '每日访谈',
   'prefs.assistant.interviewTypes': '访谈类型',
   'prefs.assistant.ai': 'AI 助手',
+
+  'prefs.video.section': '视频录制',
+  'prefs.video.quality': '画质',
+  'prefs.video.quality.low': '小',
+  'prefs.video.quality.medium': '均衡',
+  'prefs.video.quality.high': '清晰',
+  'prefs.video.perMinute': '≈{mb} MB/分钟',
+  'prefs.video.quality.hint': '仅影响新的录制——已录制的片段保持原有画质。合成的影片沿用第一个片段的尺寸。',
+  'prefs.video.limit': '单条回答时长上限',
+  'prefs.video.limit.hint': '视频采访中单条回答最长可录制多久，超时后自动停止录制。',
+
   'prefs.vault.section': '保险库',
   'prefs.vault.yourVault': '你的保险库',
   'prefs.vault.idLabel': '保险库 ID',

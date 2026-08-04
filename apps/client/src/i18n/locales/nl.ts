@@ -685,6 +685,17 @@ const nl: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interview': 'Dagelijks interview',
   'prefs.assistant.interviewTypes': 'Interviewtypes',
   'prefs.assistant.ai': 'AI-assistent',
+
+  'prefs.video.section': 'Video-opname',
+  'prefs.video.quality': 'Kwaliteit',
+  'prefs.video.quality.low': 'Klein',
+  'prefs.video.quality.medium': 'Gebalanceerd',
+  'prefs.video.quality.high': 'Scherp',
+  'prefs.video.perMinute': '≈{mb} MB/min',
+  'prefs.video.quality.hint': 'Geldt voor nieuwe opnamen — clips die je al hebt gemaakt behouden hun formaat. Een samengestelde film neemt het formaat van de eerste clip over.',
+  'prefs.video.limit': 'Tijdslimiet per antwoord',
+  'prefs.video.limit.hint': 'Hoe lang één antwoord in het video-interview mag duren voordat de opname vanzelf stopt.',
+
   'prefs.vault.section': 'Kluis',
   'prefs.vault.yourVault': 'Je kluis',
   'prefs.vault.idLabel': 'kluis-id',

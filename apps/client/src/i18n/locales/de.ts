@@ -699,6 +699,17 @@ const de: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interview': 'Tägliches Interview',
   'prefs.assistant.interviewTypes': 'Interviewtypen',
   'prefs.assistant.ai': 'KI-Assistent',
+
+  'prefs.video.section': 'Videoaufnahme',
+  'prefs.video.quality': 'Qualität',
+  'prefs.video.quality.low': 'Klein',
+  'prefs.video.quality.medium': 'Ausgewogen',
+  'prefs.video.quality.high': 'Scharf',
+  'prefs.video.perMinute': '≈{mb} MB/Min.',
+  'prefs.video.quality.hint': 'Gilt für neue Aufnahmen — bereits aufgenommene Clips behalten ihre Größe. Ein zusammengefügter Film übernimmt die Größe seines ersten Clips.',
+  'prefs.video.limit': 'Zeitlimit pro Antwort',
+  'prefs.video.limit.hint': 'Wie lange eine einzelne Antwort im Video-Interview laufen darf, bevor die Aufnahme sich selbst stoppt.',
+
   'prefs.vault.section': 'Tresor',
   'prefs.vault.yourVault': 'Dein Tresor',
   'prefs.vault.idLabel': 'Tresor-ID',

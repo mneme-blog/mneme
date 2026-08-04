@@ -634,6 +634,17 @@ const ko: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interview': '오늘의 인터뷰',
   'prefs.assistant.interviewTypes': '인터뷰 유형',
   'prefs.assistant.ai': 'AI 어시스턴트',
+
+  'prefs.video.section': '동영상 녹화',
+  'prefs.video.quality': '화질',
+  'prefs.video.quality.low': '작게',
+  'prefs.video.quality.medium': '균형',
+  'prefs.video.quality.high': '선명하게',
+  'prefs.video.perMinute': '≈{mb} MB/분',
+  'prefs.video.quality.hint': '새 녹화에만 적용됩니다. 이미 녹화한 클립은 원래 크기를 유지합니다. 이어 붙인 영상은 첫 클립의 크기를 따릅니다.',
+  'prefs.video.limit': '답변 시간 제한',
+  'prefs.video.limit.hint': '영상 인터뷰에서 한 답변을 녹화할 수 있는 최대 시간이며, 초과하면 녹화가 자동으로 멈춥니다.',
+
   'prefs.vault.section': '금고',
   'prefs.vault.yourVault': '내 금고',
   'prefs.vault.idLabel': '금고 ID',

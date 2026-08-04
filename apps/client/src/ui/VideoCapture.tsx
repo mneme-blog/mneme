@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { t } from '../i18n';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
-import { fmtDuration, pickMimeType } from './recorder';
+import { cameraConstraints, fmtDuration, pickMimeType, recorderOptions } from './recorder';
 
 // The format choice and duration formatting live in ./recorder.ts, shared with
 // the multi-take video-interview session. Re-exported here because several
@@ -40,7 +40,7 @@ export function VideoCapture({
   useEffect(() => {
     let cancelled = false;
     navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'user' }, audio: true })
+      .getUserMedia(cameraConstraints())
       .then((s) => {
         if (cancelled) {
           s.getTracks().forEach((track) => track.stop());
@@ -72,7 +72,7 @@ export function VideoCapture({
     const mimeType = pickMimeType();
     let rec: MediaRecorder;
     try {
-      rec = new MediaRecorder(s, mimeType ? { mimeType } : undefined);
+      rec = new MediaRecorder(s, recorderOptions(mimeType));
     } catch {
       setError(t('media.record.unsupported'));
       setStage('error');

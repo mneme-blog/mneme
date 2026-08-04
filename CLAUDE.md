@@ -321,6 +321,17 @@ encrypted body. **`docMediaIds` is security-critical here**: one node references
 **Per-question time limit is device-local `localStorage`, deliberately NOT a field on
 `InterviewType`** — `sync/engine.ts` encodes that record field by field, so a new field is silently
 stripped the moment an older build edits and re-pushes it (LWW field loss, no conflict, no warning).
+**Capture quality** is device-local for the same reason: `mneme.video.quality` = low 640×360 /
+**medium 1280×720 (default)** / high 1920×1080, each with a `videoBitsPerSecond` cap — the cap is the
+real file-size lever, since browsers default to ~2.5 Mbps whatever the frame size. Constraints are
+**`ideal`, never `exact`** (an `exact` miss is `OverconstrainedError` — no camera at all). Left
+unconstrained, engines hand back ~640×480, and since the film render adopts the FIRST clip's
+dimensions and derives its bitrate from them, capture size sets the keepsake's size too. Both knobs
+live in **`ui/recorder.ts`** (`VIDEO_QUALITY`/`cameraConstraints`/`recorderOptions`/
+`answerLimitSeconds`/`ANSWER_LIMITS`), shared with `ui/VideoCapture.tsx` (the one-off camera modal
+honours the quality too) and with the **Preferences → Assistant → "Video recording"** picker
+(`VideoSection` in `ui/Preferences.tsx`; the quality tiles show frame size + ≈MB/min, the limit chips
+are `fmtDuration` digits so they need no translation).
 
 **One-click film rendering** stitches the answers into a single video with each question cut in as a
 ~2.5 s title card. Entirely on-device, no relay involvement, **no CSP and no COOP/COEP change** —
@@ -416,7 +427,7 @@ sets `<html dir="rtl">`; layout uses **logical CSS properties** (inline-start/en
 direction-bearing icons opt into mirroring via `<Icon dirFlip>` + the `[dir='rtl'] .dir-flip` rule in
 `tokens.css`. The AI assistant is told to reply in the app language (`ai/prompts.ts`,
 `currentLocale().english`). Coverage/regression check: `pnpm --filter client exec tsx scripts/i18n-dump.ts`
-(writes the flat English reference + prints per-locale `607/607` coverage). Known refinement: gendered
+(writes the flat English reference + prints per-locale full coverage, currently `780/780`). Known refinement: gendered
 languages get neutral phrasing around the shared `{noun}` media-delete placeholder; Arabic plurals use
 one/other with an `#other` fallback for two/few/many.
 

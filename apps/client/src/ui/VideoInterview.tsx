@@ -20,7 +20,7 @@ import { Btn } from './primitives';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ProviderBadge } from './ProviderBadge';
 import { useVisualViewport } from '../hooks/useVisualViewport';
-import { fmtDuration, pickMimeType } from './recorder';
+import { answerLimitSeconds, cameraConstraints, fmtDuration, pickMimeType, recorderOptions } from './recorder';
 import { t } from '../i18n';
 import { useAppData } from '../state/data';
 import type { InterviewType, MediaAttachment } from '../sync/engine';
@@ -37,18 +37,12 @@ import { currentLocale } from '../i18n';
 
 const pStyle: JSX.CSSProperties = { fontFamily: 'var(--ui)', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)', margin: 0 };
 
-// How long a single answer may run before recording stops itself. Device-local
-// like the theme and the language — never synced, never content. Deliberately
-// NOT a field on InterviewType: sync/engine.ts encodes that record field by
-// field, so a new field would be silently stripped the moment an older build
-// edits and re-pushes the record (LWW field loss, no conflict, no warning).
-const MAX_SECONDS_KEY = 'mneme.videoInterview.maxSeconds';
-const DEFAULT_MAX_SECONDS = 90;
-
-function maxSeconds(): number {
-  const raw = Number(localStorage.getItem(MAX_SECONDS_KEY));
-  return Number.isFinite(raw) && raw >= 15 && raw <= 600 ? raw : DEFAULT_MAX_SECONDS;
-}
+// The answer time limit and the capture quality live in ./recorder.ts, shared
+// with the Preferences picker that sets them. Both are device-local — never
+// synced, never content — and deliberately NOT fields on InterviewType:
+// sync/engine.ts encodes that record field by field, so a new field would be
+// silently stripped the moment an older build edits and re-pushes the record
+// (LWW field loss, no conflict, no warning).
 
 type Phase = 'pick' | 'planning' | 'plan' | 'record' | 'saving';
 type Stage = 'idle' | 'recording' | 'review';
@@ -110,7 +104,7 @@ export function VideoInterviewSheet({
   const provider = useMemo(() => (aiSettings?.enabled ? makeProvider(aiSettings) : null), [aiSettings]);
   const alive = useMemo(() => interviewTypes.filter((it) => !it.deleted), [interviewTypes]);
   const vp = useVisualViewport();
-  const limit = useMemo(() => maxSeconds(), []);
+  const limit = useMemo(() => answerLimitSeconds(), []);
 
   // Release the camera and cancel any in-flight plan request on unmount.
   useEffect(
@@ -198,7 +192,7 @@ export function VideoInterviewSheet({
     setError('');
     setPhase('record');
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+      const s = await navigator.mediaDevices.getUserMedia(cameraConstraints());
       stream.current = s;
       if (liveRef.current) liveRef.current.srcObject = s;
     } catch {
@@ -227,7 +221,7 @@ export function VideoInterviewSheet({
     const mimeType = pickMimeType();
     let rec: MediaRecorder;
     try {
-      rec = new MediaRecorder(s, mimeType ? { mimeType } : undefined);
+      rec = new MediaRecorder(s, recorderOptions(mimeType));
     } catch {
       setError(t('assistant.video.unsupported'));
       return;
