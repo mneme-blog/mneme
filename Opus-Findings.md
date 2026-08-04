@@ -15,6 +15,41 @@ CLAUDE.md §1/§3 and `docs/SECURITY.md`.
 
 ---
 
+## Status: all 12 findings resolved (2026-08-05)
+
+Every item below is checked off. The assessment and each finding are kept verbatim for the record —
+what changed is appended to each item in bold. Summary of the work:
+
+| | Finding | Resolution |
+|---|---|---|
+| H1 | Unauthenticated, unrestricted whisper proxy | Caddy forwards an allowlist (transcribe + model list + install pinned to `WHISPER_MODEL`), 512 MB body cap, everything else 404 |
+| M1 | No security headers on relay responses | `internal/api/headers.go` — nosniff / DENY / no-referrer / `default-src 'none'` everywhere, plus a hash-pinned CSP for the dashboard |
+| M2 | Record ciphertext not bound to its id | `mneme:record:v1:<entry_id>` as AAD on every record kind + a one-shot re-push (client DB v9) |
+| M3 | Admin token guesses unthrottled | Failed `/admin` authentications go through a per-IP bucket (`RATE_LIMIT_ADMIN_*`) |
+| L1 | Root updater runs from a writable checkout | Installer and agent both name the paths root does not own, and the fix |
+| L2 | Release-asset URL followed unchecked | https + a GitHub-owned host required |
+| L3 | Unbounded `entry_id` / `reminder_id` | 1–128 chars of `[A-Za-z0-9_.:-]` |
+| L4 | Restore read archive members unbounded | Per-member size limits + media member names must be a chunk path |
+| L5 | Stored relay URL trusted on read | Re-normalized where it is used |
+| L6 | Dashboard interpolated data into `innerHTML` | `esc()` at every sink; the server-side constraints stay as defence in depth |
+| I1 | `/admin` page served unauthenticated | Accepted — by design; it holds no data and prompts for the token |
+| I2 | `0.0.0.0` classified as loopback | Accepted — it does resolve to the local host, and it affects a label only |
+
+Regression coverage added: `apps/client/scripts/record-binding.ts` (M2 — relabelling rejected, legacy
+blobs still open, a poisoned record does not wedge the pull), `TestDashboardCSPCoversInlineScript` and
+`TestSecurityHeaders` (M1), `TestAdminTokenGuessesAreThrottled` (M3), `TestReleaseAssetHost` (L2).
+
+Not re-verified here: the Go `e2e` suite and the relay-dependent client scripts, which need Postgres
+and a running relay (no Docker daemon in the environment the fixes were made in). Everything else
+runs clean — `gofmt`, `go vet` (e2e build tag included) and `go test ./...`, `pnpm --filter client
+typecheck` and `build`, and the eight relay-free repro scripts.
+
+Two of the module ratings below are worth re-reading with the fixes in mind: the admin surface's
+**C+** was earned by the missing headers, the missing throttle and the raw interpolation — all three
+are now closed — and the deploy layer's **C** was the whisper route.
+
+---
+
 ## Overall security rating
 
 **B+ — the first audit's remediation holds up, and the core E2EE promise is intact. One
@@ -60,8 +95,8 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
 
 ### 🔴 High
 
-- [ ] **H1 — The bundled speech-to-text server is proxied to every client of the deployment
-  with no authentication and no restriction on which of its endpoints are reachable.**
+- [x] **H1 — The bundled speech-to-text server is proxied to every client of the deployment
+  with no authentication and no restriction on which of its endpoints are reachable.** — **Fixed:** the `/whisper` route now forwards only `POST /v1/audio/transcriptions` (512 MB body cap), `GET /v1/models`, and `POST /v1/models/{id}` restricted to the deployment's `WHISPER_MODEL`; every other path is a 404. What remains — open transcription compute for anyone on the network — is written down as an accepted LAN trade in docs/SECURITY.md §6.18, with the two ways out (put auth in front of it, or drop the whisper services).
   `deploy/web/Caddyfile:63-69` (`handle_path /whisper/*` → `reverse_proxy whisper:8000`),
   `docker-compose.prod.yml:123-181` (the `whisper` / `whisper-model` services).
   **Problem:** the relay's own API is behind device auth, per-IP throttling, a per-owner quota
@@ -88,8 +123,8 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
 
 ### 🟠 Medium
 
-- [ ] **M1 — The relay sends no security headers at all, so the admin dashboard is framable and
-  runs with no CSP while holding the admin token.**
+- [x] **M1 — The relay sends no security headers at all, so the admin dashboard is framable and
+  runs with no CSP while holding the admin token.** — **Fixed:** `internal/api/headers.go` sets nosniff, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` and `default-src 'none'` on every relay response, so the baseline holds whatever fronts it. The dashboard overrides the CSP with its own: `script-src` pinned to the sha256 of its single inline script (computed from the bytes actually served, so it cannot drift), `connect-src 'self'`, `frame-ancestors 'none'`.
   `deploy/web/Caddyfile:45-56` (the `/v1/*`, `/healthz`, `/readyz`, `/admin*` handlers carry no
   `header` block — it lives only inside the SPA `handle` at `:91-107`),
   `server/internal/api/admin.go:42-50`, `server/internal/api/server.go:110`.
@@ -109,8 +144,8 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   every response, plus a strict per-page CSP for the dashboard (`frame-ancestors 'none'`, a
   hash for its single inline script, no external origins).
 
-- [ ] **M2 — A record's ciphertext is not bound to the record it belongs to: the relay can move
-  one record's encrypted body onto another record's id and the client accepts it.**
+- [x] **M2 — A record's ciphertext is not bound to the record it belongs to: the relay can move
+  one record's encrypted body onto another record's id and the client accepts it.** — **Fixed:** every record body is encrypted with `mneme:record:v1:<entry_id>` as AAD, so a relabelled blob fails its tag. Blobs written before the binding open via a fallback and are retired by a one-shot re-push (client DB migration v9); a record that will not decrypt is now skipped with a warning instead of wedging the vault's sync from that cursor onwards.
   `apps/client/src/sync/engine.ts:185,255,284,315,340` (every `encrypt(dataKey, …)` call passes
   no AAD) and `:380` (decrypt likewise); `apps/client/src/crypto/aead.ts:13-28` (AAD is
   supported — media chunks use it; entries, templates, interview types, journals and AI settings
@@ -129,7 +164,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   encrypt, and require it on decrypt, falling back to the unbound form only for blobs written
   before the change — plus a one-time re-push so those legacy blobs stop being the weak case.
 
-- [ ] **M3 — Nothing throttles guesses at `ADMIN_TOKEN`.**
+- [x] **M3 — Nothing throttles guesses at `ADMIN_TOKEN`.** — **Fixed:** failed admin authentications go through a per-IP token bucket (`RATE_LIMIT_ADMIN_PER_MINUTE` / `_BURST`, default 10/10). Successes are never charged, so the dashboard's polling is unaffected and an attacker cannot lock the operator out.
   `server/internal/api/admin.go:25-38` (`adminAuth`), `server/internal/api/server.go:96-108`
   (every `/admin/*` route), versus `server.go:76-78` where the three unauthenticated *client*
   endpoints are rate-limited.
@@ -144,8 +179,8 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
 
 ### 🟡 Low
 
-- [ ] **L1 — The root updater agent executes and sources files out of a checkout the operator's
-  own (non-root) account can write.**
+- [x] **L1 — The root updater agent executes and sources files out of a checkout the operator's
+  own (non-root) account can write.** — **Fixed (disclosed, not blocked):** the installer lists exactly which executed paths root does not exclusively own and gives the one-line fix, and the agent repeats the warning in the log the dashboard shows, on every run. Deliberately not fatal — it is the documented layout, and failing mid-update would help nobody. Named as a residual risk in docs/SECURITY.md §6.17.
   `deploy/updater/mneme-updater.sh:49,129` (`COMPOSE="$REPO_DIR/deploy/prod.sh"`, run as root),
   `deploy/prod.sh:21-30` (`source deploy/version.env` with `set -a`),
   `deploy/updater/install.sh:56-62` (installs the agent's own script to root-owned
@@ -162,7 +197,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   root-owned and not group/world-writable, refuse (or warn loudly) otherwise, and have the agent
   re-check ownership of the compose wrapper before running it.
 
-- [ ] **L2 — The update check follows an arbitrary URL named by the release feed.**
+- [x] **L2 — The update check follows an arbitrary URL named by the release feed.** — **Fixed:** the asset URL must be https on a GitHub-owned host; anything else is logged and skipped, degrading to the “unknown rollback cost” the check already reports for a release with no manifest.
   `server/internal/api/version.go:202-207` and `:290-312` (`fetchSchemaManifest` requests
   `asset.browser_download_url` verbatim).
   **Problem:** the relay's single deliberate outbound destination is documented as
@@ -175,7 +210,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   should be true in the code, not just in the comment.
   **Fix:** require `https` and a GitHub-owned host before following the asset URL.
 
-- [ ] **L3 — `entry_id` and `reminder_id` are accepted with no length or charset limit.**
+- [x] **L3 — `entry_id` and `reminder_id` are accepted with no length or charset limit.** — **Fixed:** both ids take 1–128 characters of `[A-Za-z0-9_.:-]` — wider than what any client mints, so no existing outbox can wedge on it.
   `server/internal/api/sync.go:61` (`if e.EntryID == ""`), `server/internal/api/reminders.go:46`.
   **Problem:** `media_id` is properly constrained (`^[A-Za-z0-9_-]{16,64}$`, media.go:29) because
   it becomes an object-storage key. The oplog's own primary key gets only a non-empty check, so
@@ -185,7 +220,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   it is storage the quota's own accounting (which measures ciphertext) does not see.
   **Fix:** validate both ids against the same shape the client actually generates.
 
-- [ ] **L4 — Restore reads archive members with no size bound.**
+- [x] **L4 — Restore reads archive members with no size bound.** — **Fixed:** members are bounded before they are read (2 MiB for a media chunk, a large ceiling for the NDJSON tables) and a media member's name must match the exact `media/{owner}/{media}/{n}` shape, so a crafted archive cannot write an object outside the media namespace.
   `server/internal/backup/restore.go:84` (`io.ReadAll(tr)` per media member; the NDJSON decoders
   are likewise unbounded).
   **Problem:** `Restore` is the one place the relay parses a file it did not just write — and it
@@ -198,7 +233,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   **Fix:** bound each member (a chunk can never exceed the relay's own `maxChunkBytes`) and the
   archive's total member count/size.
 
-- [ ] **L5 — The stored relay URL is trusted verbatim when read back.**
+- [x] **L5 — The stored relay URL is trusted verbatim when read back.** — **Fixed:** `getStoredRelayUrl` re-normalizes; anything that is not an absolute http(s) URL reads as unset and falls back to the build-time default.
   `apps/client/src/sync/relay.ts:217-224` (`getStoredRelayUrl` returns the raw localStorage
   string; only the Preferences editor calls `normalizeRelayUrl`).
   **Problem:** validation lives at the write path, so any value that reaches the key another way
@@ -208,7 +243,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
   setting that decides where the vault is pushed should be validated where it is *used*.
   **Fix:** re-normalize on read and ignore anything that isn't an absolute http(s) URL.
 
-- [ ] **L6 — The admin dashboard interpolates server-supplied strings straight into `innerHTML`.**
+- [x] **L6 — The admin dashboard interpolates server-supplied strings straight into `innerHTML`.** — **Fixed:** `esc()` moved to the top of the script and applied at every sink.
   `server/internal/api/dashboard.html:396-406` (vault rows: `owner_id`, `vault`),
   `:412-414` (`status`, `approval_hint`), `:463-471` (backup names).
   **Problem:** safe **today**, and deliberately so — `status` is a Postgres `CHECK`-constrained
@@ -222,12 +257,12 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
 
 ### 🔵 Info / accepted
 
-- [ ] **I1 — `GET /admin` serves the dashboard HTML without authentication** (`admin.go:42-50`)
+- [x] **I1 — `GET /admin` serves the dashboard HTML without authentication** — **Accepted.** No change beyond the strict CSP it now carries from M1. (`admin.go:42-50`)
   whenever `ADMIN_TOKEN` is set — by design: the page prompts for the token and holds no data.
   It does make "this relay has an admin surface" discoverable. Accepted; noted because the
   header work in M1 touches the same handler.
 
-- [ ] **I2 — `ollamaScope` classifies `0.0.0.0` as loopback** (`apps/client/src/ai/ollamaUrl.ts:48`).
+- [x] **I2 — `ollamaScope` classifies `0.0.0.0` as loopback** — **Accepted.** No change. (`apps/client/src/ai/ollamaUrl.ts:48`).
   Defensible (it resolves to the local host on the platforms in question) and it only affects a
   label, but it is the one address in that list that isn't literally loopback. Accepted.
 
