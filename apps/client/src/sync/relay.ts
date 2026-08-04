@@ -213,11 +213,22 @@ export function normalizeRelayUrl(input: string): string | null {
   }
 }
 
-/** The user-set relay override, or null when unset (empty is treated as unset). */
+/**
+ * The user-set relay override, or null when unset or unusable.
+ *
+ * Re-normalized on READ, not only when the Preferences editor writes it. The key
+ * lives in localStorage, which the app is not the only possible writer of — a
+ * hostile page sharing the origin (docs/SECURITY.md §6.15), a value left by an
+ * older build, a copied profile. Validating only at the write path means a
+ * setting that decides where the whole vault gets pushed is trusted verbatim
+ * wherever it came from. The payload is ciphertext either way, and the CSP's
+ * `connect-src 'self'` blocks the fetch in the standard deployment — but neither
+ * of those is a reason to hand an unvalidated string to fetch().
+ */
 export function getStoredRelayUrl(): string | null {
   try {
     const v = localStorage.getItem(RELAY_URL_KEY);
-    return v && v.trim() ? v.trim() : null;
+    return v ? normalizeRelayUrl(v) : null;
   } catch {
     return null;
   }
