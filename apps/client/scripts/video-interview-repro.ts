@@ -214,6 +214,88 @@ async function main(): Promise<void> {
   assert(!card.textContent?.includes('Not recorded'), 'a dropped-clip card does not read as skipped');
   console.log('ok: videoInterview node mounts and renders its questions');
 
+  // ── hand-editing a transcript writes back into the node attrs ──
+  // Speech-to-text mishears; the transcript is what search, previews, and the
+  // assistant read, so a wrong one is worse than none. Both write-backs (the
+  // interview card and a plain recording) run through the shared strip.
+  {
+    const { mediaAttachmentNode } = await import('../src/editor/media');
+    const mount = dom.window.document.createElement('div');
+    dom.window.document.body.appendChild(mount);
+    const edited = new Editor({
+      element: mount,
+      extensions: [
+        ...buildExtensions('placeholder'),
+        videoInterviewNode({ resolve: async () => null, onRemoved: () => {} }),
+        mediaAttachmentNode({ resolve: async () => null, onRemoved: () => {} }),
+      ],
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'videoInterview',
+            attrs: {
+              ...attrs,
+              cards: [
+                { q: 'What stood out today?', clip: clip1, transcript: 'the wrong nmae' },
+                { q: 'What are you carrying into tomorrow?', clip: clip2, transcript: 'second answer' },
+              ],
+            },
+          },
+          { type: 'mediaAttachment', attrs: { ...clip2, transcript: 'a lone recording' } },
+          { type: 'paragraph' },
+        ],
+      },
+    });
+    await new Promise((r) => setTimeout(r, 0));
+
+    const buttons = (root: Element, label: string): HTMLElement[] =>
+      Array.from(root.querySelectorAll('button')).filter((b) => b.textContent?.trim() === label) as HTMLElement[];
+    const type = async (root: Element, index: number, text: string): Promise<void> => {
+      const edit = buttons(root, 'Edit')[index];
+      assert(edit, `an "Edit" affordance exists for transcript ${index}`);
+      edit.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 0));
+      const boxes = Array.from(root.querySelectorAll('textarea')) as HTMLTextAreaElement[];
+      assert(boxes.length === 1, 'editing opens exactly one transcript box');
+      boxes[0].value = text;
+      boxes[0].dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 0));
+      const save = buttons(root, 'Save')[0];
+      assert(save, 'the transcript box has a Save button');
+      save.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 0));
+    };
+    const nodes = (): { attrs: Record<string, unknown> }[] =>
+      (edited.getJSON().content ?? []) as { attrs: Record<string, unknown> }[];
+    const interviewCards = (): { transcript?: string }[] => nodes()[0].attrs.cards as { transcript?: string }[];
+
+    const inMount = (sel: string): Element => {
+      const el = mount.querySelector(sel);
+      assert(el, `${sel} is mounted`);
+      return el;
+    };
+    const interviewNode = inMount('.mneme-video-interview-node');
+    await type(interviewNode, 0, 'the right name');
+    assert(interviewCards()[0].transcript === 'the right name', 'the edited answer transcript is stored');
+    assert(interviewCards()[1].transcript === 'second answer', 'the other answer is untouched');
+
+    // Emptying the box removes the transcript rather than storing '': a cleared
+    // answer is what puts it back into the "Transcribe answers" count.
+    await type(inMount('.mneme-video-interview-node'), 0, '   ');
+    assert(interviewCards()[0].transcript === undefined, 'an emptied box clears the answer transcript');
+    assert(interviewCards()[1].transcript === 'second answer', 'clearing one answer leaves the other alone');
+
+    await type(inMount('.mneme-media-node'), 0, 'what was actually said');
+    assert(nodes()[1].attrs.transcript === 'what was actually said', 'the edited recording transcript is stored');
+    await type(inMount('.mneme-media-node'), 0, '');
+    assert(nodes()[1].attrs.transcript === null, 'an emptied box clears the recording transcript');
+
+    edited.destroy();
+    mount.remove();
+  }
+  console.log('ok: transcripts are editable by hand (both nodes, clearing included)');
+
   // ── doc helpers ──
   const json = editor.getJSON();
   const text = docToText(json);

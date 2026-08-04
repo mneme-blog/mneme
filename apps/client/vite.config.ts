@@ -109,12 +109,18 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         cleanupOutdatedCaches: true,
         // SPA: serve the cached shell for client-routed navigations offline.
-        navigateFallback: '/index.html',
+        // RELATIVE on purpose: precache keys resolve against the service
+        // worker's own URL, so under a sub-path deploy (the Caddy image builds
+        // with --base=/mneme/) the shell is cached as /mneme/index.html. A
+        // leading-slash fallback then points at a URL that was never precached
+        // and every navigation throws `non-precached-url` instead of being
+        // served offline.
+        navigateFallback: 'index.html',
       },
       devOptions: {
         enabled: pwaDevEnabled,
         type: 'module',
-        navigateFallback: '/index.html',
+        navigateFallback: 'index.html',
       },
     }),
     ...(useBasicSsl ? [basicSsl()] : []),
@@ -151,5 +157,15 @@ export default defineConfig({
   // the build stops trying an unsupported transform. No browser-support change.
   esbuild: {
     supported: { destructuring: true },
+  },
+  build: {
+    // Vite inlines assets under 4 kB as data: URIs. For fonts that collides
+    // with the CSP: `font-src 'self'` blocks a data: font outright, so the
+    // small subsets (some Hanken Grotesk unicode ranges, most KaTeX faces)
+    // silently fell back to system fonts in the production build. Keep them as
+    // files — they are also the assets the service worker precaches and Caddy
+    // serves immutable, which inlining defeats.
+    assetsInlineLimit: (filePath: string) =>
+      /\.(woff2?|ttf|otf|eot)$/i.test(filePath) ? false : undefined,
   },
 });

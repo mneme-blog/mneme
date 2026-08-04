@@ -154,14 +154,22 @@ export function ConfirmDeleteDialog({
  * `onTranscribe` present) the retroactive "Transcribe" action with its busy and
  * error states. The caller persists the resulting text (node attrs inside the
  * encrypted body, or the legacy attachments array).
+ *
+ * With `onSave` the shown text is editable: speech-to-text mishears names and
+ * numbers, and the transcript is what search, previews, and Ask-my-journal read
+ * — so a wrong one is worse than none. Saving an empty box drops the transcript
+ * (the caller stores undefined), which puts the Transcribe action back.
  */
 export function TranscriptStrip({
   transcript,
   onTranscribe,
+  onSave,
   dest,
 }: {
   transcript?: string;
   onTranscribe?: () => Promise<void>;
+  /** Persist a hand-edited transcript; empty string clears it. Omit for read-only. */
+  onSave?: (text: string) => void;
   /** Where the recording would be sent; non-local destinations confirm first. */
   dest?: TranscribeDestination;
 }): VNode | null {
@@ -169,6 +177,8 @@ export function TranscriptStrip({
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
   if (!transcript && !onTranscribe) return null;
 
   const run = async (): Promise<void> => {
@@ -201,22 +211,65 @@ export function TranscriptStrip({
     else void run();
   };
 
+  const startEdit = (): void => {
+    setDraft(transcript ?? '');
+    setOpen(true);
+    setEditing(true);
+  };
+
   return (
     <div style={{ borderTop: '1px solid var(--line)', padding: '6px 11px 8px' }}>
       {transcript ? (
         <>
-          <button
-            onClick={() => setOpen((o) => !o)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'var(--ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}
-          >
-            <Icon name="quote" size={13} color="var(--ink-3)" />
-            {open ? t('media.transcribe.hide') : t('media.transcribe.show')}
-          </button>
-          {open && (
-            <p style={{ fontFamily: 'var(--serif)', fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-2)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', margin: '7px 0 0' }}>
-              {transcript}
-            </p>
-          )}
+          <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              onClick={() => setOpen((o) => !o)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'var(--ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}
+            >
+              <Icon name="quote" size={13} color="var(--ink-3)" />
+              {open ? t('media.transcribe.hide') : t('media.transcribe.show')}
+            </button>
+            {onSave && !editing && (
+              <button
+                onClick={startEdit}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'var(--ui)', fontSize: 12, fontWeight: 600, color: 'var(--accent-ink)' }}
+              >
+                {t('media.transcribe.edit')}
+              </button>
+            )}
+          </span>
+          {open &&
+            (editing ? (
+              <>
+                <textarea
+                  value={draft}
+                  autoFocus
+                  onInput={(e) => setDraft((e.currentTarget as HTMLTextAreaElement).value)}
+                  rows={Math.min(16, Math.max(4, draft.split('\n').length + 1))}
+                  style={{ display: 'block', width: '100%', boxSizing: 'border-box', resize: 'vertical', margin: '7px 0 0', padding: '8px 10px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'var(--serif)', fontSize: 13.5, lineHeight: 1.6 }}
+                />
+                <span style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 7 }}>
+                  <Btn
+                    kind="primary"
+                    size="sm"
+                    onClick={() => {
+                      setEditing(false);
+                      onSave?.(draft.trim());
+                    }}
+                  >
+                    {t('common.save')}
+                  </Btn>
+                  <Btn kind="ghost" size="sm" onClick={() => setEditing(false)}>{t('common.cancel')}</Btn>
+                  <span style={{ fontFamily: 'var(--ui)', fontSize: 11, color: 'var(--ink-3)' }}>
+                    {t('media.transcribe.editHint')}
+                  </span>
+                </span>
+              </>
+            ) : (
+              <p style={{ fontFamily: 'var(--serif)', fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-2)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', margin: '7px 0 0' }}>
+                {transcript}
+              </p>
+            ))}
         </>
       ) : (
         <>
@@ -256,6 +309,7 @@ export function MediaCard({
   onDelete,
   onOpen,
   onTranscribe,
+  onSaveTranscript,
   transcribeDest,
 }: {
   att: MediaAttachment;
@@ -266,6 +320,8 @@ export function MediaCard({
   onOpen?: () => void;
   /** Video/audio only: transcribe the recording; the caller persists the text. */
   onTranscribe?: () => Promise<void>;
+  /** Persist a hand-edited transcript ('' clears it); omit for read-only. */
+  onSaveTranscript?: (text: string) => void;
   /** Where transcription goes — drives the non-local per-use confirm. */
   transcribeDest?: TranscribeDestination;
 }): VNode {
@@ -358,7 +414,12 @@ export function MediaCard({
         {deleteBtn}
       </div>
       {(att.kind === 'video' || att.kind === 'audio') && (
-        <TranscriptStrip transcript={att.transcript} onTranscribe={onTranscribe} dest={transcribeDest} />
+        <TranscriptStrip
+          transcript={att.transcript}
+          onTranscribe={onTranscribe}
+          onSave={onSaveTranscript}
+          dest={transcribeDest}
+        />
       )}
       {confirming && (
         <ConfirmDeleteDialog
@@ -508,6 +569,11 @@ export function AttachmentList({ entry }: { entry: JournalEntry }): VNode | null
             removeMedia(att.id);
           }}
           transcribeDest={cfg ? transcriptionDestination(cfg) : undefined}
+          onSaveTranscript={(text) =>
+            updateEntry(entry.id, {
+              attachments: attachments.map((a) => (a.id === att.id ? { ...a, transcript: text || undefined } : a)),
+            })
+          }
           onTranscribe={
             cfg
               ? async () => {

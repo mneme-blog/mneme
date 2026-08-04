@@ -847,6 +847,8 @@ const fr: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busy': 'Transcription…',
   'media.transcribe.show': 'Afficher la transcription',
   'media.transcribe.hide': 'Masquer la transcription',
+  'media.transcribe.edit': 'Modifier',
+  'media.transcribe.editHint': 'Videz le champ pour supprimer la transcription.',
   'media.transcribe.failed': 'Échec de la transcription : {message}',
   'media.transcribe.modelMissing': 'Le serveur de transcription n’a pas de modèle installé. Ouvrez les réglages IA et utilisez « Vérifier le serveur ».',
   'media.transcribe.answers': 'Transcrire les réponses',

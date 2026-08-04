@@ -98,7 +98,9 @@ export function docImages(doc: JSONContent): MediaAttachment[] {
 // buttons, links, and the confirmation dialogs.
 function stopEvent(event: Event): boolean {
   const t = event.target as HTMLElement | null;
-  return !!t?.closest('audio, video, img, a, button, [role="dialog"]');
+  // `textarea` is the transcript editor: without it ProseMirror handles the
+  // keystrokes and typing into the box moves the document instead.
+  return !!t?.closest('audio, video, img, a, button, textarea, [role="dialog"]');
 }
 
 export function mediaAttachmentNode(handlers: MediaNodeHandlers): Node {
@@ -140,18 +142,24 @@ export function mediaAttachmentNode(handlers: MediaNodeHandlers): Node {
           editor.chain().focus().deleteRange({ from: pos, to: pos + node.nodeSize }).run();
           handlers.onRemoved(att);
         };
-        // Transcribe the recording, then write the text into the node attrs —
-        // from the doc's CURRENT node at that position, not the captured one,
-        // so a concurrent attr change isn't resurrected.
+        // Write a transcript into the node attrs — from the doc's CURRENT node
+        // at that position, not the captured one, so a concurrent attr change
+        // isn't resurrected. Empty text clears the attr (the card then offers
+        // to transcribe again).
+        const writeTranscript = (text: string): void => {
+          const pos = getPos();
+          if (typeof pos !== 'number') return;
+          const cur = editor.state.doc.nodeAt(pos);
+          if (!cur || cur.type.name !== MEDIA_NODE || cur.attrs.id !== att.id) return;
+          editor.view.dispatch(
+            editor.state.tr.setNodeMarkup(pos, undefined, { ...cur.attrs, transcript: text || null }),
+          );
+        };
+        const isRecording = att.kind === 'video' || att.kind === 'audio';
         const onTranscribe =
-          handlers.transcribe && (att.kind === 'video' || att.kind === 'audio')
+          handlers.transcribe && isRecording
             ? async (): Promise<void> => {
-                const text = await handlers.transcribe!(att);
-                const pos = getPos();
-                if (typeof pos !== 'number') return;
-                const cur = editor.state.doc.nodeAt(pos);
-                if (!cur || cur.type.name !== MEDIA_NODE || cur.attrs.id !== att.id) return;
-                editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...cur.attrs, transcript: text }));
+                writeTranscript(await handlers.transcribe!(att));
               }
             : undefined;
         render(
@@ -161,6 +169,7 @@ export function mediaAttachmentNode(handlers: MediaNodeHandlers): Node {
             onDelete={editor.isEditable ? onDelete : undefined}
             onOpen={att.kind === 'image' && handlers.onOpenImage ? () => handlers.onOpenImage?.(att) : undefined}
             onTranscribe={editor.isEditable ? onTranscribe : undefined}
+            onSaveTranscript={editor.isEditable && isRecording ? writeTranscript : undefined}
             transcribeDest={handlers.transcribeDest}
           />,
           dom,
