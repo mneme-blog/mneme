@@ -53,6 +53,7 @@ Errors are `{ "error": "message" }` with an appropriate status (400/401/404/500)
 | Limit | Default | Env | Applies to |
 |---|---|---|---|
 | Auth rate limit | 30/min per IP, burst 15 | `RATE_LIMIT_AUTH_PER_MINUTE`, `RATE_LIMIT_AUTH_BURST` | `/v1/register`, `/v1/auth/*` → `429` |
+| Admin auth rate limit | 10/min per IP, burst 10 | `RATE_LIMIT_ADMIN_PER_MINUTE`, `RATE_LIMIT_ADMIN_BURST` | failed `/admin/*` authentications → `429` (a valid token is never charged) |
 | Per-owner storage | unlimited | `QUOTA_BYTES_PER_OWNER` | `sync/push`, media chunk upload → `413` |
 | Push batch | 500 entries | – | `/v1/sync/push` → `413` |
 | Request body | 32 MiB | – | any JSON endpoint |

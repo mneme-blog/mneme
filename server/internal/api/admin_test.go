@@ -147,3 +147,34 @@ func TestRequestMetricsCountOnlyV1(t *testing.T) {
 		t.Fatalf("runtime = %+v, want 1 request / 1 4xx", rt)
 	}
 }
+
+// Guessing ADMIN_TOKEN is throttled per client IP. Only failures are charged, so
+// a dashboard holding the right token keeps polling at any rate it likes.
+func TestAdminTokenGuessesAreThrottled(t *testing.T) {
+	cfg := testConfig()
+	cfg.AdminToken = "correct-horse"
+	cfg.RateLimit.AdminPerMinute = 6
+	cfg.RateLimit.AdminBurst = 3
+	srv := New(nil, nil, cfg)
+
+	bad := map[string]string{"Authorization": "Bearer wrong"}
+	for i := 0; i < cfg.RateLimit.AdminBurst; i++ {
+		if rec := get(t, srv, "/admin/stats", bad); rec.Code != http.StatusUnauthorized {
+			t.Fatalf("guess %d = %d, want 401", i+1, rec.Code)
+		}
+	}
+	rec := get(t, srv, "/admin/stats", bad)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Errorf("guess past the burst = %d, want 429", rec.Code)
+	}
+	if rec.Header().Get("Retry-After") == "" {
+		t.Error("a throttled admin response should say when to come back")
+	}
+
+	// A valid token is never charged, so the operator is not locked out by an
+	// attacker sharing their address — and the dashboard's polling is free.
+	good := map[string]string{"Authorization": "Bearer correct-horse"}
+	if rec := get(t, srv, "/admin/version", good); rec.Code != http.StatusOK {
+		t.Errorf("authenticated admin request = %d, want 200", rec.Code)
+	}
+}

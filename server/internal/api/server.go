@@ -30,6 +30,9 @@ type Server struct {
 	// authLimiter throttles the unauthenticated endpoints — the only way into
 	// the relay, and so the only place an anonymous caller can cost anything.
 	authLimiter *rateLimiter
+	// adminLimiter bounds guesses at ADMIN_TOKEN. Charged on failure only, so a
+	// dashboard holding a valid token never spends from it (see adminAuth).
+	adminLimiter *rateLimiter
 }
 
 func New(st *store.Store, bl blobs.Store, cfg config.Config) *Server {
@@ -45,14 +48,15 @@ func New(st *store.Store, bl blobs.Store, cfg config.Config) *Server {
 		schema = m.Schema
 	}
 	return &Server{
-		store:       st,
-		blobs:       bl,
-		cfg:         cfg,
-		metrics:     newMetrics(),
-		backup:      backup.NewService(cfg.Backup.Dir, cfg.Backup.Keep, st, bl),
-		updates:     newUpdateChecker(cfg.Version, schema, cfg.UpdateCheck),
-		spool:       deploy.NewSpool(cfg.UpdateSpoolDir),
-		authLimiter: newRateLimiter(cfg.RateLimit.AuthPerMinute, cfg.RateLimit.AuthBurst),
+		store:        st,
+		blobs:        bl,
+		cfg:          cfg,
+		metrics:      newMetrics(),
+		backup:       backup.NewService(cfg.Backup.Dir, cfg.Backup.Keep, st, bl),
+		updates:      newUpdateChecker(cfg.Version, schema, cfg.UpdateCheck),
+		spool:        deploy.NewSpool(cfg.UpdateSpoolDir),
+		authLimiter:  newRateLimiter(cfg.RateLimit.AuthPerMinute, cfg.RateLimit.AuthBurst),
+		adminLimiter: newRateLimiter(cfg.RateLimit.AdminPerMinute, cfg.RateLimit.AdminBurst),
 	}
 }
 

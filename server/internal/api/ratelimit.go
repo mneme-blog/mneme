@@ -51,8 +51,10 @@ func newRateLimiter(perMinute int, burst int) *rateLimiter {
 }
 
 // allow consumes one token for key, reporting whether the request may proceed.
+// Nil-safe: a Server assembled without a limiter behaves like one where the
+// limiter is disabled, rather than panicking.
 func (l *rateLimiter) allow(key string, now time.Time) bool {
-	if !l.enabled {
+	if l == nil || !l.enabled {
 		return true
 	}
 	l.mu.Lock()

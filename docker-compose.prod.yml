@@ -92,6 +92,10 @@ services:
       # Per-IP throttle on the unauthenticated auth endpoints (0 disables).
       RATE_LIMIT_AUTH_PER_MINUTE: ${RATE_LIMIT_AUTH_PER_MINUTE:-30}
       RATE_LIMIT_AUTH_BURST: ${RATE_LIMIT_AUTH_BURST:-15}
+      # Guesses at ADMIN_TOKEN, per IP. Charged on failure only, so the
+      # dashboard's own polling never spends from it.
+      RATE_LIMIT_ADMIN_PER_MINUTE: ${RATE_LIMIT_ADMIN_PER_MINUTE:-10}
+      RATE_LIMIT_ADMIN_BURST: ${RATE_LIMIT_ADMIN_BURST:-10}
       # Caddy fronts the relay here, so the socket address is always Caddy's:
       # read the real client address from the forwarded headers it sets.
       TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-true}
