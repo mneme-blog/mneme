@@ -110,7 +110,10 @@ dialog — warning for the on-device case would train users to click through). A
 server remains fully covered by the shipped CSP (`connect-src http://localhost:*
 http://127.0.0.1:*`); a third-party endpoint needs `CSP_CONNECT_EXTRA`. The resulting transcript is
 stored **inside the encrypted entry body** (media node attrs / video-interview cards), so it syncs
-like any entry content, is searchable, feeds Ask-my-journal — and the relay never sees it.
+like any entry content, is searchable, feeds Ask-my-journal — and the relay never sees it. Because it
+is ordinary entry content, it is also **editable by hand** (the "Edit" action next to a shown
+transcript; emptying the box removes it) — a correction never leaves the device, since fixing text
+involves no server at all.
 
 ### Location snapshots — a one-time, per-insert exception
 

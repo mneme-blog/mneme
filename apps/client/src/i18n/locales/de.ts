@@ -859,6 +859,8 @@ const de: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busy': 'Transkribiere…',
   'media.transcribe.show': 'Transkript anzeigen',
   'media.transcribe.hide': 'Transkript ausblenden',
+  'media.transcribe.edit': 'Bearbeiten',
+  'media.transcribe.editHint': 'Feld leeren, um das Transkript zu entfernen.',
   'media.transcribe.failed': 'Transkription fehlgeschlagen: {message}',
   'media.transcribe.modelMissing': 'Auf dem Transkriptionsserver ist kein Modell installiert. Öffne die KI-Einstellungen und nutze „Server prüfen“.',
   'media.transcribe.answers': 'Antworten transkribieren',

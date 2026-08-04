@@ -107,6 +107,10 @@ export const media = {
   'media.transcribe.busy': 'Transcribing…',
   'media.transcribe.show': 'Show transcript',
   'media.transcribe.hide': 'Hide transcript',
+  // Speech-to-text mishears names and numbers, and the transcript is what
+  // search, previews, and the assistant read — so it is editable by hand.
+  'media.transcribe.edit': 'Edit',
+  'media.transcribe.editHint': 'Empty the box to remove the transcript.',
   'media.transcribe.failed': 'Could not transcribe: {message}',
   // The 404 a whisper server gives for a model it has not downloaded. Points at
   // the settings, where "Check server" can install it — a bare status code here

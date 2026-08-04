@@ -381,7 +381,13 @@ on-device case would train click-through. The transcript is **content, not a med
 inside the encrypted body — `transcript` on `mediaAttachment` nodes (Transcribe strip on video/audio
 cards; legacy attachments too) and per card on `videoInterview` nodes ("Transcribe answers" runs
 clip-by-clip; transcripts **survive "Delete the source clips"**). `docToText` surfaces them, so
-search, previews, and Ask-my-journal see what was said. The **video interview offers auto-transcribe
+search, previews, and Ask-my-journal see what was said. Being content, they are **editable by hand**:
+`TranscriptStrip`'s `onSave` turns the shown text into a textarea, and each caller writes it back its
+own way — node attrs re-read from the doc's *current* node (both node views, so a concurrent
+transcription isn't resurrected), or the legacy attachments array. An emptied box stores
+`undefined`/`null` rather than `''`, which is what puts a card back into the "Transcribe" /
+"Transcribe answers" counts. Both node views' `stopEvent` must keep matching `textarea` — without it
+ProseMirror handles the keystrokes and typing moves the document instead of filling the box. The **video interview offers auto-transcribe
 at start** (toggle in the plan step, default off, carries the destination copy): after save a
 detached loop transcribes clip-by-clip and writes back via `setTranscriptAttr`/`attachTranscript`
 (the `setFilmAttr` pattern — the sheet is gone when results land), passing whisper's `language`

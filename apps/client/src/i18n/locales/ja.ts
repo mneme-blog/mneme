@@ -848,6 +848,8 @@ const ja: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busy': '文字起こし中…',
   'media.transcribe.show': '文字起こしを表示',
   'media.transcribe.hide': '文字起こしを隠す',
+  'media.transcribe.edit': '編集',
+  'media.transcribe.editHint': '入力欄を空にすると文字起こしが削除されます。',
   'media.transcribe.failed': '文字起こしに失敗しました: {message}',
   'media.transcribe.modelMissing': '文字起こしサーバーにモデルがインストールされていません。AI 設定を開き「サーバーを確認」を使ってください。',
   'media.transcribe.answers': '回答を文字起こし',
