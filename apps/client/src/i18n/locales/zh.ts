@@ -696,6 +696,7 @@ const zh: Partial<Record<MessageKey, string>> = {
   'editorx.videoInterview.questions#other': '{count} 个问题',
   'editorx.videoInterview.answered': '已回答 {n}/{total}',
   'editorx.videoInterview.notRecorded': '未录制',
+  'editorx.videoInterview.clipRemoved': '已回答 — 源片段已删除',
   'editorx.videoInterview.loadingClip': '正在加载回答…',
   'editorx.videoInterview.retry': '尚不可用 — 重试',
   'editorx.videoInterview.film': '你的影片',

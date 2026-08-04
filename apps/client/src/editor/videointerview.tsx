@@ -26,6 +26,7 @@ import { Icon } from '../ui/Icon';
 import {
   VIDEO_INTERVIEW_NODE,
   coerceVideoInterview,
+  isAnswered,
   isFilmStale,
   videoInterviewAttachments,
   type VideoInterviewData,
@@ -114,10 +115,13 @@ export function VideoInterviewCardView({
   const [transcribing, setTranscribing] = useState(false);
   const [confirmingTranscribe, setConfirmingTranscribe] = useState(false);
   const [transcribeError, setTranscribeError] = useState('');
-  const answered = data.cards.filter((c) => c.clip).length;
+  // Two different counts: `answered` is what the header claims (an answer that
+  // outlived its dropped source clip still counts), `clipCount` is what the
+  // render/drop/delete affordances need (actual bytes present).
+  const answered = data.cards.filter(isAnswered).length;
+  const clipCount = data.cards.filter((c) => c.clip).length;
   const untranscribed = data.cards.filter((c) => c.clip && !c.transcript).length;
   const stale = isFilmStale(data);
-  const clipCount = answered;
 
   // Transcripts appear under each question as they land (the node redraws per
   // clip), so the running button needs no separate progress counter.
@@ -178,7 +182,7 @@ export function VideoInterviewCardView({
             </p>
           )}
           <span style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: data.film ? 8 : 0 }}>
-            {onRender && answered > 0 && (
+            {onRender && clipCount > 0 && (
               <button
                 onClick={onRender}
                 style={{ fontFamily: 'var(--ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--accent-ink)', background: 'transparent', border: '1px solid var(--line)', borderRadius: 999, padding: '5px 13px', cursor: 'pointer' }}
@@ -188,7 +192,7 @@ export function VideoInterviewCardView({
             )}
             {/* The vault now carries every answer twice — this is the lever for
                 that, and for a relay with a per-owner quota. */}
-            {onDropClips && data.film && answered > 0 && (
+            {onDropClips && data.film && clipCount > 0 && (
               <button
                 onClick={() => setDroppingClips(true)}
                 style={{ fontFamily: 'var(--ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-3)', background: 'transparent', border: '1px solid var(--line)', borderRadius: 999, padding: '5px 13px', cursor: 'pointer' }}
@@ -226,7 +230,7 @@ export function VideoInterviewCardView({
               <ClipPlayer att={card.clip} resolve={resolve} />
             ) : (
               <span style={{ fontFamily: 'var(--ui)', fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic' }}>
-                {t('editorx.videoInterview.notRecorded')}
+                {isAnswered(card) ? t('editorx.videoInterview.clipRemoved') : t('editorx.videoInterview.notRecorded')}
               </span>
             )}
             {/* The answer's transcript — kept even after the source clips were
@@ -350,8 +354,15 @@ export function videoInterviewNode(handlers: VideoInterviewHandlers): Node {
                 tr.setNodeMarkup(pos, undefined, {
                   ...attrs,
                   // Keep the transcripts: they are the searchable text of the
-                  // answers and must outlive the bytes being dropped here.
-                  cards: data.cards.map((c) => ({ q: c.q, clip: null, transcript: c.transcript })),
+                  // answers and must outlive the bytes being dropped here. The
+                  // `dropped` flag keeps an answered question reading as
+                  // answered once its clip is gone (here and on other devices).
+                  cards: data.cards.map((c) => ({
+                    q: c.q,
+                    clip: null,
+                    transcript: c.transcript,
+                    dropped: c.clip ? true : c.dropped,
+                  })),
                 });
                 return true;
               })

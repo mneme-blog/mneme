@@ -757,6 +757,7 @@ const fi: Partial<Record<MessageKey, string>> = {
   'editorx.videoInterview.questions#other': '{count} kysymystä',
   'editorx.videoInterview.answered': '{n}/{total} vastattu',
   'editorx.videoInterview.notRecorded': 'Ei tallennettu',
+  'editorx.videoInterview.clipRemoved': 'Vastattu – alkuperäinen tallenne poistettu',
   'editorx.videoInterview.loadingClip': 'Ladataan vastausta…',
   'editorx.videoInterview.retry': 'Ei vielä saatavilla – yritä uudelleen',
   'editorx.videoInterview.film': 'Elokuvasi',

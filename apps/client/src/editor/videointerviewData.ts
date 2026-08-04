@@ -17,6 +17,11 @@ export interface VideoInterviewCard {
   /** Speech-to-text of the answer. On the card, not the clip, so it survives
    *  "Delete the source clips" — the searchable text outlives the bytes. */
   transcript?: string;
+  /** True when this question WAS answered but its source clip was dropped via
+   *  "Delete the source clips" (the answer lives on in the film). Without it a
+   *  clip-less card is indistinguishable from one that was skipped, and the
+   *  card would claim "0 of 6 answered" after a cleanup. */
+  dropped?: boolean;
 }
 
 export interface VideoInterviewData {
@@ -60,6 +65,7 @@ export function coerceVideoInterview(attrs: Record<string, unknown>): VideoInter
       q: typeof o.q === 'string' ? o.q : '',
       clip: coerceClip(o.clip),
       transcript: typeof o.transcript === 'string' && o.transcript ? o.transcript : undefined,
+      dropped: o.dropped === true ? true : undefined,
     };
   });
   if (cards.length === 0) return null;
@@ -92,6 +98,16 @@ export function videoInterviewMediaIds(attrs: Record<string, unknown>): string[]
   }
   push(attrs.film);
   return ids;
+}
+
+/**
+ * Was this question answered on camera? True while the clip is present, and
+ * still true after the source clip was dropped (`dropped` flag) — including
+ * docs from before that flag existed, where a surviving transcript is the
+ * evidence an answer was recorded.
+ */
+export function isAnswered(card: VideoInterviewCard): boolean {
+  return !!(card.clip || card.dropped || card.transcript);
 }
 
 /** Attachments of a session, in the order they appear — clips then the film. */

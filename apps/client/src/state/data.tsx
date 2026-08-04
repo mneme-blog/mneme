@@ -461,33 +461,50 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
   // then push queued deletions. Runs after the entry flush so the attachment
   // metadata usually lands first. Uploads strictly before deletions: a recording
   // deleted while its upload was already snapshotted gets uploaded, then removed
-  // by its tombstone — never resurrected the other way around.
+  // by its tombstone — never resurrected the other way around (the per-run
+  // ordering below is what carries that invariant).
+  //
+  // One failing upload must NOT abort the rest of the run. The worst case was a
+  // large film that keeps failing (flaky network mid-transfer, or a vault the
+  // render pushed over the relay quota → 413 on every chunk): with a single
+  // try/catch it starved everything queued behind it — above all the deletions,
+  // which are exactly how an over-quota vault frees space (the relay exempts
+  // tombstones from the quota for that reason). So: per-item error handling,
+  // failed items stay queued for the next flush, and deletions always run.
   const flushMedia = useCallback(async () => {
     const s = session.current;
     if (!s || mediaFlushing.current) return;
     if (pendingMedia.current.size === 0 && pendingMediaDeletes.current.size === 0) return;
     mediaFlushing.current = true;
+    let failure: unknown = null;
     try {
       for (const rec of [...pendingMedia.current.values()]) {
         if (!rec.data) {
           pendingMedia.current.delete(rec.id); // nothing to upload (shouldn't happen)
           continue;
         }
-        await uploadMedia(relay, s.token, s.identity.mediaKey, rec.id, rec.data);
-        pendingMedia.current.delete(rec.id);
-        if (dbReady.current) void db.markMediaSynced(rec.id);
-        syncPendingCount();
+        try {
+          await uploadMedia(relay, s.token, s.identity.mediaKey, rec.id, rec.data);
+          pendingMedia.current.delete(rec.id);
+          if (dbReady.current) void db.markMediaSynced(rec.id);
+          syncPendingCount();
+        } catch (e) {
+          failure = e; // stays queued; the next flush retries
+        }
       }
       for (const id of [...pendingMediaDeletes.current]) {
-        await relay.deleteMedia(s.token, id); // idempotent on the relay
-        pendingMediaDeletes.current.delete(id);
-        if (dbReady.current) void db.clearMediaTombstone(id);
-        syncPendingCount();
+        try {
+          await relay.deleteMedia(s.token, id); // idempotent on the relay
+          pendingMediaDeletes.current.delete(id);
+          if (dbReady.current) void db.clearMediaTombstone(id);
+          syncPendingCount();
+        } catch (e) {
+          failure = e;
+        }
       }
-    } catch (e) {
       // 503 = relay has no object store configured; recordings stay queued
       // locally without flapping the connection indicator to "offline".
-      if (!(e instanceof RelayError && e.status === 503)) setStatusLive('offline');
+      if (failure && !(failure instanceof RelayError && failure.status === 503)) setStatusLive('offline');
     } finally {
       mediaFlushing.current = false;
     }

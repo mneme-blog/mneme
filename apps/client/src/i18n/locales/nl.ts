@@ -748,6 +748,7 @@ const nl: Partial<Record<MessageKey, string>> = {
   'editorx.videoInterview.questions#other': '{count} vragen',
   'editorx.videoInterview.answered': '{n} van {total} beantwoord',
   'editorx.videoInterview.notRecorded': 'Niet opgenomen',
+  'editorx.videoInterview.clipRemoved': 'Beantwoord — bronclip verwijderd',
   'editorx.videoInterview.loadingClip': 'Antwoord laden…',
   'editorx.videoInterview.retry': 'Nog niet beschikbaar — opnieuw',
   'editorx.videoInterview.film': 'Jouw film',

@@ -53,6 +53,7 @@ async function main(): Promise<void> {
     coerceVideoInterview,
     videoInterviewMediaIds,
     setFilmAttr,
+    isAnswered,
     isFilmStale,
     buildVideoInterviewDoc,
   } = await import('../src/editor/videointerviewData');
@@ -76,7 +77,7 @@ async function main(): Promise<void> {
     typeName: 'Daily reflection',
     cards: [
       { q: 'What stood out today?', clip: clip1 },
-      { q: 'What did you avoid?', clip: null },
+      { q: 'What did you avoid?', clip: null, dropped: true },
       { q: 'What are you carrying into tomorrow?', clip: clip2 },
     ],
     film,
@@ -159,6 +160,26 @@ async function main(): Promise<void> {
   assert(round !== null && round.cards.length === 3 && round.film?.id === 'film-id', 'a real session round-trips through JSON');
   console.log('ok: coerceVideoInterview survives malformed attrs');
 
+  // ── answered-ness survives "Delete the source clips" ──
+  const droppedCards = coerceVideoInterview({
+    cards: [
+      { q: 'kept', clip: clip1 },
+      { q: 'dropped', clip: null, dropped: true },
+      { q: 'transcribed then dropped (pre-flag doc)', clip: null, transcript: 'what was said' },
+      { q: 'skipped', clip: null },
+      { q: 'junk flag', clip: null, dropped: 'yes' },
+    ],
+  });
+  assert(droppedCards !== null, 'dropped cards coerce');
+  assert(droppedCards.cards[1].dropped === true, 'the dropped flag round-trips');
+  assert(droppedCards.cards[4].dropped === undefined, 'a non-boolean dropped flag coerces away');
+  assert(isAnswered(droppedCards.cards[0]), 'a card with its clip is answered');
+  assert(isAnswered(droppedCards.cards[1]), 'a card whose source clip was dropped is STILL answered');
+  assert(isAnswered(droppedCards.cards[2]), 'a transcript alone marks a pre-flag card as answered');
+  assert(!isAnswered(droppedCards.cards[3]), 'a skipped card is not answered');
+  assert(droppedCards.cards.filter(isAnswered).length === 3, 'the header count survives a clip cleanup');
+  console.log('ok: isAnswered + dropped flag (clip cleanup does not zero the count)');
+
   // ── the media-id walk, on raw attrs ──
   assert(
     same(videoInterviewMediaIds(attrs as unknown as Record<string, unknown>), ['clip-one', 'clip-two', 'film-id']),
@@ -184,6 +205,9 @@ async function main(): Promise<void> {
   assert(card.textContent?.includes('Daily reflection'), 'the card shows the interview type name');
   assert(card.textContent?.includes('What stood out today?'), 'the card shows the first question');
   assert(card.textContent?.includes('What are you carrying into tomorrow?'), 'the card shows the last question');
+  assert(card.textContent?.includes('3 of 3 answered'), 'the header counts a dropped-clip answer as answered');
+  assert(card.textContent?.includes('Answered — source clip deleted'), 'a dropped-clip card explains itself');
+  assert(!card.textContent?.includes('Not recorded'), 'a dropped-clip card does not read as skipped');
   console.log('ok: videoInterview node mounts and renders its questions');
 
   // ── doc helpers ──
