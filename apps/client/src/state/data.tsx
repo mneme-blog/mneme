@@ -26,7 +26,7 @@ import { seedBuiltinTemplates, localizeBuiltinTemplate } from '../data/templates
 import { seedBuiltinInterviews, localizeBuiltinInterview } from '../data/interviews';
 import type { JSONContent } from '@tiptap/core';
 import { blocksToDoc, textToDoc, docToText, docMediaIds } from '../editor/doc';
-import { setFilmAttr } from '../editor/videointerviewData';
+import { setFilmAttr, setTranscriptAttr } from '../editor/videointerviewData';
 import { stopAllRenders } from '../video/film';
 import { LocalDb, destroyOwnerDb, type MediaRecord } from '../db';
 import { makeThumbnail } from '../ui/thumbnail';
@@ -122,6 +122,12 @@ interface AppData {
    * render was running).
    */
   attachFilm(entryId: string, sessionId: string, film: MediaAttachment): void;
+  /**
+   * Write one answer's transcript into the video-interview node with this
+   * session id (auto-transcribe after save — the sheet that started it is
+   * gone by the time results land). A no-op if the entry or node is gone.
+   */
+  attachTranscript(entryId: string, sessionId: string, cardIndex: number, transcript: string): void;
   /**
    * After the user confirmed: tombstone the entry (the deletion syncs to other
    * devices through the LWW oplog) and delete every recording it references —
@@ -1048,6 +1054,33 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
     [db, flush, syncPendingCount],
   );
 
+  // Same shape for a transcript landing after the interview sheet closed: the
+  // functional updater reads the entry's current body, so it composes with
+  // concurrent writes (other transcripts of the same run, a finished film).
+  const attachTranscript: AppData['attachTranscript'] = useCallback(
+    (entryId, sessionId, cardIndex, transcript) => {
+      const now = Date.now();
+      setEntries((prev) => {
+        const cur = prev.find((e) => e.id === entryId);
+        if (!cur) return prev;
+        const bodyJson = setTranscriptAttr(cur.bodyJson, sessionId, cardIndex, transcript);
+        if (!bodyJson) return prev; // entry or node gone — drop it rather than guess
+        const next: JournalEntry = {
+          ...cur,
+          bodyJson,
+          bodyText: docToText(JSON.parse(bodyJson) as JSONContent),
+          updatedAt: now,
+        };
+        if (dbReady.current) void db.putLocal(next);
+        pending.current.set(entryId, next);
+        syncPendingCount();
+        void flush();
+        return mergeByLWW(prev, [next]);
+      });
+    },
+    [db, flush, syncPendingCount],
+  );
+
   const newJournal = useCallback(
     (j: Journal) => {
       const now = Date.now();
@@ -1669,6 +1702,6 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
     [interviewTypes, locale],
   );
 
-  const value: AppData = { status, hasVault, vaultMethod, ownerId, pendingApproval, approvalHint, retryApproval, pendingCount, pendingJournalIds, syncTotal, saving, bootstrapping, entries: liveEntries, journals: journalsWithCounts, templates: localizedTemplates, interviewTypes: localizedInterviewTypes, aiSettings, saveAiSettings, signIn, unlock, unlockWithKey, setDeviceUnlock, lock, createEntry, updateEntry, attachFilm, deleteEntry, newJournal, updateJournal, deleteJournal, createTemplate, updateTemplate, deleteTemplate, createInterviewType, updateInterviewType, deleteInterviewType, addMedia, removeMedia, mediaBlob, mediaThumb, rotatePhrase, deleteVault, relayUrl, setRelayUrl };
+  const value: AppData = { status, hasVault, vaultMethod, ownerId, pendingApproval, approvalHint, retryApproval, pendingCount, pendingJournalIds, syncTotal, saving, bootstrapping, entries: liveEntries, journals: journalsWithCounts, templates: localizedTemplates, interviewTypes: localizedInterviewTypes, aiSettings, saveAiSettings, signIn, unlock, unlockWithKey, setDeviceUnlock, lock, createEntry, updateEntry, attachFilm, attachTranscript, deleteEntry, newJournal, updateJournal, deleteJournal, createTemplate, updateTemplate, deleteTemplate, createInterviewType, updateInterviewType, deleteInterviewType, addMedia, removeMedia, mediaBlob, mediaThumb, rotatePhrase, deleteVault, relayUrl, setRelayUrl };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

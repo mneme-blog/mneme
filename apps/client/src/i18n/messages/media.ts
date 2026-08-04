@@ -110,4 +110,11 @@ export const media = {
   'media.transcribe.failed': 'Could not transcribe: {message}',
   'media.transcribe.answers': 'Transcribe answers',
   'media.transcribe.notConfigured': 'Set up transcription in the AI settings first.',
+  // Per-use disclosure before any decrypted audio leaves the device (shown only
+  // when the configured server is not loopback — loopback runs directly).
+  'media.transcribe.confirmTitle': 'Send for transcription?',
+  'media.transcribe.confirmBody':
+    'This recording leaves this device decrypted and is sent to {host} to be turned into text. The transcript is then stored end-to-end encrypted like the rest of the entry.',
+  'media.transcribe.confirmAnswersBody':
+    'Your {count} answer clips leave this device decrypted and are sent, one at a time, to {host} to be turned into text. The transcripts are then stored end-to-end encrypted like the rest of the entry.',
 } as const;

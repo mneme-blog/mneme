@@ -19,6 +19,7 @@ import { useState } from 'preact/hooks';
 import { t, tp } from '../i18n';
 import type { MediaAttachment } from '../sync/engine';
 import { toAiError } from '../ai/types';
+import type { TranscribeDestination } from '../ai/transcribe';
 import { TranscriptStrip, useMediaUrl, type MediaResolver } from '../ui/Attachments';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Icon } from '../ui/Icon';
@@ -44,6 +45,8 @@ export interface VideoInterviewHandlers {
   /** Speech-to-text for one answer clip (ai/transcribe.ts). Present only when a
    *  transcription server is configured — presence gates the affordance. */
   transcribe?: (att: MediaAttachment) => Promise<string>;
+  /** Where transcription goes — drives the non-local per-use confirm. */
+  transcribeDest?: TranscribeDestination;
 }
 
 // Inserting an atom leaves it node-selected; a trailing paragraph parks the cursor after it.
@@ -91,6 +94,7 @@ export function VideoInterviewCardView({
   onDelete,
   onDropClips,
   onTranscribe,
+  transcribeDest,
 }: {
   data: VideoInterviewData;
   resolve: MediaResolver;
@@ -102,10 +106,13 @@ export function VideoInterviewCardView({
   onDropClips?: () => void;
   /** Transcribe every untranscribed answer clip; transcripts land per card. */
   onTranscribe?: () => Promise<void>;
+  /** Where transcription goes — non-local destinations confirm first. */
+  transcribeDest?: TranscribeDestination;
 }): VNode {
   const [confirming, setConfirming] = useState(false);
   const [droppingClips, setDroppingClips] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const [confirmingTranscribe, setConfirmingTranscribe] = useState(false);
   const [transcribeError, setTranscribeError] = useState('');
   const answered = data.cards.filter((c) => c.clip).length;
   const untranscribed = data.cards.filter((c) => c.clip && !c.transcript).length;
@@ -191,7 +198,10 @@ export function VideoInterviewCardView({
             )}
             {onTranscribe && untranscribed > 0 && (
               <button
-                onClick={() => void runTranscribe()}
+                onClick={() => {
+                  if (transcribeDest && !transcribeDest.local) setConfirmingTranscribe(true);
+                  else void runTranscribe();
+                }}
                 disabled={transcribing}
                 style={{ fontFamily: 'var(--ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--accent-ink)', background: 'transparent', border: '1px solid var(--line)', borderRadius: 999, padding: '5px 13px', cursor: transcribing ? 'default' : 'pointer', opacity: transcribing ? 0.6 : 1 }}
               >
@@ -257,6 +267,21 @@ export function VideoInterviewCardView({
         >
           {t('media.film.deleteClipsBody', { count: String(clipCount) })}{' '}
           <strong style={{ color: 'var(--ink)' }}>{t('editorx.videoInterview.cannotUndo')}</strong>
+        </ConfirmDialog>
+      )}
+
+      {confirmingTranscribe && transcribeDest && (
+        <ConfirmDialog
+          icon="shield"
+          title={t('media.transcribe.confirmTitle')}
+          confirmLabel={t('media.transcribe.answers')}
+          onCancel={() => setConfirmingTranscribe(false)}
+          onConfirm={() => {
+            setConfirmingTranscribe(false);
+            void runTranscribe();
+          }}
+        >
+          {t('media.transcribe.confirmAnswersBody', { count: String(untranscribed), host: transcribeDest.host })}
         </ConfirmDialog>
       )}
     </div>
@@ -360,6 +385,7 @@ export function videoInterviewNode(handlers: VideoInterviewHandlers): Node {
               onDelete={editor.isEditable ? onDelete : undefined}
               onDropClips={editor.isEditable ? onDropClips : undefined}
               onTranscribe={handlers.transcribe && editor.isEditable ? onTranscribe : undefined}
+              transcribeDest={handlers.transcribeDest}
             />,
             dom,
           );

@@ -822,7 +822,7 @@ const fi: Partial<Record<MessageKey, string>> = {
   'shell.compose.videoInterviewHint': 'Vastaa kameralle, yksi leike kysymystä kohden',
   // Speech-to-text (transcription) for video/audio recordings.
   'assistant.transcribe.title': 'Litterointi',
-  'assistant.transcribe.hint': 'Valinnainen: muunna video- ja äänitallenteet tekstiksi, jota voit hakea ja jonka avustaja voi lukea. Toimii minkä tahansa OpenAI:n äänilitterointi-APIa puhuvan palvelimen kanssa — Whisper-palvelin tällä laitteella tai pilvipäätepiste API-avaimella. Jätä URL tyhjäksi pitääksesi ominaisuuden pois päältä.',
+  'assistant.transcribe.hint': 'Muunna video- ja äänitallenteet tekstiksi, jota voit hakea ja jonka avustaja voi lukea. Asennuksesi mukana tuleva Whisper-palvelin on esimääritetty; mikä tahansa OpenAI:n äänilitterointi-APIa puhuva palvelin toimii — tällä laitteella tai pilvipäätepiste API-avaimella. Tyhjennä URL poistaaksesi litteroinnin käytöstä.',
   'assistant.transcribe.effective': 'Tallenteet lähetetään osoitteeseen {host}',
   'assistant.transcribe.notLocal': 'Tuo osoite ei ole tämä laite. Litterointi lähettää puretun tallenteen sinne kyseistä pyyntöä varten — pelkällä HTTP-osoitteella se kulkee verkossasi salaamattomana.',
   'assistant.transcribe.keyOptional': 'valinnainen',
@@ -834,6 +834,12 @@ const fi: Partial<Record<MessageKey, string>> = {
   'media.transcribe.failed': 'Litterointi epäonnistui: {message}',
   'media.transcribe.answers': 'Litteroi vastaukset',
   'media.transcribe.notConfigured': 'Määritä ensin litterointi tekoälyasetuksissa.',
+  'media.transcribe.confirmTitle': 'Lähetetäänkö litteroitavaksi?',
+  'media.transcribe.confirmBody': 'Tämä tallenne lähtee laitteelta purettuna ja lähetetään osoitteeseen {host} tekstiksi muunnettavaksi. Litterointi tallennetaan sen jälkeen päästä päähän salattuna kuten muukin merkintä.',
+  'media.transcribe.confirmAnswersBody': 'Vastausklippisi ({count}) lähtevät laitteelta purettuina ja lähetetään yksi kerrallaan osoitteeseen {host} tekstiksi muunnettaviksi. Litteroinnit tallennetaan sen jälkeen päästä päähän salattuina kuten muukin merkintä.',
+  'assistant.video.transcribe': 'Litteroi vastaukseni jälkeenpäin',
+  'assistant.video.transcribeLocal': 'Puheentunnistus tapahtuu tallennuksen jälkeen tällä laitteella.',
+  'assistant.video.transcribeRemote': 'Tallennuksen jälkeen vastauksesi lähetetään purettuina osoitteeseen {host} tekstiksi muunnettaviksi.',
 };
 
 export default fi;

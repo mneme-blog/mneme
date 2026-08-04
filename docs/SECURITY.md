@@ -92,16 +92,22 @@ themselves (API key included) sync to the vault's other devices as an encrypted 
 indistinguishable from an entry to the relay, which still cannot use or read the key. The one invariant
 that must never break: **journal plaintext must never be routed through the relay as an AI proxy.**
 
-**Recording transcription** (`ai/transcribe.ts`) follows the same rules. When the user configures a
-speech-to-text server (any endpoint speaking the OpenAI `/v1/audio/transcriptions` shape), the
-"Transcribe" actions on video/audio recordings send the **decrypted media bytes** browser → that
-server directly — never via the relay. A loopback whisper server keeps everything on-device (the
-shipped CSP allows loopback on any port, `connect-src http://localhost:* http://127.0.0.1:*` — no
-cross-origin egress an attacker could exfiltrate to); anything non-loopback gets the same badge swap
-and warning as a non-loopback Ollama URL and needs an explicit `CSP_CONNECT_EXTRA` entry in
-production. The resulting transcript is stored **inside the encrypted entry body** (media node attrs
-/ video-interview cards), so it syncs like any entry content, is searchable, feeds Ask-my-journal —
-and the relay never sees it.
+**Recording transcription** (`ai/transcribe.ts`) follows the same rules. The "Transcribe" actions on
+video/audio recordings send the **decrypted media bytes** browser → a speech-to-text server (any
+endpoint speaking the OpenAI `/v1/audio/transcriptions` shape) directly — never via the relay
+*process*. The standard deployment **bundles** a whisper container (`whisper` in
+`docker-compose.prod.yml`, MIT-licensed stack) proxied under the app's own origin at `/whisper`, and
+the client defaults to it. Be precise about what that means: the relay software still never sees
+audio or text, but the **operator's machine** now runs the transcriber — from any device other than
+the server itself (phones, always), the decrypted recording crosses the network to that box. The UI
+refuses to let this be implicit twice over: the settings sheet badges any non-loopback destination
+"leaves this device" and names the resolved host, and **every Transcribe action shows a per-use
+confirmation naming the destination** before any audio is sent (a loopback server runs without the
+dialog — warning for the on-device case would train users to click through). A truly-local loopback
+server remains fully covered by the shipped CSP (`connect-src http://localhost:*
+http://127.0.0.1:*`); a third-party endpoint needs `CSP_CONNECT_EXTRA`. The resulting transcript is
+stored **inside the encrypted entry body** (media node attrs / video-interview cards), so it syncs
+like any entry content, is searchable, feeds Ask-my-journal — and the relay never sees it.
 
 ### Location snapshots — a one-time, per-insert exception
 

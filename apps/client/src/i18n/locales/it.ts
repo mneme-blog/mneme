@@ -833,7 +833,7 @@ const it: Partial<Record<MessageKey, string>> = {
   'shell.compose.videoInterviewHint': 'Rispondi davanti alla fotocamera, un clip per domanda',
   // Speech-to-text (transcription) for video/audio recordings.
   'assistant.transcribe.title': 'Trascrizione',
-  'assistant.transcribe.hint': 'Facoltativo: trasforma le registrazioni video e audio in testo che puoi cercare e che l’assistente può leggere. Funziona con qualsiasi server che parli l’API di trascrizione audio di OpenAI: un server Whisper su questo dispositivo o un endpoint cloud con chiave API. Lascia l’URL vuoto per tenerlo disattivato.',
+  'assistant.transcribe.hint': 'Trasforma le registrazioni video e audio in testo che puoi cercare e che l’assistente può leggere. Il server Whisper incluso nel tuo deployment è preconfigurato; funziona qualsiasi server che parli l’API di trascrizione audio di OpenAI — su questo dispositivo o un endpoint cloud con chiave API. Svuota l’URL per disattivare la trascrizione.',
   'assistant.transcribe.effective': 'Le registrazioni vanno a {host}',
   'assistant.transcribe.notLocal': 'Quell’indirizzo non è questo dispositivo. La trascrizione invia lì la registrazione decifrata per quella richiesta — su un indirizzo HTTP semplice attraversa la tua rete in chiaro.',
   'assistant.transcribe.keyOptional': 'facoltativa',
@@ -845,6 +845,12 @@ const it: Partial<Record<MessageKey, string>> = {
   'media.transcribe.failed': 'Trascrizione non riuscita: {message}',
   'media.transcribe.answers': 'Trascrivi le risposte',
   'media.transcribe.notConfigured': 'Configura prima la trascrizione nelle impostazioni IA.',
+  'media.transcribe.confirmTitle': 'Inviare per la trascrizione?',
+  'media.transcribe.confirmBody': 'Questa registrazione lascia questo dispositivo decifrata e viene inviata a {host} per essere convertita in testo. La trascrizione viene poi salvata cifrata end-to-end come il resto della voce.',
+  'media.transcribe.confirmAnswersBody': 'I tuoi {count} clip di risposta lasciano questo dispositivo decifrati e vengono inviati uno alla volta a {host} per essere convertiti in testo. Le trascrizioni vengono poi salvate cifrate end-to-end come il resto della voce.',
+  'assistant.video.transcribe': 'Trascrivi le mie risposte dopo',
+  'assistant.video.transcribeLocal': 'La conversione in testo avviene su questo dispositivo dopo il salvataggio.',
+  'assistant.video.transcribeRemote': 'Dopo il salvataggio, le tue risposte vengono inviate decifrate a {host} per essere convertite in testo.',
 };
 
 export default it;

@@ -11,6 +11,7 @@ import { t } from '../i18n';
 import { useAppData } from '../state/data';
 import { makeProvider } from '../ai/provider';
 import { ollamaHostLabel, ollamaScope } from '../ai/ollamaUrl';
+import { resolveTranscriptionUrl } from '../ai/transcribe';
 import {
   toAiError,
   defaultAiSettings,
@@ -68,13 +69,16 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
     setTest({ state: 'idle' });
   };
 
-  // Records sealed before transcription existed lack the field — treat as defaults.
+  // Records sealed before transcription existed lack the field — treat as
+  // defaults (the deployment-bundled same-origin /whisper proxy).
   const tr = form.transcription ?? defaultTranscriptionSettings();
   const patchTr = (p: Partial<TranscriptionSettings>): void => patch({ transcription: { ...tr, ...p } });
   // Same honesty rules as the Ollama URL: this setting syncs across devices and
   // decides where decrypted recordings go, so the badge must not be able to lie.
-  const trScope = ollamaScope(tr.baseUrl);
-  const trConfigured = tr.baseUrl.trim() !== '' && trScope !== 'invalid';
+  // The stored value may be the same-origin path form — resolve before judging.
+  const trResolved = resolveTranscriptionUrl(tr.baseUrl);
+  const trConfigured = trResolved !== null;
+  const trScope = trResolved ? ollamaScope(trResolved) : 'invalid';
 
   const runTest = async (): Promise<void> => {
     setTest({ state: 'busy' });
@@ -263,11 +267,11 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
                   style={inputStyle}
                   value={tr.baseUrl}
                   onInput={(e) => patchTr({ baseUrl: (e.target as HTMLInputElement).value })}
-                  placeholder="http://localhost:8000"
+                  placeholder={defaultTranscriptionSettings().baseUrl}
                 />
                 {trConfigured && (
                   <p style={{ ...pStyle, fontSize: 11.5, marginTop: 6, color: trScope === 'loopback' ? 'var(--ink-3)' : 'var(--accent-ink)' }}>
-                    {t('assistant.transcribe.effective', { host: ollamaHostLabel(tr.baseUrl) })}
+                    {t('assistant.transcribe.effective', { host: trResolved })}
                   </p>
                 )}
                 {trConfigured && trScope !== 'loopback' && (

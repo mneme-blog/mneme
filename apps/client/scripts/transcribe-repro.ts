@@ -17,10 +17,17 @@
 //    production policy; anything else still needs CSP_CONNECT_EXTRA.
 //
 // Run: pnpm --filter client exec tsx scripts/transcribe-repro.ts
-import { transcribe, transcriptionConfig, transcriptionEndpoint, transcriptionLocal } from '../src/ai/transcribe';
-import { AiError, defaultAiSettings, type AiSettings } from '../src/ai/types';
+import {
+  resolveTranscriptionUrl,
+  transcribe,
+  transcriptionConfig,
+  transcriptionDestination,
+  transcriptionEndpoint,
+  transcriptionLocal,
+} from '../src/ai/transcribe';
+import { AiError, defaultAiSettings, DEFAULT_TRANSCRIPTION_MODEL, type AiSettings } from '../src/ai/types';
 import { docToText } from '../src/editor/doc';
-import { coerceVideoInterview } from '../src/editor/videointerviewData';
+import { coerceVideoInterview, setTranscriptAttr } from '../src/editor/videointerviewData';
 // eslint-disable-next-line no-restricted-imports
 import { policy } from '../csp.js';
 
@@ -49,10 +56,30 @@ check('file: URL → off', transcriptionConfig(settings({ transcription: { baseU
 const cfg = transcriptionConfig(settings({ transcription: { baseUrl: 'http://localhost:8000///', apiKey: 'k', model: '  ' } }));
 check('loopback URL → configured', cfg !== null);
 check('trailing slashes normalized', cfg?.baseUrl === 'http://localhost:8000');
-check('blank model falls back to default', cfg?.model === 'whisper-1');
+check('blank model falls back to default', cfg?.model === DEFAULT_TRANSCRIPTION_MODEL);
 check('loopback classified local', cfg !== null && transcriptionLocal(cfg));
 const cloud = transcriptionConfig(settings({ transcription: { baseUrl: 'https://api.openai.com/v1', apiKey: 'k', model: 'whisper-1' } }));
 check('cloud endpoint not local', cloud !== null && !transcriptionLocal(cloud));
+check('non-local destination flagged for the per-use confirm', cloud !== null && !transcriptionDestination(cloud).local);
+
+// ── the bundled same-origin default (relative /whisper) ──
+// Outside a browser there is no origin to resolve a path against — the
+// default must read as OFF, not point somewhere made up.
+check('relative path without an origin → off', resolveTranscriptionUrl('/whisper') === null);
+check('default settings without an origin → off', transcriptionConfig(settings({ transcription: undefined })) === null);
+// With an origin (the browser case), the absent field falls back to the
+// bundled default and resolves same-origin — a stock deployment transcribes
+// out of the box, and the app origin decides local vs not.
+(globalThis as Record<string, unknown>).location = new URL('https://mneme.example/mneme/');
+try {
+  check('relative path resolves against the app origin', resolveTranscriptionUrl('/whisper') === 'https://mneme.example/whisper');
+  const bundled = transcriptionConfig(settings({ transcription: undefined }));
+  check('absent field → bundled default on', bundled !== null && bundled.baseUrl.startsWith('https://mneme.example/'));
+  check('bundled default on a LAN host is NOT local (phones!)', bundled !== null && !transcriptionLocal(bundled));
+  check('cleared URL still means off', transcriptionConfig(settings({ transcription: { baseUrl: '', apiKey: '', model: '' } })) === null);
+} finally {
+  delete (globalThis as Record<string, unknown>).location;
+}
 
 // ── endpoint building ──
 check('bare origin gets /v1 path', transcriptionEndpoint('http://localhost:8000') === 'http://localhost:8000/v1/audio/transcriptions');
@@ -60,7 +87,7 @@ check('…/v1 base completes', transcriptionEndpoint('https://api.openai.com/v1'
 check('full path passes through', transcriptionEndpoint('http://localhost:9000/v1/audio/transcriptions') === 'http://localhost:9000/v1/audio/transcriptions');
 
 // ── the wire shape, against a mocked fetch ──
-type Captured = { url: string; auth: string | undefined; file: File; model: string };
+type Captured = { url: string; auth: string | undefined; file: File; model: string; language: string | null };
 let captured: Captured | null = null;
 let respond: () => Response = () => new Response(JSON.stringify({ text: '  hello from the clip  ' }), { status: 200 });
 const realFetch = globalThis.fetch;
@@ -71,6 +98,7 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     auth: (init?.headers as Record<string, string> | undefined)?.Authorization,
     file: form.get('file') as File,
     model: String(form.get('model')),
+    language: form.get('language') === null ? null : String(form.get('language')),
   };
   return respond();
 }) as typeof fetch;
@@ -83,10 +111,14 @@ try {
   check('bearer auth when a key is set', captured!.auth === 'Bearer sk-test');
   check('model field carried', captured!.model === 'whisper-1');
   check('codec-suffixed webm mime → .webm filename', captured!.file.name === 'recording.webm');
+  // Whisper's `language` is a constraint, not a hint — it must be absent
+  // unless the caller genuinely knows it (interview clips do, uploads don't).
+  check('no language field by default (auto-detect)', captured!.language === null);
 
-  await transcribe({ ...goodCfg, apiKey: '' }, new Blob(['x'], { type: 'audio/mpeg' }));
+  await transcribe({ ...goodCfg, apiKey: '' }, new Blob(['x'], { type: 'audio/mpeg' }), { language: 'de' });
   check('no auth header without a key', captured!.auth === undefined);
   check('mp3 mime → .mp3 filename', captured!.file.name === 'recording.mp3');
+  check('language pinned when the caller knows it', captured!.language === 'de');
 
   respond = () => new Response('nope', { status: 401 });
   const authErr = await transcribe(goodCfg, new Blob(['x'])).then(() => null, (e: unknown) => e);
@@ -147,6 +179,15 @@ const dropped = coerceVideoInterview({
   cards: coerced!.cards.map((c) => ({ q: c.q, clip: null, transcript: c.transcript })),
 } as Record<string, unknown>);
 check('dropping clips keeps the transcript', dropped?.cards[0].transcript === 'it was a long but good day');
+
+// ── the out-of-editor write-back (auto-transcribe after save) ──
+const storedBody = JSON.stringify(interviewDoc);
+const written = setTranscriptAttr(storedBody, 's1', 1, 'thinking about the garden');
+check('setTranscriptAttr writes the addressed card', written !== null && coerceVideoInterview((JSON.parse(written!) as { content: { attrs: Record<string, unknown> }[] }).content[0].attrs)?.cards[1].transcript === 'thinking about the garden');
+check('setTranscriptAttr leaves other cards alone', written !== null && coerceVideoInterview((JSON.parse(written!) as { content: { attrs: Record<string, unknown> }[] }).content[0].attrs)?.cards[0].transcript === 'it was a long but good day');
+check('wrong sessionId → null (entry reused, node replaced)', setTranscriptAttr(storedBody, 'other-session', 0, 'x') === null);
+check('out-of-range card → null', setTranscriptAttr(storedBody, 's1', 9, 'x') === null);
+check('unparseable body → null', setTranscriptAttr('{nope', 's1', 0, 'x') === null);
 
 // ── CSP: loopback whisper on any port is reachable in production ──
 const csp = policy();

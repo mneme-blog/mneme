@@ -15,7 +15,8 @@ import { Icon } from './Icon';
 import { Btn } from './primitives';
 import { fmtDuration } from './VideoCapture';
 import { toAiError } from '../ai/types';
-import { transcribe, transcriptionConfig } from '../ai/transcribe';
+import { transcribe, transcriptionConfig, transcriptionDestination, type TranscribeDestination } from '../ai/transcribe';
+import { ConfirmDialog } from './ConfirmDialog';
 
 export type MediaResolver = (att: MediaAttachment) => Promise<Blob | null>;
 
@@ -128,12 +129,16 @@ export function ConfirmDeleteDialog({
 export function TranscriptStrip({
   transcript,
   onTranscribe,
+  dest,
 }: {
   transcript?: string;
   onTranscribe?: () => Promise<void>;
+  /** Where the recording would be sent; non-local destinations confirm first. */
+  dest?: TranscribeDestination;
 }): VNode | null {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState('');
   if (!transcript && !onTranscribe) return null;
 
@@ -152,6 +157,15 @@ export function TranscriptStrip({
     } finally {
       setBusy(false);
     }
+  };
+
+  // The per-use disclosure: a non-local destination gets a confirm naming the
+  // host before any decrypted audio leaves the device. Loopback runs directly —
+  // a warning that also fired for the on-device case would train people to
+  // click through it.
+  const start = (): void => {
+    if (dest && !dest.local) setConfirming(true);
+    else void run();
   };
 
   return (
@@ -174,7 +188,7 @@ export function TranscriptStrip({
       ) : (
         <>
           <button
-            onClick={() => void run()}
+            onClick={start}
             disabled={busy}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--ui)', fontSize: 12, fontWeight: 600, color: 'var(--accent-ink)', background: 'transparent', border: '1px solid var(--line)', borderRadius: 999, padding: '4px 12px', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
           >
@@ -182,6 +196,20 @@ export function TranscriptStrip({
             {busy ? t('media.transcribe.busy') : t('media.transcribe.action')}
           </button>
           {error && <p style={{ fontFamily: 'var(--ui)', fontSize: 11.5, color: 'var(--accent-ink)', margin: '6px 0 0' }}>{error}</p>}
+          {confirming && dest && (
+            <ConfirmDialog
+              icon="shield"
+              title={t('media.transcribe.confirmTitle')}
+              confirmLabel={t('media.transcribe.action')}
+              onCancel={() => setConfirming(false)}
+              onConfirm={() => {
+                setConfirming(false);
+                void run();
+              }}
+            >
+              {t('media.transcribe.confirmBody', { host: dest.host })}
+            </ConfirmDialog>
+          )}
         </>
       )}
     </div>
@@ -195,6 +223,7 @@ export function MediaCard({
   onDelete,
   onOpen,
   onTranscribe,
+  transcribeDest,
 }: {
   att: MediaAttachment;
   resolve: MediaResolver;
@@ -204,6 +233,8 @@ export function MediaCard({
   onOpen?: () => void;
   /** Video/audio only: transcribe the recording; the caller persists the text. */
   onTranscribe?: () => Promise<void>;
+  /** Where transcription goes — drives the non-local per-use confirm. */
+  transcribeDest?: TranscribeDestination;
 }): VNode {
   const { url, failed, retry } = useMediaUrl(att, resolve);
   const [confirming, setConfirming] = useState(false);
@@ -294,7 +325,7 @@ export function MediaCard({
         {deleteBtn}
       </div>
       {(att.kind === 'video' || att.kind === 'audio') && (
-        <TranscriptStrip transcript={att.transcript} onTranscribe={onTranscribe} />
+        <TranscriptStrip transcript={att.transcript} onTranscribe={onTranscribe} dest={transcribeDest} />
       )}
       {confirming && (
         <ConfirmDeleteDialog
@@ -443,6 +474,7 @@ export function AttachmentList({ entry }: { entry: JournalEntry }): VNode | null
             updateEntry(entry.id, { attachments: attachments.filter((a) => a.id !== att.id) });
             removeMedia(att.id);
           }}
+          transcribeDest={cfg ? transcriptionDestination(cfg) : undefined}
           onTranscribe={
             cfg
               ? async () => {

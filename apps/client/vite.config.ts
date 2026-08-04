@@ -131,6 +131,17 @@ export default defineConfig({
     https: hasCustomCert
       ? { cert: readFileSync(tlsCert!), key: readFileSync(tlsKey!) }
       : undefined,
+    // Mirror the production Caddy route: the client's default transcription
+    // URL is the same-origin path /whisper (see ai/transcribe.ts), which Caddy
+    // proxies to the bundled whisper container. Proxy it in dev too so the
+    // default works against `docker compose up whisper` with zero config.
+    proxy: {
+      '/whisper': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (p: string) => p.replace(/^\/whisper/, ''),
+      },
+    },
   },
   // esbuild ≥0.28 refuses to *lower* destructuring when it's entangled with
   // private-field lowering (the wa-sqlite OPFS worker does both), erroring out

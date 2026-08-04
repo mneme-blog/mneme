@@ -815,7 +815,7 @@ const fr: Partial<Record<MessageKey, string>> = {
   'shell.compose.videoInterviewHint': 'Répondez face caméra, un clip par question',
   // Speech-to-text (transcription) for video/audio recordings.
   'assistant.transcribe.title': 'Transcription',
-  'assistant.transcribe.hint': 'Facultatif : convertissez vos enregistrements vidéo et audio en texte que vous pouvez rechercher et que l’assistant peut lire. Fonctionne avec tout serveur parlant l’API de transcription audio d’OpenAI — un serveur Whisper sur cet appareil, ou un point de terminaison cloud avec une clé API. Laissez l’URL vide pour le désactiver.',
+  'assistant.transcribe.hint': 'Convertissez vos enregistrements vidéo et audio en texte que vous pouvez rechercher et que l’assistant peut lire. Le serveur Whisper fourni avec votre déploiement est préconfiguré ; tout serveur parlant l’API de transcription audio d’OpenAI fonctionne — sur cet appareil ou un point de terminaison cloud avec une clé API. Effacez l’URL pour désactiver la transcription.',
   'assistant.transcribe.effective': 'Les enregistrements vont vers {host}',
   'assistant.transcribe.notLocal': 'Cette adresse n’est pas cet appareil. La transcription y envoie l’enregistrement déchiffré pour cette requête — via une adresse HTTP simple, il traverse votre réseau non chiffré.',
   'assistant.transcribe.keyOptional': 'facultatif',
@@ -827,6 +827,12 @@ const fr: Partial<Record<MessageKey, string>> = {
   'media.transcribe.failed': 'Échec de la transcription : {message}',
   'media.transcribe.answers': 'Transcrire les réponses',
   'media.transcribe.notConfigured': 'Configurez d’abord la transcription dans les réglages IA.',
+  'media.transcribe.confirmTitle': 'Envoyer pour transcription ?',
+  'media.transcribe.confirmBody': 'Cet enregistrement quitte cet appareil déchiffré et est envoyé à {host} pour être converti en texte. La transcription est ensuite stockée chiffrée de bout en bout comme le reste de l’entrée.',
+  'media.transcribe.confirmAnswersBody': 'Vos {count} clips de réponse quittent cet appareil déchiffrés et sont envoyés un par un à {host} pour être convertis en texte. Les transcriptions sont ensuite stockées chiffrées de bout en bout comme le reste de l’entrée.',
+  'assistant.video.transcribe': 'Transcrire mes réponses ensuite',
+  'assistant.video.transcribeLocal': 'La reconnaissance vocale s’exécute sur cet appareil après l’enregistrement.',
+  'assistant.video.transcribeRemote': 'Après l’enregistrement, vos réponses sont envoyées déchiffrées à {host} pour être converties en texte.',
 };
 
 export default fr;

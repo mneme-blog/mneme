@@ -10,32 +10,75 @@
 // entry body (editor/media.tsx, editor/videointerviewData.ts), so it syncs
 // like any entry content and docToText surfaces it to search, previews, and
 // the Ask-my-journal context.
-import { AiError, toAiError, DEFAULT_TRANSCRIPTION_MODEL, type AiSettings, type TranscriptionSettings } from './types';
+import {
+  AiError,
+  toAiError,
+  defaultTranscriptionSettings,
+  DEFAULT_TRANSCRIPTION_MODEL,
+  type AiSettings,
+  type TranscriptionSettings,
+} from './types';
 // URL hygiene shared with the Ollama backend: same normalization (http(s)
 // only) and the same loopback classification driving the local/cloud badge.
 import { normalizeOllamaUrl as normalizeHttpUrl, ollamaScope as httpUrlScope } from './ollamaUrl';
 
 /**
- * The usable transcription config, or null when the feature is unavailable
- * (AI off, no server configured, or an unusable URL). Null gates every
- * "Transcribe" affordance — unlike the Ollama URL there is no loopback
- * fallback, because a half-configured speech endpoint should look "off",
- * not quietly point somewhere else.
+ * Resolve a stored server URL to an absolute one, or null when unusable.
+ * A path beginning with `/` is the same-origin form — the deployment-bundled
+ * whisper proxy (`/whisper`, types.ts bundledWhisperUrl) — and resolves
+ * against the app's own origin; outside a browser there is no origin, so it
+ * reads as unavailable (the repro scripts pass absolute URLs).
+ */
+export function resolveTranscriptionUrl(raw: string): string | null {
+  const trimmed = raw.trim().replace(/\/+$/, '');
+  if (!trimmed) return null;
+  if (trimmed.startsWith('/')) {
+    if (typeof location === 'undefined') return null;
+    return location.origin + trimmed;
+  }
+  return normalizeHttpUrl(trimmed);
+}
+
+/**
+ * The usable transcription config (absolute base URL), or null when the
+ * feature is unavailable (AI off, or an unusable URL). A settings record
+ * without the field — sealed before the feature, or never customised — falls
+ * back to the bundled same-origin default, so a stock deployment transcribes
+ * out of the box; clearing the URL in settings stores '' and turns it off.
+ * Null gates every "Transcribe" affordance — there is deliberately no other
+ * fallback URL, a half-configured speech endpoint should look "off".
  */
 export function transcriptionConfig(settings: AiSettings | null | undefined): TranscriptionSettings | null {
-  if (!settings?.enabled || !settings.transcription) return null;
-  const baseUrl = normalizeHttpUrl(settings.transcription.baseUrl);
+  if (!settings?.enabled) return null;
+  const t = settings.transcription ?? defaultTranscriptionSettings();
+  const baseUrl = resolveTranscriptionUrl(t.baseUrl);
   if (!baseUrl) return null;
   return {
     baseUrl,
-    apiKey: settings.transcription.apiKey ?? '',
-    model: settings.transcription.model.trim() || DEFAULT_TRANSCRIPTION_MODEL,
+    apiKey: t.apiKey ?? '',
+    model: t.model.trim() || DEFAULT_TRANSCRIPTION_MODEL,
   };
 }
 
 /** True when the server is loopback — nothing leaves the device. */
 export function transcriptionLocal(cfg: TranscriptionSettings): boolean {
   return httpUrlScope(cfg.baseUrl) === 'loopback';
+}
+
+/**
+ * Where transcription requests actually go, for the per-use disclosure. When
+ * `local` is false every Transcribe affordance confirms first, naming `host` —
+ * the settings-sheet warning alone is not enough for an action that ships a
+ * decrypted recording off the device (on phones the endpoint is practically
+ * never loopback, so this is the disclosure most users will actually see).
+ */
+export interface TranscribeDestination {
+  host: string;
+  local: boolean;
+}
+
+export function transcriptionDestination(cfg: TranscriptionSettings): TranscribeDestination {
+  return { host: cfg.baseUrl, local: transcriptionLocal(cfg) };
 }
 
 /** Accepts a bare origin, an `…/v1` base, or a full `…/audio/transcriptions` path. */
@@ -69,17 +112,23 @@ function fileExt(mime: string): string {
  * Transcribe one recording. Resolves the transcript text (may be empty for a
  * silent clip); rejects with AiError ('auth' for a rejected key, 'aborted',
  * else 'network').
+ *
+ * `language` (ISO-639-1) is a CONSTRAINT to whisper, not a soft hint — a wrong
+ * value silently yields garbage. Pass it only when the language is genuinely
+ * known (interview answers follow the app language the questions were asked
+ * in); leave arbitrary uploads on auto-detect.
  */
 export async function transcribe(
   cfg: TranscriptionSettings,
   media: Blob,
-  opts?: { mime?: string; signal?: AbortSignal },
+  opts?: { mime?: string; language?: string; signal?: AbortSignal },
 ): Promise<string> {
   const mime = opts?.mime || media.type || 'video/webm';
   const form = new FormData();
   form.set('file', new File([media], `recording.${fileExt(mime)}`, { type: mime }));
   form.set('model', cfg.model);
   form.set('response_format', 'json');
+  if (opts?.language) form.set('language', opts.language);
   let res: Response;
   try {
     res = await fetch(transcriptionEndpoint(cfg.baseUrl), {

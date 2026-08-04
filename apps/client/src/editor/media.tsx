@@ -14,6 +14,7 @@
 import { Node, mergeAttributes, type Editor, type JSONContent } from '@tiptap/core';
 import { render } from 'preact';
 import type { MediaAttachment } from '../sync/engine';
+import type { TranscribeDestination } from '../ai/transcribe';
 import { MediaCard, ImageGallery, type MediaResolver } from '../ui/Attachments';
 
 export interface MediaNodeHandlers {
@@ -25,6 +26,9 @@ export interface MediaNodeHandlers {
   /** Speech-to-text for a video/audio recording (ai/transcribe.ts). Present only
    *  when a transcription server is configured — presence gates the affordance. */
   transcribe?: (att: MediaAttachment) => Promise<string>;
+  /** Where transcription goes — node views can't reach app context, so the
+   *  per-use disclosure data rides in with the handlers. */
+  transcribeDest?: TranscribeDestination;
 }
 
 export const MEDIA_NODE = 'mediaAttachment';
@@ -157,6 +161,7 @@ export function mediaAttachmentNode(handlers: MediaNodeHandlers): Node {
             onDelete={editor.isEditable ? onDelete : undefined}
             onOpen={att.kind === 'image' && handlers.onOpenImage ? () => handlers.onOpenImage?.(att) : undefined}
             onTranscribe={editor.isEditable ? onTranscribe : undefined}
+            transcribeDest={handlers.transcribeDest}
           />,
           dom,
         );

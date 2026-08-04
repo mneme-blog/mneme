@@ -59,7 +59,7 @@ export const assistant = {
   // ── transcription (speech-to-text for video/audio recordings) ──
   'assistant.transcribe.title': 'Transcription',
   'assistant.transcribe.hint':
-    'Optional: turn video and audio recordings into text you can search and the assistant can read. Works with any server speaking the OpenAI audio-transcriptions API — a whisper server on this device, or a cloud endpoint with an API key. Leave the URL empty to keep it off.',
+    "Turn video and audio recordings into text you can search and the assistant can read. Your deployment's bundled whisper server is preconfigured; any server speaking the OpenAI audio-transcriptions API works — one on this device, or a cloud endpoint with an API key. Clear the URL to turn transcription off.",
   // Always shown when configured — this setting syncs between your devices, so
   // the destination is never implicit (same rule as the Ollama URL).
   'assistant.transcribe.effective': 'Recordings go to {host}',
@@ -140,6 +140,11 @@ export const assistant = {
   'assistant.video.savingClip': 'Saving answer {n} of {total}…',
   'assistant.video.noClips': 'Record at least one answer to save.',
   'assistant.video.maxLength': 'Up to {seconds}s per answer',
+  // Opt-in auto-transcription after saving; the sub-line is the per-use
+  // disclosure — it names the destination when it isn't this device.
+  'assistant.video.transcribe': 'Transcribe my answers afterwards',
+  'assistant.video.transcribeLocal': 'Speech-to-text runs on this device after saving.',
+  'assistant.video.transcribeRemote': 'After saving, your answers are sent decrypted to {host} to be turned into text.',
   'assistant.video.discardTitle': 'Discard this interview?',
   'assistant.video.discardBody': 'Your recorded answers have not been saved yet and will be lost.',
   'assistant.video.discard': 'Discard',

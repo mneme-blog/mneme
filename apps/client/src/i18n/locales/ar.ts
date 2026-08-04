@@ -817,7 +817,7 @@ const ar: Partial<Record<MessageKey, string>> = {
   'shell.compose.videoInterviewHint': 'أجب أمام الكاميرا، مقطع واحد لكل سؤال',
   // Speech-to-text (transcription) for video/audio recordings.
   'assistant.transcribe.title': 'التفريغ النصي',
-  'assistant.transcribe.hint': 'اختياري: حوّل تسجيلات الفيديو والصوت إلى نص يمكنك البحث فيه ويستطيع المساعد قراءته. يعمل مع أي خادم يتحدث واجهة OpenAI لتفريغ الصوت — خادم Whisper على هذا الجهاز، أو نقطة نهاية سحابية بمفتاح API. اترك العنوان فارغًا لإبقائه معطّلًا.',
+  'assistant.transcribe.hint': 'حوّل تسجيلات الفيديو والصوت إلى نص يمكنك البحث فيه ويستطيع المساعد قراءته. خادم Whisper المرفق بنشرك مُعدّ مسبقًا؛ يعمل أي خادم يتحدث واجهة OpenAI لتفريغ الصوت — على هذا الجهاز أو نقطة نهاية سحابية بمفتاح API. امسح العنوان لإيقاف التفريغ.',
   'assistant.transcribe.effective': 'تُرسل التسجيلات إلى {host}',
   'assistant.transcribe.notLocal': 'هذا العنوان ليس هذا الجهاز. عند التفريغ يُرسل التسجيل المفكوك التشفير إلى هناك لذلك الطلب — وعبر عنوان HTTP عادي يمر في شبكتك دون تشفير.',
   'assistant.transcribe.keyOptional': 'اختياري',
@@ -829,6 +829,12 @@ const ar: Partial<Record<MessageKey, string>> = {
   'media.transcribe.failed': 'تعذّر التفريغ: {message}',
   'media.transcribe.answers': 'تفريغ الإجابات',
   'media.transcribe.notConfigured': 'قم أولًا بإعداد التفريغ في إعدادات الذكاء الاصطناعي.',
+  'media.transcribe.confirmTitle': 'إرسال للتفريغ النصي؟',
+  'media.transcribe.confirmBody': 'يغادر هذا التسجيل هذا الجهاز مفكوك التشفير ويُرسل إلى {host} لتحويله إلى نص. يُخزَّن النص المفرّغ بعد ذلك مشفّرًا من طرف إلى طرف مثل بقية المدخلة.',
+  'media.transcribe.confirmAnswersBody': 'تغادر مقاطع إجاباتك ({count}) هذا الجهاز مفكوكة التشفير وتُرسل واحدًا تلو الآخر إلى {host} لتحويلها إلى نص. تُخزَّن النصوص المفرّغة بعد ذلك مشفّرة من طرف إلى طرف مثل بقية المدخلة.',
+  'assistant.video.transcribe': 'فرّغ إجاباتي نصيًا بعد الحفظ',
+  'assistant.video.transcribeLocal': 'يعمل تحويل الكلام إلى نص على هذا الجهاز بعد الحفظ.',
+  'assistant.video.transcribeRemote': 'بعد الحفظ تُرسل إجاباتك مفكوكة التشفير إلى {host} لتحويلها إلى نص.',
 };
 
 export default ar;

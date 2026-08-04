@@ -32,6 +32,8 @@ import { buildVideoInterviewDoc, type VideoInterviewCard } from '../editor/video
 import { docToText } from '../editor/doc';
 import { newMediaId } from '../sync/ids';
 import { toAiError } from '../ai/types';
+import { transcribe, transcriptionConfig, transcriptionDestination } from '../ai/transcribe';
+import { currentLocale } from '../i18n';
 
 const pStyle: JSX.CSSProperties = { fontFamily: 'var(--ui)', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)', margin: 0 };
 
@@ -75,9 +77,15 @@ export function VideoInterviewSheet({
   /** Preselected start — skips the pick phase. */
   initial?: InterviewType;
 }): VNode | null {
-  const { entries, journals, interviewTypes, aiSettings, createEntry, updateEntry, addMedia } = useAppData();
+  const { entries, journals, interviewTypes, aiSettings, createEntry, updateEntry, addMedia, mediaBlob, attachTranscript } = useAppData();
 
   const [phase, setPhase] = useState<Phase>('pick');
+  // Opt-in: turn the answers into text right after saving. Off by default; the
+  // toggle row itself carries the destination disclosure when the configured
+  // transcription server is not on this device (on phones it practically never
+  // is), so consent lands at the moment of choice.
+  const trCfg = transcriptionConfig(aiSettings);
+  const [autoTranscribe, setAutoTranscribe] = useState(false);
   const [type, setType] = useState<InterviewType | null>(null);
   const [questions, setQuestions] = useState<string[]>([]);
   const [planFallback, setPlanFallback] = useState(false);
@@ -311,14 +319,40 @@ export function VideoInterviewSheet({
       }
       cards.push({ q: questions[i], clip: att });
     }
+    const sessionId = newMediaId();
     const doc = buildVideoInterviewDoc({
-      sessionId: newMediaId(),
+      sessionId,
       typeName: type.name,
       cards,
       film: null,
       renderedAt: null,
     });
     updateEntry(entry.id, { bodyJson: JSON.stringify(doc), bodyText: docToText(doc) });
+    // Opted-in auto-transcription runs detached — the sheet closes now, and the
+    // stable context callbacks (mediaBlob/attachTranscript) outlive it. Clips
+    // go one at a time; each transcript lands via the sessionId-addressed
+    // write-back the film render also uses. The language is pinned to the app
+    // locale: the questions were asked in it, so the answers follow it — this
+    // is the one place the whisper `language` constraint is justified.
+    if (autoTranscribe && trCfg) {
+      const language = currentLocale().id;
+      void (async () => {
+        for (let i = 0; i < cards.length; i++) {
+          const clip = cards[i].clip;
+          if (!clip) continue;
+          try {
+            const blob = await mediaBlob(entry.id, clip);
+            if (!blob) continue;
+            const text = await transcribe(trCfg, blob, { mime: clip.mime, language });
+            attachTranscript(entry.id, sessionId, i, text);
+          } catch {
+            // Best-effort: stop on the first failure (server down, vault
+            // locked). The card's manual "Transcribe answers" action remains.
+            break;
+          }
+        }
+      })();
+    }
     onOpenEntry(entry.id);
     onClose();
   };
@@ -428,6 +462,29 @@ export function VideoInterviewSheet({
             <p style={{ ...pStyle, color: 'var(--ink-3)', fontSize: 12, marginTop: 12 }}>
               {t('assistant.video.maxLength', { seconds: String(limit) })}
             </p>
+            {trCfg && (() => {
+              const dest = transcriptionDestination(trCfg);
+              return (
+                <button
+                  onClick={() => setAutoTranscribe((v) => !v)}
+                  style={{ marginTop: 12, width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, background: 'var(--surface-2)', border: '1px solid var(--line)', cursor: 'pointer', textAlign: 'start' }}
+                >
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontFamily: 'var(--ui)', fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
+                      {t('assistant.video.transcribe')}
+                    </span>
+                    <span style={{ display: 'block', fontFamily: 'var(--ui)', fontSize: 11.5, lineHeight: 1.45, color: dest.local ? 'var(--ink-3)' : 'var(--accent-ink)', marginTop: 2 }}>
+                      {dest.local
+                        ? t('assistant.video.transcribeLocal')
+                        : t('assistant.video.transcribeRemote', { host: dest.host })}
+                    </span>
+                  </span>
+                  <span style={{ width: 34, height: 20, borderRadius: 99, flexShrink: 0, background: autoTranscribe ? 'var(--accent)' : 'var(--line)', position: 'relative', transition: 'background .15s' }}>
+                    <span style={{ position: 'absolute', top: 2, left: autoTranscribe ? 16 : 2, width: 16, height: 16, borderRadius: 99, background: 'var(--surface)', transition: 'left .15s' }} />
+                  </span>
+                </button>
+              );
+            })()}
           </>
         )}
 

@@ -21,7 +21,7 @@ import { SlashMenu } from '../editor/SlashMenu';
 import { createMathHandle, MathDialog } from '../editor/math';
 import { AiActionDialog } from '../ui/AiActionDialog';
 import type { AiEditorAction } from '../ai/prompts';
-import { transcribe, transcriptionConfig } from '../ai/transcribe';
+import { transcribe, transcriptionConfig, transcriptionDestination } from '../ai/transcribe';
 import { VideoCapture } from '../ui/VideoCapture';
 import { AudioCapture } from '../ui/AudioCapture';
 import { AttachmentList } from '../ui/Attachments';
@@ -249,6 +249,10 @@ function EntryEditor({
             return transcribe(cfg, blob, { mime: att.mime });
           }
         : undefined,
+      transcribeDest: (() => {
+        const cfg = transcriptionConfig(aiSettings);
+        return cfg ? transcriptionDestination(cfg) : undefined;
+      })(),
     }),
     [],
   );
