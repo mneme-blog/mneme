@@ -392,7 +392,11 @@ is answered **404** (its `routers/stt.py`), which shipped as an unexplained "404
 button. Two halves fix it and both must stay: a one-shot **`whisper-model`** service in both compose
 files installs the default model into the cache volume on `up` (`POST /v1/models/{id}`, idempotent,
 runs in the whisper image so it pulls nothing extra, `WHISPER_MODEL` overrides — keep it in step with
-`DEFAULT_TRANSCRIPTION_MODEL`), and the client makes the state legible: a **404 maps to the `'model'`
+`DEFAULT_TRANSCRIPTION_MODEL`; the whisper service also needs **`HF_HUB_DISABLE_PROGRESS_BARS=1`**,
+which is load-bearing rather than cosmetic — without it a download dies mid-flight in
+huggingface_hub's threaded tqdm bar, `AttributeError: … 'tqdm' has no attribute '_lock'`
+(huggingface_hub#3285), surfacing as a 500 from the install endpoint), and the client makes the state
+legible: a **404 maps to the `'model'`
 AiError hint** (not `network`) so the card says the server has no model, and AI settings →
 Transcription has **Check server** (`checkTranscription`, `GET /v1/models` — never sends a recording,
 so no per-use disclosure) with a **Download model** action on the `modelMissing` verdict

@@ -123,6 +123,16 @@ services:
   whisper:
     image: ghcr.io/speaches-ai/speaches:0.8.2-cpu
     restart: unless-stopped
+    environment:
+      # Load-bearing, not cosmetic: a model download runs through
+      # huggingface_hub's thread_map, whose tqdm progress bar hits a known
+      # thread-safety bug (huggingface_hub#3285 — ensure_lock deletes
+      # tqdm._lock while a concurrent bar still needs it) and dies mid-download
+      # with `AttributeError: type object 'tqdm' has no attribute '_lock'`,
+      # surfacing as a 500 from POST /v1/models/{id}. Disabling the progress
+      # bars takes tqdm's disabled path, which never touches that lock. A
+      # container has no terminal to draw them on anyway.
+      HF_HUB_DISABLE_PROGRESS_BARS: "1"
     volumes:
       - whisper_models:/home/ubuntu/.cache/huggingface/hub
     healthcheck:
