@@ -276,6 +276,7 @@ printf 'MNEME_VERSION=v0.2.1\nMNEME_SERVER_IMAGE=ghcr.io/plasticparticle/mneme-s
 | `/readyz` failing | Postgres unreachable — check the `postgres` container, volume, and password. |
 | New relay endpoint 404s after a deploy | Compose reused a stale image. Force it: `./deploy/prod.sh up -d --build server`. |
 | `/admin` returns 404 | Intended when `ADMIN_TOKEN` is empty. Set it in `.env.prod` and redeploy to enable the surface. |
+| Transcription ("Transcribe" in the client) fails or hangs | Check the `whisper` container (`logs -f whisper`). The **first** transcription downloads the model from Hugging Face into the `whisper_models` volume — it needs outbound network once and can take minutes on a slow link; afterwards it's warm. Removing the service is fine: clients just get an error and can clear the URL in AI settings. |
 | A client feels haunted after a dependency bump | A long-lived dev Vite server can go stale; restart it against a cold server before chasing ghosts. |
 | An update fails with `preflight failed: REPO_DIR … is not reachable` (older builds: `cd: …: No such file or directory`) | The updater's systemd sandbox cannot see the checkout — it was moved, or the install predates the path drop-in. Re-run `sudo ./deploy/updater/install.sh`. Nothing was changed by the failed run. |
 
@@ -289,7 +290,8 @@ docker system prune                     # drop dangling image layers (occasional
   psql -U mneme -c 'SELECT count(*) FROM entry_blobs;'   # poke the bookkeeping DB directly
 ```
 
-- **Volumes** (`pgdata`, `miniodata`, `caddy_data`, `caddy_config`) hold everything. `./deploy/prod.sh
+- **Volumes** (`pgdata`, `miniodata`, `caddy_data`, `caddy_config`, `whisper_models`) hold everything
+  (`whisper_models` is only a re-downloadable model cache). `./deploy/prod.sh
   down` keeps them; `down -v` **destroys** them. The distinction is one character and your entire
   dataset — respect it.
 - **Rotating dev credentials:** if you ever ran the dev stack with `_dev` defaults and then went to

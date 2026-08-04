@@ -759,6 +759,26 @@ const zh: Partial<Record<MessageKey, string>> = {
   'assistant.video.fallback.q5': '你要把什么带进明天？',
   'shell.compose.videoInterview': '视频访谈',
   'shell.compose.videoInterviewHint': '对着镜头回答，每个问题一段视频',
+  // Speech-to-text (transcription) for video/audio recordings.
+  'assistant.transcribe.title': '转写',
+  'assistant.transcribe.hint': '把视频和音频录制转成可搜索、助手也能读取的文字。部署自带的 Whisper 服务器已预先配置；任何支持 OpenAI 音频转写 API 的服务器都可用——本机上的服务器，或带 API 密钥的云端接口。清空 URL 即可关闭转写。',
+  'assistant.transcribe.effective': '录音将发送至 {host}',
+  'assistant.transcribe.notLocal': '该地址不是本设备。转写时会把解密后的录音发送到那里——若是纯 HTTP 地址，它将在你的网络中以明文传输。',
+  'assistant.transcribe.keyOptional': '可选',
+  'assistant.transcribe.cspNote': '自托管的网页部署还需在 Content-Security-Policy 中允许非本机服务器（CSP_CONNECT_EXTRA）。',
+  'media.transcribe.action': '转写',
+  'media.transcribe.busy': '转写中…',
+  'media.transcribe.show': '显示转写文本',
+  'media.transcribe.hide': '隐藏转写文本',
+  'media.transcribe.failed': '转写失败：{message}',
+  'media.transcribe.answers': '转写回答',
+  'media.transcribe.notConfigured': '请先在 AI 设置中配置转写。',
+  'media.transcribe.confirmTitle': '发送以进行转写？',
+  'media.transcribe.confirmBody': '这段录制将以解密状态离开本设备，发送到 {host} 转成文字。转写文本随后与条目其余内容一样进行端到端加密存储。',
+  'media.transcribe.confirmAnswersBody': '你的 {count} 段回答将以解密状态离开本设备，逐个发送到 {host} 转成文字。转写文本随后与条目其余内容一样进行端到端加密存储。',
+  'assistant.video.transcribe': '保存后转写我的回答',
+  'assistant.video.transcribeLocal': '保存后语音转文字在本设备上运行。',
+  'assistant.video.transcribeRemote': '保存后，你的回答将以解密状态发送到 {host} 转成文字。',
 };
 
 export default zh;

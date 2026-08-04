@@ -347,6 +347,37 @@ deliberately mismatched clips (MKV/VP8/PCM 44.1 kHz mono 640×480@24 + WebM/VP8/
 1280×720@30) and assert 0 ms A/V drift — jsdom has no WebCodecs, so this is the only automated cover
 for the riskiest part.
 
+**Recording transcription** (extends the opt-in assistant; retroactive, works on any video/audio in
+the vault) is in: `ai/transcribe.ts` posts the decrypted recording browser → a speech-to-text server
+speaking the OpenAI `/v1/audio/transcriptions` shape. **The deployment bundles one**: a Speaches
+container (`whisper` service in both compose files — all-MIT stack, models pulled from HF on first
+use into a cache volume) proxied **same-origin** at `/whisper` (Caddy `handle_path` inside the
+`/mneme` block; vite dev proxy mirrors it), and the client **defaults to it** —
+`defaultTranscriptionSettings()` stores the relative path `/whisper` (resolved against the app
+origin at use; `bundledWhisperUrl()` respects a path-form `VITE_RELAY_URL`), an absent
+`AiSettings.transcription` field falls back to that default, and clearing the URL stores `''` = off.
+Same-origin means no CSP/CORS config; a user-configured loopback server is covered by the CSP's
+loopback-any-port entries (`http://localhost:* http://127.0.0.1:*`), anything else needs
+`CSP_CONNECT_EXTRA`. **Disclosure is per-use, not settings-only** (the bundled default is
+non-loopback from every device but the server itself — phones always): any non-local destination
+gets a ConfirmDialog naming the resolved host before audio leaves the device
+(`TranscriptStrip`/interview card; `TranscribeDestination` rides in through the node handlers since
+node views can't reach app context), while loopback runs without a dialog — warning for the
+on-device case would train click-through. The transcript is **content, not a media row**: node attrs
+inside the encrypted body — `transcript` on `mediaAttachment` nodes (Transcribe strip on video/audio
+cards; legacy attachments too) and per card on `videoInterview` nodes ("Transcribe answers" runs
+clip-by-clip; transcripts **survive "Delete the source clips"**). `docToText` surfaces them, so
+search, previews, and Ask-my-journal see what was said. The **video interview offers auto-transcribe
+at start** (toggle in the plan step, default off, carries the destination copy): after save a
+detached loop transcribes clip-by-clip and writes back via `setTranscriptAttr`/`attachTranscript`
+(the `setFilmAttr` pattern — the sheet is gone when results land), passing whisper's `language`
+**constraint** as the app locale — justified there because the questions were asked in it;
+**arbitrary uploads stay on auto-detect** (a wrong `language` silently yields garbage). Regression
+check: `pnpm --filter client exec tsx scripts/transcribe-repro.ts` (mocked fetch — wire shape incl.
+language, config gating incl. the same-origin default, write-back transform, docToText/coercion
+contracts, CSP). Deliberately NOT built: in-browser whisper (wasm model download vs. the CSP/bundle
+posture) and transcription of the stitched film (per-answer transcripts are strictly more useful).
+
 **Day One import** (§10 step 7, the first import path) is in: Preferences → Vault → "Import from
 Day One" (`ui/ImportDayOne.tsx`) takes a Day One **JSON export .zip** and rebuilds it locally as
 encrypted entries. `src/import/` does the work — `dayone.ts` unzips (fflate) and resolves each

@@ -825,6 +825,26 @@ const es: Partial<Record<MessageKey, string>> = {
   'assistant.video.fallback.q5': '¿Qué te llevas contigo hacia mañana?',
   'shell.compose.videoInterview': 'Entrevista en vídeo',
   'shell.compose.videoInterviewHint': 'Responde ante la cámara, un clip por pregunta',
+  // Speech-to-text (transcription) for video/audio recordings.
+  'assistant.transcribe.title': 'Transcripción',
+  'assistant.transcribe.hint': 'Convierte tus grabaciones de vídeo y audio en texto que puedes buscar y que el asistente puede leer. El servidor Whisper incluido en tu despliegue viene preconfigurado; funciona cualquier servidor que hable la API de transcripción de audio de OpenAI: en este dispositivo o un punto de conexión en la nube con clave de API. Borra la URL para desactivar la transcripción.',
+  'assistant.transcribe.effective': 'Las grabaciones van a {host}',
+  'assistant.transcribe.notLocal': 'Esa dirección no es este dispositivo. Al transcribir, la grabación descifrada se envía allí para esa solicitud; con una dirección HTTP simple viaja por tu red sin cifrar.',
+  'assistant.transcribe.keyOptional': 'opcional',
+  'assistant.transcribe.cspNote': 'Los despliegues web autoalojados también deben permitir un servidor que no sea loopback en la Content-Security-Policy (CSP_CONNECT_EXTRA).',
+  'media.transcribe.action': 'Transcribir',
+  'media.transcribe.busy': 'Transcribiendo…',
+  'media.transcribe.show': 'Mostrar transcripción',
+  'media.transcribe.hide': 'Ocultar transcripción',
+  'media.transcribe.failed': 'No se pudo transcribir: {message}',
+  'media.transcribe.answers': 'Transcribir respuestas',
+  'media.transcribe.notConfigured': 'Configura primero la transcripción en los ajustes de IA.',
+  'media.transcribe.confirmTitle': '¿Enviar para transcribir?',
+  'media.transcribe.confirmBody': 'Esta grabación sale de este dispositivo descifrada y se envía a {host} para convertirla en texto. La transcripción se guarda después cifrada de extremo a extremo, como el resto de la entrada.',
+  'media.transcribe.confirmAnswersBody': 'Tus {count} clips de respuesta salen de este dispositivo descifrados y se envían uno a uno a {host} para convertirlos en texto. Las transcripciones se guardan después cifradas de extremo a extremo, como el resto de la entrada.',
+  'assistant.video.transcribe': 'Transcribir mis respuestas después',
+  'assistant.video.transcribeLocal': 'La conversión a texto se ejecuta en este dispositivo tras guardar.',
+  'assistant.video.transcribeRemote': 'Tras guardar, tus respuestas se envían descifradas a {host} para convertirlas en texto.',
 };
 
 export default es;

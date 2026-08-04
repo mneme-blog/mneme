@@ -60,6 +60,15 @@ services:
     ports: ["8080:8080"]
     volumes: ["backups:/backups"] # persist archives across container restarts; copy these off-box for real DR
 
+  # Speech-to-text for the transcription feature (MIT stack; models download
+  # from Hugging Face on first use into the cache volume). Dev exposes :8000
+  # directly; the vite dev server also proxies /whisper here so the client's
+  # bundled same-origin default URL works in dev exactly like behind Caddy.
+  whisper:
+    image: ghcr.io/speaches-ai/speaches:0.8.2-cpu
+    volumes: [whispermodels:/home/ubuntu/.cache/huggingface/hub]
+    ports: ["8000:8000"]
+
   # Optional: client dev server in compose (otherwise just run `pnpm dev`).
   client:
     profiles: ["fullstack"]
@@ -74,3 +83,4 @@ volumes:
   pgdata:
   miniodata:
   backups:
+  whispermodels:

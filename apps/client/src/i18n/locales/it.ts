@@ -831,6 +831,26 @@ const it: Partial<Record<MessageKey, string>> = {
   'assistant.video.fallback.q5': 'Che cosa porti con te verso domani?',
   'shell.compose.videoInterview': 'Intervista video',
   'shell.compose.videoInterviewHint': 'Rispondi davanti alla fotocamera, un clip per domanda',
+  // Speech-to-text (transcription) for video/audio recordings.
+  'assistant.transcribe.title': 'Trascrizione',
+  'assistant.transcribe.hint': 'Trasforma le registrazioni video e audio in testo che puoi cercare e che l’assistente può leggere. Il server Whisper incluso nel tuo deployment è preconfigurato; funziona qualsiasi server che parli l’API di trascrizione audio di OpenAI — su questo dispositivo o un endpoint cloud con chiave API. Svuota l’URL per disattivare la trascrizione.',
+  'assistant.transcribe.effective': 'Le registrazioni vanno a {host}',
+  'assistant.transcribe.notLocal': 'Quell’indirizzo non è questo dispositivo. La trascrizione invia lì la registrazione decifrata per quella richiesta — su un indirizzo HTTP semplice attraversa la tua rete in chiaro.',
+  'assistant.transcribe.keyOptional': 'facoltativa',
+  'assistant.transcribe.cspNote': 'I deployment web self-hosted devono inoltre consentire un server non loopback nella Content-Security-Policy (CSP_CONNECT_EXTRA).',
+  'media.transcribe.action': 'Trascrivi',
+  'media.transcribe.busy': 'Trascrizione…',
+  'media.transcribe.show': 'Mostra trascrizione',
+  'media.transcribe.hide': 'Nascondi trascrizione',
+  'media.transcribe.failed': 'Trascrizione non riuscita: {message}',
+  'media.transcribe.answers': 'Trascrivi le risposte',
+  'media.transcribe.notConfigured': 'Configura prima la trascrizione nelle impostazioni IA.',
+  'media.transcribe.confirmTitle': 'Inviare per la trascrizione?',
+  'media.transcribe.confirmBody': 'Questa registrazione lascia questo dispositivo decifrata e viene inviata a {host} per essere convertita in testo. La trascrizione viene poi salvata cifrata end-to-end come il resto della voce.',
+  'media.transcribe.confirmAnswersBody': 'I tuoi {count} clip di risposta lasciano questo dispositivo decifrati e vengono inviati uno alla volta a {host} per essere convertiti in testo. Le trascrizioni vengono poi salvate cifrate end-to-end come il resto della voce.',
+  'assistant.video.transcribe': 'Trascrivi le mie risposte dopo',
+  'assistant.video.transcribeLocal': 'La conversione in testo avviene su questo dispositivo dopo il salvataggio.',
+  'assistant.video.transcribeRemote': 'Dopo il salvataggio, le tue risposte vengono inviate decifrate a {host} per essere convertite in testo.',
 };
 
 export default it;

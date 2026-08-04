@@ -811,6 +811,26 @@ const nl: Partial<Record<MessageKey, string>> = {
   'assistant.video.fallback.q5': 'Wat neem je mee naar morgen?',
   'shell.compose.videoInterview': 'Video-interview',
   'shell.compose.videoInterviewHint': 'Beantwoord voor de camera, één clip per vraag',
+  // Speech-to-text (transcription) for video/audio recordings.
+  'assistant.transcribe.title': 'Transcriptie',
+  'assistant.transcribe.hint': 'Zet video- en audio-opnamen om in tekst die je kunt doorzoeken en die de assistent kan lezen. De meegeleverde Whisper-server van je deployment is voorgeconfigureerd; elke server die de OpenAI-audio-transcriptie-API spreekt werkt — op dit apparaat of een cloud-endpoint met API-sleutel. Maak de URL leeg om transcriptie uit te zetten.',
+  'assistant.transcribe.effective': 'Opnamen gaan naar {host}',
+  'assistant.transcribe.notLocal': 'Dat adres is niet dit apparaat. Bij het transcriberen wordt de ontsleutelde opname voor dat verzoek daarheen gestuurd — via een gewoon HTTP-adres reist hij onversleuteld door je netwerk.',
+  'assistant.transcribe.keyOptional': 'optioneel',
+  'assistant.transcribe.cspNote': 'Zelf gehoste webdeployments moeten een niet-loopback-server ook toestaan in de Content-Security-Policy (CSP_CONNECT_EXTRA).',
+  'media.transcribe.action': 'Transcriberen',
+  'media.transcribe.busy': 'Transcriberen…',
+  'media.transcribe.show': 'Transcript tonen',
+  'media.transcribe.hide': 'Transcript verbergen',
+  'media.transcribe.failed': 'Transcriberen mislukt: {message}',
+  'media.transcribe.answers': 'Antwoorden transcriberen',
+  'media.transcribe.notConfigured': 'Stel eerst transcriptie in bij de AI-instellingen.',
+  'media.transcribe.confirmTitle': 'Versturen voor transcriptie?',
+  'media.transcribe.confirmBody': 'Deze opname verlaat dit apparaat ontsleuteld en wordt naar {host} gestuurd om in tekst omgezet te worden. Het transcript wordt daarna end-to-end versleuteld opgeslagen, net als de rest van de notitie.',
+  'media.transcribe.confirmAnswersBody': 'Je {count} antwoordclips verlaten dit apparaat ontsleuteld en worden één voor één naar {host} gestuurd om in tekst omgezet te worden. De transcripten worden daarna end-to-end versleuteld opgeslagen, net als de rest van de notitie.',
+  'assistant.video.transcribe': 'Mijn antwoorden daarna transcriberen',
+  'assistant.video.transcribeLocal': 'Spraak-naar-tekst draait na het opslaan op dit apparaat.',
+  'assistant.video.transcribeRemote': 'Na het opslaan worden je antwoorden ontsleuteld naar {host} gestuurd en in tekst omgezet.',
 };
 
 export default nl;

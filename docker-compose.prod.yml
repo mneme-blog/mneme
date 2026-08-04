@@ -112,6 +112,27 @@ services:
       postgres: { condition: service_healthy }
       minio: { condition: service_started }
 
+  # Bundled speech-to-text for the client's transcription feature (opt-in per
+  # use in the app; the client's default server URL points here, proxied by
+  # Caddy under /mneme/whisper so it shares the app's origin — no CSP or CORS
+  # config needed). Speaches is OpenAI-API-compatible and loads whisper models
+  # on demand from Hugging Face into the cache volume (first transcription needs
+  # egress to huggingface.co and takes a moment; afterwards it's warm). The
+  # whole stack is MIT-licensed (speaches, faster-whisper, CTranslate2, and the
+  # OpenAI whisper weights). Remove this service to run without transcription —
+  # the client feature simply errors/switches off when the endpoint is absent.
+  whisper:
+    image: ghcr.io/speaches-ai/speaches:0.8.2-cpu
+    restart: unless-stopped
+    volumes:
+      - whisper_models:/home/ubuntu/.cache/huggingface/hub
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://0.0.0.0:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   web:
     # Same story as `server` above: released image by default, still buildable
     # from source with `--build`.
@@ -137,3 +158,4 @@ volumes:
   miniodata:
   caddy_data:
   caddy_config:
+  whisper_models:

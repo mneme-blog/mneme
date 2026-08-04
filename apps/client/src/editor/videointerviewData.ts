@@ -14,6 +14,9 @@ export const VIDEO_INTERVIEW_NODE = 'videoInterview';
 export interface VideoInterviewCard {
   q: string;
   clip: MediaAttachment | null;
+  /** Speech-to-text of the answer. On the card, not the clip, so it survives
+   *  "Delete the source clips" — the searchable text outlives the bytes. */
+  transcript?: string;
 }
 
 export interface VideoInterviewData {
@@ -53,7 +56,11 @@ export function coerceVideoInterview(attrs: Record<string, unknown>): VideoInter
   if (!raw) return null;
   const cards: VideoInterviewCard[] = raw.map((c) => {
     const o = (c && typeof c === 'object' ? c : {}) as Record<string, unknown>;
-    return { q: typeof o.q === 'string' ? o.q : '', clip: coerceClip(o.clip) };
+    return {
+      q: typeof o.q === 'string' ? o.q : '',
+      clip: coerceClip(o.clip),
+      transcript: typeof o.transcript === 'string' && o.transcript ? o.transcript : undefined,
+    };
   });
   if (cards.length === 0) return null;
   return {
@@ -115,6 +122,42 @@ export function buildVideoInterviewDoc(data: VideoInterviewData): JSONContent {
  * navigated away, so there is no editor instance to dispatch a transaction on.
  * Returns null when the body doesn't parse or holds no such node.
  */
+/**
+ * Write one answer's transcript into the video-interview node with this
+ * sessionId, as a pure transform of a stored bodyJson string — the same
+ * out-of-editor write-back shape as setFilmAttr below. Used by the
+ * auto-transcribe-after-save flow, which outlives the interview sheet (and
+ * usually runs while the freshly saved entry is open). Returns null when the
+ * body doesn't parse, holds no such node, or the card index is gone.
+ */
+export function setTranscriptAttr(
+  bodyJson: string | undefined,
+  sessionId: string,
+  cardIndex: number,
+  transcript: string,
+): string | null {
+  if (!bodyJson || !sessionId) return null;
+  let doc: JSONContent;
+  try {
+    doc = JSON.parse(bodyJson) as JSONContent;
+  } catch {
+    return null;
+  }
+  let hit = false;
+  const walk = (node: JSONContent): void => {
+    if (node.type === VIDEO_INTERVIEW_NODE && node.attrs?.sessionId === sessionId) {
+      const cards = node.attrs.cards as unknown;
+      if (Array.isArray(cards) && cardIndex >= 0 && cardIndex < cards.length) {
+        cards[cardIndex] = { ...(cards[cardIndex] as Record<string, unknown>), transcript };
+        hit = true;
+      }
+    }
+    node.content?.forEach(walk);
+  };
+  walk(doc);
+  return hit ? JSON.stringify(doc) : null;
+}
+
 export function setFilmAttr(
   bodyJson: string | undefined,
   sessionId: string,

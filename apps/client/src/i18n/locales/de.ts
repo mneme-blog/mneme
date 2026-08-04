@@ -825,6 +825,26 @@ const de: Partial<Record<MessageKey, string>> = {
   'assistant.video.fallback.q5': 'Was nimmst du mit in den morgigen Tag?',
   'shell.compose.videoInterview': 'Video-Interview',
   'shell.compose.videoInterviewHint': 'Vor der Kamera antworten, ein Clip pro Frage',
+  // Speech-to-text (transcription) for video/audio recordings.
+  'assistant.transcribe.title': 'Transkription',
+  'assistant.transcribe.hint': 'Wandle Video- und Audioaufnahmen in Text um, den du durchsuchen und der Assistent lesen kann. Der mitgelieferte Whisper-Server deines Deployments ist vorkonfiguriert; jeder Server mit OpenAI-Audio-Transkriptions-API funktioniert – lokal auf diesem Gerät oder als Cloud-Endpunkt mit API-Schlüssel. Leere die URL, um die Transkription auszuschalten.',
+  'assistant.transcribe.effective': 'Aufnahmen gehen an {host}',
+  'assistant.transcribe.notLocal': 'Diese Adresse ist nicht dieses Gerät. Beim Transkribieren wird die entschlüsselte Aufnahme für diese Anfrage dorthin gesendet – über eine reine HTTP-Adresse unverschlüsselt durch dein Netzwerk.',
+  'assistant.transcribe.keyOptional': 'optional',
+  'assistant.transcribe.cspNote': 'Selbst gehostete Web-Deployments müssen einen Nicht-Loopback-Server zusätzlich in der Content-Security-Policy erlauben (CSP_CONNECT_EXTRA).',
+  'media.transcribe.action': 'Transkribieren',
+  'media.transcribe.busy': 'Transkribiere…',
+  'media.transcribe.show': 'Transkript anzeigen',
+  'media.transcribe.hide': 'Transkript ausblenden',
+  'media.transcribe.failed': 'Transkription fehlgeschlagen: {message}',
+  'media.transcribe.answers': 'Antworten transkribieren',
+  'media.transcribe.notConfigured': 'Richte zuerst die Transkription in den KI-Einstellungen ein.',
+  'media.transcribe.confirmTitle': 'Zur Transkription senden?',
+  'media.transcribe.confirmBody': 'Diese Aufnahme verlässt dieses Gerät entschlüsselt und wird an {host} gesendet, um in Text umgewandelt zu werden. Das Transkript wird danach wie der Rest des Eintrags Ende-zu-Ende-verschlüsselt gespeichert.',
+  'media.transcribe.confirmAnswersBody': 'Deine {count} Antwortclips verlassen dieses Gerät entschlüsselt und werden nacheinander an {host} gesendet, um in Text umgewandelt zu werden. Die Transkripte werden danach wie der Rest des Eintrags Ende-zu-Ende-verschlüsselt gespeichert.',
+  'assistant.video.transcribe': 'Antworten anschließend transkribieren',
+  'assistant.video.transcribeLocal': 'Die Umwandlung in Text läuft nach dem Speichern auf diesem Gerät.',
+  'assistant.video.transcribeRemote': 'Nach dem Speichern werden deine Antworten entschlüsselt an {host} gesendet und in Text umgewandelt.',
 };
 
 export default de;

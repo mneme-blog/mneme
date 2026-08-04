@@ -814,6 +814,26 @@ const ja: Partial<Record<MessageKey, string>> = {
   'assistant.video.fallback.q5': '明日へ持っていきたいものは何ですか？',
   'shell.compose.videoInterview': 'ビデオインタビュー',
   'shell.compose.videoInterviewHint': 'カメラに向かって回答、質問ごとに 1 クリップ',
+  // Speech-to-text (transcription) for video/audio recordings.
+  'assistant.transcribe.title': '文字起こし',
+  'assistant.transcribe.hint': '動画・音声の録音を、検索でき、アシスタントも読めるテキストに変換します。デプロイに同梱の Whisper サーバーが事前設定されています。OpenAI の音声文字起こし API を話すサーバーならどれでも使えます — この端末上のサーバー、または API キー付きのクラウドエンドポイント。URL を空にすると文字起こしはオフになります。',
+  'assistant.transcribe.effective': '録音は {host} に送信されます',
+  'assistant.transcribe.notLocal': 'そのアドレスはこの端末ではありません。文字起こしの際、復号された録音がそのリクエストのためにそこへ送信されます — 素の HTTP アドレスでは、ネットワーク上を暗号化されずに流れます。',
+  'assistant.transcribe.keyOptional': '任意',
+  'assistant.transcribe.cspNote': 'セルフホストの Web デプロイでは、ループバック以外のサーバーを Content-Security-Policy でも許可する必要があります（CSP_CONNECT_EXTRA）。',
+  'media.transcribe.action': '文字起こし',
+  'media.transcribe.busy': '文字起こし中…',
+  'media.transcribe.show': '文字起こしを表示',
+  'media.transcribe.hide': '文字起こしを隠す',
+  'media.transcribe.failed': '文字起こしに失敗しました: {message}',
+  'media.transcribe.answers': '回答を文字起こし',
+  'media.transcribe.notConfigured': 'まず AI 設定で文字起こしを設定してください。',
+  'media.transcribe.confirmTitle': '文字起こしのために送信しますか？',
+  'media.transcribe.confirmBody': 'この録音は復号された状態でこの端末を離れ、テキスト化のため {host} に送信されます。文字起こしはその後、エントリーの他の内容と同様にエンドツーエンドで暗号化して保存されます。',
+  'media.transcribe.confirmAnswersBody': '{count} 件の回答クリップは復号された状態でこの端末を離れ、1 つずつ {host} に送信されてテキスト化されます。文字起こしはその後、エントリーの他の内容と同様にエンドツーエンドで暗号化して保存されます。',
+  'assistant.video.transcribe': '保存後に回答を文字起こしする',
+  'assistant.video.transcribeLocal': '保存後、音声認識はこの端末上で実行されます。',
+  'assistant.video.transcribeRemote': '保存後、回答は復号された状態で {host} に送信され、テキスト化されます。',
 };
 
 export default ja;

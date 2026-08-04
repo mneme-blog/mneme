@@ -21,6 +21,7 @@ import { SlashMenu } from '../editor/SlashMenu';
 import { createMathHandle, MathDialog } from '../editor/math';
 import { AiActionDialog } from '../ui/AiActionDialog';
 import type { AiEditorAction } from '../ai/prompts';
+import { transcribe, transcriptionConfig, transcriptionDestination } from '../ai/transcribe';
 import { VideoCapture } from '../ui/VideoCapture';
 import { AudioCapture } from '../ui/AudioCapture';
 import { AttachmentList } from '../ui/Attachments';
@@ -227,12 +228,31 @@ function EntryEditor({
   const openImageRef = useRef<(att: MediaAttachment) => void>(() => undefined);
 
   // Stable per mount (keyed by entry.id): how inline media nodes get their
-  // bytes, how a confirmed delete purges them, and how an image maximizes.
+  // bytes, how a confirmed delete purges them, how an image maximizes, and —
+  // when a transcription server is configured — how a recording turns into
+  // text. Like the slash AI commands, the transcribe affordance is gated at
+  // editor mount; the settings read through a ref so the request itself always
+  // uses the current config.
+  const aiSettingsRef = useRef(aiSettings);
+  aiSettingsRef.current = aiSettings;
   const mediaHandlers = useMemo(
     () => ({
       resolve: (att: MediaAttachment) => mediaBlob(entry.id, att),
       onRemoved: (att: MediaAttachment) => removeMedia(att.id),
       onOpenImage: (att: MediaAttachment) => openImageRef.current(att),
+      transcribe: transcriptionConfig(aiSettings)
+        ? async (att: MediaAttachment): Promise<string> => {
+            const cfg = transcriptionConfig(aiSettingsRef.current);
+            if (!cfg) throw new Error(t('media.transcribe.notConfigured'));
+            const blob = await mediaBlob(entry.id, att);
+            if (!blob) throw new Error(t('media.retryUnavailable'));
+            return transcribe(cfg, blob, { mime: att.mime });
+          }
+        : undefined,
+      transcribeDest: (() => {
+        const cfg = transcriptionConfig(aiSettings);
+        return cfg ? transcriptionDestination(cfg) : undefined;
+      })(),
     }),
     [],
   );

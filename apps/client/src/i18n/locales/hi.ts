@@ -815,6 +815,26 @@ const hi: Partial<Record<MessageKey, string>> = {
   'assistant.video.fallback.q5': 'आप कल के लिए अपने साथ क्या ले जा रहे हैं?',
   'shell.compose.videoInterview': 'वीडियो साक्षात्कार',
   'shell.compose.videoInterviewHint': 'कैमरे पर उत्तर दें, हर प्रश्न के लिए एक क्लिप',
+  // Speech-to-text (transcription) for video/audio recordings.
+  'assistant.transcribe.title': 'ट्रांसक्रिप्शन',
+  'assistant.transcribe.hint': 'वीडियो और ऑडियो रिकॉर्डिंग को ऐसे टेक्स्ट में बदलें जिसे आप खोज सकें और असिस्टेंट पढ़ सके। आपके डिप्लॉयमेंट के साथ आया Whisper सर्वर पहले से कॉन्फ़िगर है; OpenAI ऑडियो-ट्रांसक्रिप्शन API बोलने वाला कोई भी सर्वर काम करता है — इस डिवाइस पर या API कुंजी वाला क्लाउड एंडपॉइंट। ट्रांसक्रिप्शन बंद करने के लिए URL खाली कर दें।',
+  'assistant.transcribe.effective': 'रिकॉर्डिंग {host} पर जाती हैं',
+  'assistant.transcribe.notLocal': 'वह पता यह डिवाइस नहीं है। ट्रांसक्राइब करते समय डिक्रिप्ट की गई रिकॉर्डिंग उस अनुरोध के लिए वहाँ भेजी जाती है — सादे HTTP पते पर यह आपके नेटवर्क में बिना एन्क्रिप्शन के जाती है।',
+  'assistant.transcribe.keyOptional': 'वैकल्पिक',
+  'assistant.transcribe.cspNote': 'सेल्फ़-होस्टेड वेब डिप्लॉयमेंट को गैर-लूपबैक सर्वर को Content-Security-Policy में भी अनुमति देनी होगी (CSP_CONNECT_EXTRA)।',
+  'media.transcribe.action': 'ट्रांसक्राइब करें',
+  'media.transcribe.busy': 'ट्रांसक्राइब हो रहा है…',
+  'media.transcribe.show': 'ट्रांसक्रिप्ट दिखाएँ',
+  'media.transcribe.hide': 'ट्रांसक्रिप्ट छिपाएँ',
+  'media.transcribe.failed': 'ट्रांसक्राइब नहीं हो सका: {message}',
+  'media.transcribe.answers': 'उत्तर ट्रांसक्राइब करें',
+  'media.transcribe.notConfigured': 'पहले AI सेटिंग्स में ट्रांसक्रिप्शन सेट करें।',
+  'media.transcribe.confirmTitle': 'ट्रांसक्रिप्शन के लिए भेजें?',
+  'media.transcribe.confirmBody': 'यह रिकॉर्डिंग डिक्रिप्ट होकर इस डिवाइस से बाहर जाती है और टेक्स्ट में बदलने के लिए {host} पर भेजी जाती है। ट्रांसक्रिप्ट इसके बाद प्रविष्टि के बाकी हिस्से की तरह एंड-टू-एंड एन्क्रिप्ट होकर सहेजा जाता है।',
+  'media.transcribe.confirmAnswersBody': 'आपके {count} उत्तर क्लिप डिक्रिप्ट होकर इस डिवाइस से बाहर जाते हैं और एक-एक करके {host} पर भेजे जाते हैं ताकि टेक्स्ट में बदले जा सकें। ट्रांसक्रिप्ट इसके बाद प्रविष्टि के बाकी हिस्से की तरह एंड-टू-एंड एन्क्रिप्ट होकर सहेजे जाते हैं।',
+  'assistant.video.transcribe': 'बाद में मेरे उत्तर ट्रांसक्राइब करें',
+  'assistant.video.transcribeLocal': 'सहेजने के बाद वाक्-से-टेक्स्ट इसी डिवाइस पर चलता है।',
+  'assistant.video.transcribeRemote': 'सहेजने के बाद आपके उत्तर डिक्रिप्ट होकर {host} पर भेजे जाते हैं और टेक्स्ट में बदले जाते हैं।',
 };
 
 export default hi;

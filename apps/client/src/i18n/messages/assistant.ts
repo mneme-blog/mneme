@@ -56,6 +56,19 @@ export const assistant = {
   'assistant.settings.keyNote':
     'The API key is encrypted with a key derived from your recovery phrase and is only readable while your journal is unlocked.',
 
+  // ── transcription (speech-to-text for video/audio recordings) ──
+  'assistant.transcribe.title': 'Transcription',
+  'assistant.transcribe.hint':
+    "Turn video and audio recordings into text you can search and the assistant can read. Your deployment's bundled whisper server is preconfigured; any server speaking the OpenAI audio-transcriptions API works — one on this device, or a cloud endpoint with an API key. Clear the URL to turn transcription off.",
+  // Always shown when configured — this setting syncs between your devices, so
+  // the destination is never implicit (same rule as the Ollama URL).
+  'assistant.transcribe.effective': 'Recordings go to {host}',
+  'assistant.transcribe.notLocal':
+    'That address is not this device. Transcribing sends the decrypted recording there for that request — on a plain HTTP address it travels your network unencrypted.',
+  'assistant.transcribe.keyOptional': 'optional',
+  'assistant.transcribe.cspNote':
+    'Self-hosted web deployments must also allow a non-loopback server in the Content-Security-Policy (CSP_CONNECT_EXTRA).',
+
   // ── Ask my journal ──
   'assistant.ask.title': 'Ask my journal',
   'assistant.ask.emptyHint':
@@ -127,6 +140,11 @@ export const assistant = {
   'assistant.video.savingClip': 'Saving answer {n} of {total}…',
   'assistant.video.noClips': 'Record at least one answer to save.',
   'assistant.video.maxLength': 'Up to {seconds}s per answer',
+  // Opt-in auto-transcription after saving; the sub-line is the per-use
+  // disclosure — it names the destination when it isn't this device.
+  'assistant.video.transcribe': 'Transcribe my answers afterwards',
+  'assistant.video.transcribeLocal': 'Speech-to-text runs on this device after saving.',
+  'assistant.video.transcribeRemote': 'After saving, your answers are sent decrypted to {host} to be turned into text.',
   'assistant.video.discardTitle': 'Discard this interview?',
   'assistant.video.discardBody': 'Your recorded answers have not been saved yet and will be lost.',
   'assistant.video.discard': 'Discard',
