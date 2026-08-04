@@ -60,14 +60,33 @@ services:
     ports: ["8080:8080"]
     volumes: ["backups:/backups"] # persist archives across container restarts; copy these off-box for real DR
 
-  # Speech-to-text for the transcription feature (MIT stack; models download
-  # from Hugging Face on first use into the cache volume). Dev exposes :8000
+  # Speech-to-text for the transcription feature (MIT stack). Dev exposes :8000
   # directly; the vite dev server also proxies /whisper here so the client's
   # bundled same-origin default URL works in dev exactly like behind Caddy.
   whisper:
     image: ghcr.io/speaches-ai/speaches:0.8.2-cpu
     volumes: [whispermodels:/home/ubuntu/.cache/huggingface/hub]
     ports: ["8000:8000"]
+
+  # Speaches does NOT fetch a model on demand: a transcription for a model that
+  # is not in its cache is answered with 404 (its routers/stt.py), which reaches
+  # the user as an unexplained "404" on the Transcribe button. So install the
+  # client's default model once, here. Idempotent (200 downloaded / 201 already
+  # present), so it is a single HTTP call on every later `up`. Runs in the
+  # whisper image itself — already pulled, and it ships curl — so this costs no
+  # extra download. WHISPER_MODEL overrides it; keep it in step with the app's
+  # DEFAULT_TRANSCRIPTION_MODEL (apps/client/src/ai/types.ts). The client's AI
+  # settings can install a model too ("Check server" → "Download model").
+  whisper-model:
+    image: ghcr.io/speaches-ai/speaches:0.8.2-cpu
+    depends_on: [whisper]
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        until curl -fsS http://whisper:8000/health >/dev/null 2>&1; do sleep 2; done;
+        curl -fsS -X POST "http://whisper:8000/v1/models/${WHISPER_MODEL:-Systran/faster-whisper-small}" >/dev/null &&
+        echo "whisper model ready: ${WHISPER_MODEL:-Systran/faster-whisper-small}"
 
   # Optional: client dev server in compose (otherwise just run `pnpm dev`).
   client:

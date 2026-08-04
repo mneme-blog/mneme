@@ -181,7 +181,11 @@ export function TranscriptStrip({
     } catch (e) {
       const err = toAiError(e);
       setError(
-        err.hint === 'auth' ? t('assistant.error.keyRejectedShort') : t('media.transcribe.failed', { message: err.message }),
+        err.hint === 'auth'
+          ? t('assistant.error.keyRejectedShort')
+          : err.hint === 'model'
+            ? t('media.transcribe.modelMissing')
+            : t('media.transcribe.failed', { message: err.message }),
       );
     } finally {
       setBusy(false);

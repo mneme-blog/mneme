@@ -81,12 +81,40 @@ export function transcriptionDestination(cfg: TranscriptionSettings): Transcribe
   return { host: cfg.baseUrl, local: transcriptionLocal(cfg) };
 }
 
+/**
+ * The OpenAI-shaped API root (`…/v1`) of a configured base URL, which may be a
+ * bare origin, an `…/v1` base, or a full `…/audio/transcriptions` path.
+ */
+function apiRoot(baseUrl: string): string {
+  const base = baseUrl.replace(/\/+$/, '');
+  if (base.endsWith('/audio/transcriptions')) return base.slice(0, -'/audio/transcriptions'.length);
+  if (base.endsWith('/v1')) return base;
+  return `${base}/v1`;
+}
+
 /** Accepts a bare origin, an `…/v1` base, or a full `…/audio/transcriptions` path. */
 export function transcriptionEndpoint(baseUrl: string): string {
-  const base = baseUrl.replace(/\/+$/, '');
-  if (base.endsWith('/audio/transcriptions')) return base;
-  if (base.endsWith('/v1')) return `${base}/audio/transcriptions`;
-  return `${base}/v1/audio/transcriptions`;
+  return `${apiRoot(baseUrl)}/audio/transcriptions`;
+}
+
+/** `GET …/v1/models` — the installed-model listing every OpenAI-shaped server has. */
+export function transcriptionModelsEndpoint(baseUrl: string): string {
+  return `${apiRoot(baseUrl)}/models`;
+}
+
+/**
+ * `POST …/v1/models/{id}` — Speaches' install endpoint (the bundled server),
+ * NOT part of the OpenAI shape. Only offered after a check found the server
+ * reachable but the model unlisted; on anything else it simply 404s and the
+ * message says so. The id is a Hugging Face repo path, so its slash is a path
+ * separator and must survive encoding.
+ */
+export function transcriptionInstallEndpoint(baseUrl: string, model: string): string {
+  const id = model
+    .split('/')
+    .map((s) => encodeURIComponent(s))
+    .join('/');
+  return `${apiRoot(baseUrl)}/models/${id}`;
 }
 
 // Whisper servers sniff the container from the filename, and MediaRecorder
@@ -141,6 +169,12 @@ export async function transcribe(
     throw toAiError(e);
   }
   if (res.status === 401 || res.status === 403) throw new AiError('auth', `HTTP ${res.status}`);
+  // A whisper server answers 404 for a model it does not have installed — the
+  // bundled Speaches container does exactly that until the model is downloaded
+  // into its cache. Distinguished from a plain network failure so the UI can
+  // point at the transcription settings (and their Check-server button) rather
+  // than showing a bare status code nobody can act on.
+  if (res.status === 404) throw new AiError('model', `HTTP 404 (${cfg.model})`);
   if (!res.ok) throw new AiError('network', `HTTP ${res.status}`);
   let text: unknown;
   try {
@@ -150,4 +184,81 @@ export async function transcribe(
   }
   if (typeof text !== 'string') throw new AiError('network', 'malformed transcription response');
   return text.trim();
+}
+
+/**
+ * What a server check found. `modelMissing` is the one worth spelling out: a
+ * reachable whisper server that has not downloaded the configured model
+ * answers every transcription with a 404, which is indistinguishable from a
+ * wrong URL unless something asks the model listing.
+ */
+export type TranscriptionCheck =
+  | { ok: true }
+  | { ok: false; reason: 'auth' }
+  | { ok: false; reason: 'unreachable'; message: string }
+  | { ok: false; reason: 'modelMissing'; available: string[] };
+
+/**
+ * Check a transcription server without sending a recording: list its installed
+ * models and look for the configured one. Never throws — the settings sheet
+ * renders the verdict.
+ *
+ * The listing is the OpenAI `GET /v1/models` shape, so this works against the
+ * bundled Speaches container, whisper.cpp, LocalAI, or a cloud endpoint. A
+ * server whose ids simply don't match ours (some name models their own way)
+ * reads as `modelMissing`, which is why the copy says "does not list" rather
+ * than asserting the model is absent.
+ */
+export async function checkTranscription(
+  cfg: TranscriptionSettings,
+  signal?: AbortSignal,
+): Promise<TranscriptionCheck> {
+  let res: Response;
+  try {
+    res = await fetch(transcriptionModelsEndpoint(cfg.baseUrl), {
+      headers: cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : undefined,
+      signal,
+    });
+  } catch (e) {
+    return { ok: false, reason: 'unreachable', message: toAiError(e).message };
+  }
+  if (res.status === 401 || res.status === 403) return { ok: false, reason: 'auth' };
+  if (!res.ok) return { ok: false, reason: 'unreachable', message: `HTTP ${res.status}` };
+  let ids: string[];
+  try {
+    const body = (await res.json()) as { data?: unknown };
+    const rows = Array.isArray(body.data) ? body.data : [];
+    ids = rows
+      .map((m) => (m as { id?: unknown }).id)
+      .filter((id): id is string => typeof id === 'string');
+  } catch {
+    return { ok: false, reason: 'unreachable', message: 'malformed model listing' };
+  }
+  if (ids.includes(cfg.model)) return { ok: true };
+  return { ok: false, reason: 'modelMissing', available: ids };
+}
+
+/**
+ * Ask the server to download the configured model (Speaches' install endpoint;
+ * see transcriptionInstallEndpoint). Resolves once it is installed — a whisper
+ * model is hundreds of megabytes, so this request can run for minutes.
+ * Rejects with AiError.
+ */
+export async function installTranscriptionModel(
+  cfg: TranscriptionSettings,
+  signal?: AbortSignal,
+): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(transcriptionInstallEndpoint(cfg.baseUrl, cfg.model), {
+      method: 'POST',
+      headers: cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : undefined,
+      signal,
+    });
+  } catch (e) {
+    throw toAiError(e);
+  }
+  if (res.status === 401 || res.status === 403) throw new AiError('auth', `HTTP ${res.status}`);
+  // 200 downloaded, 201 already there; a server without the endpoint 404s.
+  if (!res.ok) throw new AiError('network', `HTTP ${res.status}`);
 }

@@ -7,7 +7,12 @@
 //  - the wire shape: OpenAI-style multipart POST to /v1/audio/transcriptions,
 //    bearer auth only when a key is set, filename extension derived from the
 //    blob's mime (whisper servers sniff the container from it), and the error
-//    mapping (401/403 → auth, other non-2xx and malformed bodies → network).
+//    mapping (401/403 → auth, 404 → model, other non-2xx and malformed bodies
+//    → network).
+//  - the server check: a whisper server that has not downloaded the configured
+//    model is reachable but 404s every transcription, so the settings sheet
+//    asks the model listing and can install it. The 404 → 'model' mapping is
+//    what turns an unactionable status code into that instruction.
 //  - the storage contract: transcripts ride inside the encrypted body (media
 //    node attrs / video-interview cards) and docToText surfaces them, which is
 //    what makes them reachable by search, previews, and Ask-my-journal; a
@@ -18,11 +23,15 @@
 //
 // Run: pnpm --filter client exec tsx scripts/transcribe-repro.ts
 import {
+  checkTranscription,
+  installTranscriptionModel,
   resolveTranscriptionUrl,
   transcribe,
   transcriptionConfig,
   transcriptionDestination,
   transcriptionEndpoint,
+  transcriptionInstallEndpoint,
+  transcriptionModelsEndpoint,
   transcriptionLocal,
 } from '../src/ai/transcribe';
 import { AiError, defaultAiSettings, DEFAULT_TRANSCRIPTION_MODEL, type AiSettings } from '../src/ai/types';
@@ -85,16 +94,26 @@ try {
 check('bare origin gets /v1 path', transcriptionEndpoint('http://localhost:8000') === 'http://localhost:8000/v1/audio/transcriptions');
 check('…/v1 base completes', transcriptionEndpoint('https://api.openai.com/v1') === 'https://api.openai.com/v1/audio/transcriptions');
 check('full path passes through', transcriptionEndpoint('http://localhost:9000/v1/audio/transcriptions') === 'http://localhost:9000/v1/audio/transcriptions');
+// The check/install endpoints share that root, whichever of the three forms
+// the user stored — a base ending in /audio/transcriptions must not produce
+// /v1/audio/transcriptions/models.
+check('models listing from a bare origin', transcriptionModelsEndpoint('http://localhost:8000') === 'http://localhost:8000/v1/models');
+check('models listing from a full path', transcriptionModelsEndpoint('http://localhost:8000/v1/audio/transcriptions') === 'http://localhost:8000/v1/models');
+// The model id is a Hugging Face repo path: its slash separates path segments
+// and must survive, while the rest is encoded.
+check('install endpoint keeps the repo slash', transcriptionInstallEndpoint('http://localhost:8000', 'Systran/faster-whisper-small') === 'http://localhost:8000/v1/models/Systran/faster-whisper-small');
 
 // ── the wire shape, against a mocked fetch ──
-type Captured = { url: string; auth: string | undefined; file: File; model: string; language: string | null };
+type Captured = { url: string; method: string; auth: string | undefined; file: File; model: string; language: string | null };
 let captured: Captured | null = null;
 let respond: () => Response = () => new Response(JSON.stringify({ text: '  hello from the clip  ' }), { status: 200 });
 const realFetch = globalThis.fetch;
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-  const form = init?.body as FormData;
+  // The check and install calls carry no body — only transcribe() posts a form.
+  const form = init?.body instanceof FormData ? init.body : new FormData();
   captured = {
     url: String(input),
+    method: init?.method ?? 'GET',
     auth: (init?.headers as Record<string, string> | undefined)?.Authorization,
     file: form.get('file') as File,
     model: String(form.get('model')),
@@ -131,6 +150,63 @@ try {
   respond = () => new Response('{"nope":1}', { status: 200 });
   const shapeErr = await transcribe(goodCfg, new Blob(['x'])).then(() => null, (e: unknown) => e);
   check('missing text field → AiError network', shapeErr instanceof AiError && shapeErr.hint === 'network');
+
+  // The bug this whole surface exists for: the bundled Speaches container
+  // answers 404 for a model it has not downloaded, which used to reach the
+  // user as a bare "404" on the Transcribe button.
+  respond = () => new Response('{"detail":"Model is not installed locally"}', { status: 404 });
+  const modelErr = await transcribe(goodCfg, new Blob(['x'])).then(() => null, (e: unknown) => e);
+  check('404 → AiError model (not a generic network failure)', modelErr instanceof AiError && modelErr.hint === 'model');
+
+  // ── the server check ──
+  const models = (ids: string[]): Response =>
+    new Response(JSON.stringify({ object: 'list', data: ids.map((id) => ({ id, object: 'model' })) }), { status: 200 });
+
+  respond = () => models(['Systran/faster-whisper-small', 'speaches-ai/Kokoro-82M-v1.0-ONNX']);
+  const okCheck = await checkTranscription({ ...goodCfg, model: 'Systran/faster-whisper-small' });
+  check('installed model → ok', okCheck.ok);
+  check('check GETs the models listing', captured!.url === 'http://localhost:8000/v1/models' && captured!.method === 'GET');
+  check('check sends no recording', captured!.file === null);
+  check('check carries the key', captured!.auth === 'Bearer sk-test');
+
+  const missing = await checkTranscription({ ...goodCfg, model: 'Systran/faster-whisper-medium' });
+  check('unlisted model → modelMissing', !missing.ok && missing.reason === 'modelMissing');
+  check('modelMissing reports what the server does have', !missing.ok && missing.reason === 'modelMissing' && missing.available.includes('Systran/faster-whisper-small'));
+
+  respond = () => models([]);
+  const empty = await checkTranscription(goodCfg);
+  check('empty listing → modelMissing (fresh container)', !empty.ok && empty.reason === 'modelMissing');
+
+  respond = () => new Response('nope', { status: 403 });
+  const authCheck = await checkTranscription(goodCfg);
+  check('403 on the listing → auth', !authCheck.ok && authCheck.reason === 'auth');
+
+  respond = () => new Response('nope', { status: 502 });
+  const downCheck = await checkTranscription(goodCfg);
+  check('502 on the listing → unreachable', !downCheck.ok && downCheck.reason === 'unreachable');
+
+  respond = () => new Response('<html>', { status: 200 });
+  const junkCheck = await checkTranscription(goodCfg);
+  check('non-JSON listing → unreachable, never a false ok', !junkCheck.ok && junkCheck.reason === 'unreachable');
+
+  // checkTranscription is the settings sheet's verdict source — it must never
+  // throw, or the button would be left spinning.
+  globalThis.fetch = (() => Promise.reject(new TypeError('Failed to fetch'))) as unknown as typeof fetch;
+  const offline = await checkTranscription(goodCfg);
+  check('network failure → unreachable, not a throw', !offline.ok && offline.reason === 'unreachable');
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    captured = { url: String(input), method: init?.method ?? 'GET', auth: (init?.headers as Record<string, string> | undefined)?.Authorization, file: null as unknown as File, model: '', language: null };
+    return respond();
+  }) as typeof fetch;
+
+  // ── the install action ──
+  respond = () => new Response('', { status: 201 });
+  await installTranscriptionModel({ ...goodCfg, model: 'Systran/faster-whisper-small' });
+  check('install POSTs the model path', captured!.method === 'POST' && captured!.url === 'http://localhost:8000/v1/models/Systran/faster-whisper-small');
+
+  respond = () => new Response('nope', { status: 404 });
+  const noInstall = await installTranscriptionModel(goodCfg).then(() => null, (e: unknown) => e);
+  check('server without the install endpoint → AiError', noInstall instanceof AiError);
 } finally {
   globalThis.fetch = realFetch;
 }

@@ -115,12 +115,11 @@ services:
   # Bundled speech-to-text for the client's transcription feature (opt-in per
   # use in the app; the client's default server URL points here, proxied by
   # Caddy under /mneme/whisper so it shares the app's origin — no CSP or CORS
-  # config needed). Speaches is OpenAI-API-compatible and loads whisper models
-  # on demand from Hugging Face into the cache volume (first transcription needs
-  # egress to huggingface.co and takes a moment; afterwards it's warm). The
-  # whole stack is MIT-licensed (speaches, faster-whisper, CTranslate2, and the
-  # OpenAI whisper weights). Remove this service to run without transcription —
-  # the client feature simply errors/switches off when the endpoint is absent.
+  # config needed). Speaches is OpenAI-API-compatible; the model itself is
+  # installed once by the whisper-model service below. The whole stack is
+  # MIT-licensed (speaches, faster-whisper, CTranslate2, and the OpenAI whisper
+  # weights). Remove both services to run without transcription — the client
+  # feature simply errors/switches off when the endpoint is absent.
   whisper:
     image: ghcr.io/speaches-ai/speaches:0.8.2-cpu
     restart: unless-stopped
@@ -132,6 +131,28 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+  # Speaches does NOT fetch a model on demand: a transcription for a model that
+  # is not in its cache is answered with 404 (its routers/stt.py), which reaches
+  # the user as an unexplained "404" on the Transcribe button. So install the
+  # client's default model into the cache volume once, here — it needs egress to
+  # huggingface.co and takes a few minutes the first time; afterwards the call
+  # is idempotent (200 downloaded / 201 already present) and the container exits
+  # immediately. It runs in the whisper image itself (already pulled, ships
+  # curl), so it costs no extra download. WHISPER_MODEL overrides the model;
+  # keep it in step with the app's DEFAULT_TRANSCRIPTION_MODEL
+  # (apps/client/src/ai/types.ts). The client's AI settings can install a model
+  # too ("Check server" → "Download model").
+  whisper-model:
+    image: ghcr.io/speaches-ai/speaches:0.8.2-cpu
+    restart: "no"
+    depends_on:
+      whisper: { condition: service_healthy }
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        curl -fsS -X POST "http://whisper:8000/v1/models/${WHISPER_MODEL:-Systran/faster-whisper-small}" >/dev/null &&
+        echo "whisper model ready: ${WHISPER_MODEL:-Systran/faster-whisper-small}"
 
   web:
     # Same story as `server` above: released image by default, still buildable

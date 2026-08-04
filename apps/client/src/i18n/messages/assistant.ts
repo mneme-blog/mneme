@@ -68,6 +68,20 @@ export const assistant = {
   'assistant.transcribe.keyOptional': 'optional',
   'assistant.transcribe.cspNote':
     'Self-hosted web deployments must also allow a non-loopback server in the Content-Security-Policy (CSP_CONNECT_EXTRA).',
+  // The server check. It asks the model listing, never sends a recording — a
+  // whisper server that has not downloaded the model is reachable but answers
+  // every transcription with a 404, which no status code alone explains.
+  'assistant.transcribe.check': 'Check server',
+  'assistant.transcribe.checking': 'Checking…',
+  'assistant.transcribe.ready': 'Server reachable, model ready',
+  'assistant.transcribe.unreachable': 'Could not reach the server: {message}',
+  'assistant.transcribe.modelMissing':
+    'The server is reachable but does not list the model "{model}". Until the model is downloaded, a whisper server answers every transcription with a 404.',
+  'assistant.transcribe.install': 'Download model',
+  'assistant.transcribe.installing':
+    'The server is downloading the model — the first time this can take several minutes.',
+  'assistant.transcribe.installed': 'Model downloaded',
+  'assistant.transcribe.installFailed': 'Could not download the model: {message}',
 
   // ── Ask my journal ──
   'assistant.ask.title': 'Ask my journal',
