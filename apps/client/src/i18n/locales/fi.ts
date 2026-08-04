@@ -106,6 +106,8 @@ const fi: Partial<Record<MessageKey, string>> = {
   'journals.create': 'Luo päiväkirja',
   'journals.saveChanges': 'Tallenna muutokset',
   'journals.name.placeholder': 'Nimeä päiväkirjasi',
+  'journals.subtitle.placeholder': 'Lisää kuvaus',
+  'journals.field.subtitle': 'Kuvaus',
   'journals.field.colour': 'Väri',
   'journals.field.cover': 'Kansi',
   'journals.field.startFrom': 'Aloita pohjasta',

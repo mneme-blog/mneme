@@ -105,6 +105,8 @@ const nl: Partial<Record<MessageKey, string>> = {
   'journals.create': 'Dagboek aanmaken',
   'journals.saveChanges': 'Wijzigingen opslaan',
   'journals.name.placeholder': 'Geef je dagboek een naam',
+  'journals.subtitle.placeholder': 'Een omschrijving toevoegen',
+  'journals.field.subtitle': 'Omschrijving',
   'journals.field.colour': 'Kleur',
   'journals.field.cover': 'Omslag',
   'journals.field.startFrom': 'Begin met',

@@ -106,6 +106,8 @@ const de: Partial<Record<MessageKey, string>> = {
   'journals.create': 'Journal erstellen',
   'journals.saveChanges': 'Änderungen speichern',
   'journals.name.placeholder': 'Benenne dein Journal',
+  'journals.subtitle.placeholder': 'Beschreibung hinzufügen',
+  'journals.field.subtitle': 'Beschreibung',
   'journals.field.colour': 'Farbe',
   'journals.field.cover': 'Umschlag',
   'journals.field.startFrom': 'Beginnen mit',

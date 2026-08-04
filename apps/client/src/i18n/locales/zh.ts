@@ -96,6 +96,8 @@ const zh: Partial<Record<MessageKey, string>> = {
   'journals.create': '创建日记本',
   'journals.saveChanges': '保存更改',
   'journals.name.placeholder': '为你的日记本命名',
+  'journals.subtitle.placeholder': '添加描述',
+  'journals.field.subtitle': '描述',
   'journals.field.colour': '颜色',
   'journals.field.cover': '封面',
   'journals.field.startFrom': '起始于',
