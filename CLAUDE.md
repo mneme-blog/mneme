@@ -364,8 +364,8 @@ for the riskiest part.
 **Recording transcription** (extends the opt-in assistant; retroactive, works on any video/audio in
 the vault) is in: `ai/transcribe.ts` posts the decrypted recording browser → a speech-to-text server
 speaking the OpenAI `/v1/audio/transcriptions` shape. **The deployment bundles one**: a Speaches
-container (`whisper` service in both compose files — all-MIT stack, models pulled from HF on first
-use into a cache volume) proxied **same-origin** at `/whisper` (Caddy `handle_path` inside the
+container (`whisper` service in both compose files — all-MIT stack) proxied **same-origin** at
+`/whisper` (Caddy `handle_path` inside the
 `/mneme` block; vite dev proxy mirrors it), and the client **defaults to it** —
 `defaultTranscriptionSettings()` stores the relative path `/whisper` (resolved against the app
 origin at use; `bundledWhisperUrl()` respects a path-form `VITE_RELAY_URL`), an absent
@@ -386,11 +386,27 @@ at start** (toggle in the plan step, default off, carries the destination copy):
 detached loop transcribes clip-by-clip and writes back via `setTranscriptAttr`/`attachTranscript`
 (the `setFilmAttr` pattern — the sheet is gone when results land), passing whisper's `language`
 **constraint** as the app locale — justified there because the questions were asked in it;
-**arbitrary uploads stay on auto-detect** (a wrong `language` silently yields garbage). Regression
+**arbitrary uploads stay on auto-detect** (a wrong `language` silently yields garbage).
+**Speaches does not fetch models on demand** — a transcription for a model that is not in its cache
+is answered **404** (its `routers/stt.py`), which shipped as an unexplained "404" on the Transcribe
+button. Two halves fix it and both must stay: a one-shot **`whisper-model`** service in both compose
+files installs the default model into the cache volume on `up` (`POST /v1/models/{id}`, idempotent,
+runs in the whisper image so it pulls nothing extra, `WHISPER_MODEL` overrides — keep it in step with
+`DEFAULT_TRANSCRIPTION_MODEL`; the whisper service also needs **`HF_HUB_DISABLE_PROGRESS_BARS=1`**,
+which is load-bearing rather than cosmetic — without it a download dies mid-flight in
+huggingface_hub's threaded tqdm bar, `AttributeError: … 'tqdm' has no attribute '_lock'`
+(huggingface_hub#3285), surfacing as a 500 from the install endpoint), and the client makes the state
+legible: a **404 maps to the `'model'`
+AiError hint** (not `network`) so the card says the server has no model, and AI settings →
+Transcription has **Check server** (`checkTranscription`, `GET /v1/models` — never sends a recording,
+so no per-use disclosure) with a **Download model** action on the `modelMissing` verdict
+(`installTranscriptionModel`, Speaches-specific, offered only after that verdict). A server whose ids
+just don't match ours also reads as `modelMissing`, hence the copy says "does not list". Regression
 check: `pnpm --filter client exec tsx scripts/transcribe-repro.ts` (mocked fetch — wire shape incl.
-language, config gating incl. the same-origin default, write-back transform, docToText/coercion
-contracts, CSP). Deliberately NOT built: in-browser whisper (wasm model download vs. the CSP/bundle
-posture) and transcription of the stitched film (per-answer transcripts are strictly more useful).
+language, config gating incl. the same-origin default, check/install endpoints + verdicts, write-back
+transform, docToText/coercion contracts, CSP). Deliberately NOT built: in-browser whisper (wasm model
+download vs. the CSP/bundle posture) and transcription of the stitched film (per-answer transcripts
+are strictly more useful).
 
 **Day One import** (§10 step 7, the first import path) is in: Preferences → Vault → "Import from
 Day One" (`ui/ImportDayOne.tsx`) takes a Day One **JSON export .zip** and rebuilds it locally as
@@ -427,7 +443,7 @@ sets `<html dir="rtl">`; layout uses **logical CSS properties** (inline-start/en
 direction-bearing icons opt into mirroring via `<Icon dirFlip>` + the `[dir='rtl'] .dir-flip` rule in
 `tokens.css`. The AI assistant is told to reply in the app language (`ai/prompts.ts`,
 `currentLocale().english`). Coverage/regression check: `pnpm --filter client exec tsx scripts/i18n-dump.ts`
-(writes the flat English reference + prints per-locale full coverage, currently `780/780`). Known refinement: gendered
+(writes the flat English reference + prints per-locale full coverage, currently `792/792`). Known refinement: gendered
 languages get neutral phrasing around the shared `{noun}` media-delete placeholder; Arabic plurals use
 one/other with an `#other` fallback for two/few/many.
 

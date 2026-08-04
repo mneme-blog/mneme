@@ -32,7 +32,9 @@ export interface AiProvider {
   listModels?(): Promise<string[]>;
 }
 
-export type AiErrorHint = 'auth' | 'network' | 'refused' | 'aborted';
+// 'model': the server answered, but does not have the requested model — a
+// whisper server without the model downloaded 404s every transcription.
+export type AiErrorHint = 'auth' | 'network' | 'refused' | 'aborted' | 'model';
 
 export class AiError extends Error {
   readonly hint: AiErrorHint;

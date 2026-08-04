@@ -97,7 +97,10 @@ video/audio recordings send the **decrypted media bytes** browser → a speech-t
 endpoint speaking the OpenAI `/v1/audio/transcriptions` shape) directly — never via the relay
 *process*. The standard deployment **bundles** a whisper container (`whisper` in
 `docker-compose.prod.yml`, MIT-licensed stack) proxied under the app's own origin at `/whisper`, and
-the client defaults to it. Be precise about what that means: the relay software still never sees
+the client defaults to it. Its model is installed once by the `whisper-model` one-shot beside it —
+Speaches does not fetch models on demand, and an uninstalled model 404s every transcription; the
+settings sheet's **Check server** action reports that case and can trigger the same install (a
+model-listing request, never a recording). Be precise about what that means: the relay software still never sees
 audio or text, but the **operator's machine** now runs the transcriber — from any device other than
 the server itself (phones, always), the decrypted recording crosses the network to that box. The UI
 refuses to let this be implicit twice over: the settings sheet badges any non-loopback destination

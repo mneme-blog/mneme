@@ -11,7 +11,7 @@ import { t } from '../i18n';
 import { useAppData } from '../state/data';
 import { makeProvider } from '../ai/provider';
 import { ollamaHostLabel, ollamaScope } from '../ai/ollamaUrl';
-import { resolveTranscriptionUrl } from '../ai/transcribe';
+import { resolveTranscriptionUrl, checkTranscription, installTranscriptionModel } from '../ai/transcribe';
 import {
   toAiError,
   defaultAiSettings,
@@ -31,6 +31,19 @@ const inputStyle: JSX.CSSProperties = {
 };
 
 type TestState = { state: 'idle' } | { state: 'busy' } | { state: 'ok' } | { state: 'fail'; message: string };
+
+// The transcription server check is its own state: it talks to a different
+// server than the chat backend, and "reachable but the model isn't installed"
+// is a verdict of its own — the bundled whisper container answers 404 to every
+// transcription until the model has been downloaded into its cache.
+type TrCheckState =
+  | { state: 'idle' }
+  | { state: 'busy' }
+  | { state: 'ok' }
+  | { state: 'missing' }
+  | { state: 'installing' }
+  | { state: 'installed' }
+  | { state: 'fail'; message: string };
 
 // The cloud privacy warning, with its emphasized word bolded. The catalog
 // string carries a literal {decrypted} marker so translations place the
@@ -57,6 +70,7 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
   const ollamaScopeNow = ollamaScope(form.ollama.baseUrl);
   const ollamaLocal = ollamaScopeNow === 'loopback' || ollamaScopeNow === 'invalid';
   const [test, setTest] = useState<TestState>({ state: 'idle' });
+  const [trCheck, setTrCheck] = useState<TrCheckState>({ state: 'idle' });
   const [models, setModels] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -67,6 +81,9 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
   const patch = (p: Partial<AiSettings>): void => {
     setForm((f) => ({ ...f, ...p }));
     setTest({ state: 'idle' });
+    // A verdict describes the settings it was run against; editing any field
+    // invalidates it (the model name is exactly what "installed" was about).
+    setTrCheck({ state: 'idle' });
   };
 
   // Records sealed before transcription existed lack the field — treat as
@@ -101,6 +118,41 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
             : form.backend === 'ollama'
               ? t('assistant.error.ollamaUnreachable')
               : t('assistant.error.apiUnreachable', { message: err.message }),
+      });
+    }
+  };
+
+  // The transcription settings as the transcribe path would use them: the
+  // resolved absolute URL (the stored value may be the same-origin path form)
+  // and the model default filled in, so the check tests what actually runs.
+  const trCfg = (): TranscriptionSettings | null =>
+    trResolved ? { baseUrl: trResolved, apiKey: tr.apiKey, model: tr.model.trim() || DEFAULT_TRANSCRIPTION_MODEL } : null;
+
+  // Checks the server without sending a recording — nothing decrypted leaves
+  // the device here, so this needs no per-use disclosure.
+  const runTrCheck = async (): Promise<void> => {
+    const cfg = trCfg();
+    if (!cfg || trCheck.state === 'busy' || trCheck.state === 'installing') return;
+    setTrCheck({ state: 'busy' });
+    const res = await checkTranscription(cfg);
+    if (res.ok) setTrCheck({ state: 'ok' });
+    else if (res.reason === 'modelMissing') setTrCheck({ state: 'missing' });
+    else if (res.reason === 'auth') setTrCheck({ state: 'fail', message: t('assistant.error.keyRejectedShort') });
+    else setTrCheck({ state: 'fail', message: t('assistant.transcribe.unreachable', { message: res.message }) });
+  };
+
+  const runTrInstall = async (): Promise<void> => {
+    const cfg = trCfg();
+    if (!cfg || trCheck.state === 'installing') return;
+    setTrCheck({ state: 'installing' });
+    try {
+      await installTranscriptionModel(cfg);
+      setTrCheck({ state: 'installed' });
+    } catch (e) {
+      const err = toAiError(e);
+      setTrCheck({
+        state: 'fail',
+        message: err.hint === 'auth' ? t('assistant.error.keyRejectedShort') : t('assistant.transcribe.installFailed', { message: err.message }),
       });
     }
   };
@@ -305,6 +357,39 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
                       />
                     </div>
                   </div>
+                  {/* Server check. Separate from the chat backend's "Test
+                      connection" because it is a different server, and because
+                      the interesting failure is model-shaped: a reachable
+                      whisper server without the model downloaded answers 404
+                      to every transcription, which is otherwise indistinguishable
+                      from a wrong address. */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <Btn kind="ghost" size="sm" onClick={() => void runTrCheck()}>
+                      {trCheck.state === 'busy' ? t('assistant.transcribe.checking') : t('assistant.transcribe.check')}
+                    </Btn>
+                    {(trCheck.state === 'ok' || trCheck.state === 'installed') && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--accent-ink)' }}>
+                        <Icon name="check" size={14} color="var(--accent)" />
+                        {trCheck.state === 'ok' ? t('assistant.transcribe.ready') : t('assistant.transcribe.installed')}
+                      </span>
+                    )}
+                    {trCheck.state === 'fail' && (
+                      <span style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-2)' }}>{trCheck.message}</span>
+                    )}
+                  </div>
+                  {trCheck.state === 'missing' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 9, padding: '11px 13px', borderRadius: 12, background: 'var(--accent-soft)', border: '1px solid var(--accent-line)' }}>
+                      <p style={{ ...pStyle, fontSize: 12.5, color: 'var(--accent-ink)' }}>
+                        {t('assistant.transcribe.modelMissing', { model: tr.model.trim() || DEFAULT_TRANSCRIPTION_MODEL })}
+                      </p>
+                      <div>
+                        <Btn kind="ghost" size="sm" onClick={() => void runTrInstall()}>{t('assistant.transcribe.install')}</Btn>
+                      </div>
+                    </div>
+                  )}
+                  {trCheck.state === 'installing' && (
+                    <p style={{ ...pStyle, fontSize: 12.5, color: 'var(--ink-2)' }}>{t('assistant.transcribe.installing')}</p>
+                  )}
                   {trScope !== 'loopback' && (
                     <p style={{ ...pStyle, fontSize: 11.5, color: 'var(--ink-3)' }}>{t('assistant.transcribe.cspNote')}</p>
                   )}

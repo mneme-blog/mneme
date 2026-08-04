@@ -147,6 +147,12 @@ Mneme has an AI assistant that can both **read** and **write** in your journal:
 - **Guided interviews** — the assistant asks you one reflective question at a time, then drafts a
   full entry for you to review and save. It even remembers previous entries of the same kind, so a
   recurring "daily reflection" stays continuous. (There's also a one-line "freeform draft" mode.)
+- **Transcribing recordings** — any video or audio in your journal can be turned into text, so what
+  you said becomes searchable and readable by the assistant. The self-hosted stack ships its own
+  speech-to-text server, so this needs no cloud account and no configuration; Preferences →
+  Assistant → Transcription has a **Check server** button that says whether it is reachable and has
+  its model ready — and offers to download the model if it doesn't. Before a recording is sent
+  anywhere other than your own device, you get a confirmation naming exactly where it goes.
 
 Here's the important part. The AI feature is **never** routed through the Mneme server — requests go
 straight from your device to the model. You choose the model, and **the recommended choice is a
