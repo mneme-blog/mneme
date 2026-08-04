@@ -860,7 +860,8 @@ const de: Partial<Record<MessageKey, string>> = {
   'media.transcribe.show': 'Transkript anzeigen',
   'media.transcribe.hide': 'Transkript ausblenden',
   'media.transcribe.failed': 'Transkription fehlgeschlagen: {message}',
-  'media.transcribe.modelMissing': 'Auf dem Transkriptionsserver ist kein Modell installiert. Öffne die KI-Einstellungen und nutze „Server prüfen“.',
+  'media.transcribe.modelMissing':
+    'Der Transkriptionsserver hat noch kein Modell. Bei einer neuen Installation lädt er gerade eines herunter, das dauert ein paar Minuten. Ansonsten öffne die KI-Einstellungen und nutze „Server prüfen“.',
   'media.transcribe.answers': 'Antworten transkribieren',
   'media.transcribe.notConfigured': 'Richte zuerst die Transkription in den KI-Einstellungen ein.',
   'media.transcribe.confirmTitle': 'Zur Transkription senden?',
@@ -869,6 +870,8 @@ const de: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribe': 'Antworten anschließend transkribieren',
   'assistant.video.transcribeLocal': 'Die Umwandlung in Text läuft nach dem Speichern auf diesem Gerät.',
   'assistant.video.transcribeRemote': 'Nach dem Speichern werden deine Antworten entschlüsselt an {host} gesendet und in Text umgewandelt.',
+  'assistant.video.spokenLanguage': 'Gesprochene Sprache',
+  'assistant.video.autoDetect': 'Automatisch erkennen',
 };
 
 export default de;

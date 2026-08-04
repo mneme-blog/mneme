@@ -78,8 +78,20 @@ export interface AiSettings {
 export const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4-8';
 export const ANTHROPIC_MODELS = ['claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5'];
 export const DEFAULT_OLLAMA_URL = 'http://localhost:11434';
-/** The default model of the bundled Speaches container (MIT weights, loaded on demand). */
-export const DEFAULT_TRANSCRIPTION_MODEL = 'Systran/faster-whisper-small';
+/**
+ * The default model of the bundled Speaches container (MIT weights, loaded on
+ * demand). Whisper large-v3-turbo: the full large-v3 encoder with the decoder
+ * pruned from 32 layers to 4 (809M params), which is what makes it affordable —
+ * it transcribes close to large-v3 while decoding several times faster, and it
+ * is multilingual, unlike the distil-* models.
+ *
+ * This replaced faster-whisper-small, whose accuracy outside English was poor
+ * enough that transcripts read as guesswork. The download is ~1.6 GB against
+ * small's ~0.5 GB, and on the CPU image a clip takes noticeably longer — the
+ * trade the quality is worth. Keep in step with WHISPER_MODEL in both compose
+ * files, which install it into the container's cache on `up`.
+ */
+export const DEFAULT_TRANSCRIPTION_MODEL = 'deepdml/faster-whisper-large-v3-turbo-ct2';
 
 /**
  * The deployment-bundled whisper proxy, as a same-origin path. The standard

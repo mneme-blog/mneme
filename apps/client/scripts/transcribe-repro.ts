@@ -33,6 +33,8 @@ import {
   transcriptionInstallEndpoint,
   transcriptionModelsEndpoint,
   transcriptionLocal,
+  languageName,
+  SPOKEN_LANGUAGES,
 } from '../src/ai/transcribe';
 import { AiError, defaultAiSettings, DEFAULT_TRANSCRIPTION_MODEL, type AiSettings } from '../src/ai/types';
 import { docToText } from '../src/editor/doc';
@@ -264,6 +266,22 @@ check('setTranscriptAttr leaves other cards alone', written !== null && coerceVi
 check('wrong sessionId → null (entry reused, node replaced)', setTranscriptAttr(storedBody, 'other-session', 0, 'x') === null);
 check('out-of-range card → null', setTranscriptAttr(storedBody, 's1', 9, 'x') === null);
 check('unparseable body → null', setTranscriptAttr('{nope', 's1', 0, 'x') === null);
+
+// ── the spoken language: chosen, remembered, and never silently wrong ──
+// The video interview used to infer this from the app's UI language. Whisper
+// treats `language` as a constraint, so that inference turned every answer
+// spoken in another language into confident nonsense. (The stored preference
+// itself is exercised in video-interview-repro.ts, which has a DOM.)
+check('every UI locale is offerable as a spoken language', ['en', 'de', 'fr', 'es', 'it', 'nl', 'fi', 'zh', 'ja', 'ko', 'hi', 'ar'].every((c) => SPOKEN_LANGUAGES.includes(c)));
+check('language names render in the reader\'s language', languageName('de', 'de') !== 'de' && languageName('de', 'en') !== languageName('de', 'de'));
+check('an unnamed code degrades to the code itself', languageName('zzz', 'en') === 'zzz');
+
+// The session records the language it was conducted in, so a later
+// "Transcribe answers" is not at the mercy of the current device's UI.
+const langDoc = coerceVideoInterview({ ...interviewDoc.content[0].attrs, lang: 'de' });
+check('lang survives coercion', langDoc?.lang === 'de');
+check('a session without lang means auto-detect', coerceVideoInterview(interviewDoc.content[0].attrs)?.lang === undefined);
+check('a non-string lang is dropped rather than sent', coerceVideoInterview({ ...interviewDoc.content[0].attrs, lang: 7 })?.lang === undefined);
 
 // ── CSP: loopback whisper on any port is reachable in production ──
 const csp = policy();

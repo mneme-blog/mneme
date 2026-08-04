@@ -251,6 +251,12 @@ docker compose up -d            # Postgres + MinIO + the relay, on :8080
 curl localhost:8080/healthz     # {"status":"ok"}
 ```
 
+That one command is the whole setup — there is no init script to run and nothing to configure. It
+also starts the bundled speech-to-text server used by the optional transcription feature, which
+downloads its model (~1.6 GB) in the background on the **first** run only; until that finishes,
+Transcribe says the server has no model yet. Watch it with `docker compose logs -f whisper-model`,
+or ignore it entirely — nothing else waits on it.
+
 The client points at `http://localhost:8080` by default (override with `VITE_RELAY_URL`). The vault
 indicator switches to "synced · encrypted" once the handshake succeeds; if the relay is down, the
 app simply stays local and shows "offline" — your writing is never blocked on the network.

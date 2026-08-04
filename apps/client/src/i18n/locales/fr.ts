@@ -848,7 +848,8 @@ const fr: Partial<Record<MessageKey, string>> = {
   'media.transcribe.show': 'Afficher la transcription',
   'media.transcribe.hide': 'Masquer la transcription',
   'media.transcribe.failed': 'Échec de la transcription : {message}',
-  'media.transcribe.modelMissing': 'Le serveur de transcription n’a pas de modèle installé. Ouvrez les réglages IA et utilisez « Vérifier le serveur ».',
+  'media.transcribe.modelMissing':
+    'Le serveur de transcription n\'a pas encore de modèle. Sur une nouvelle installation, il est en train d\'en télécharger un, ce qui prend quelques minutes. Sinon, ouvrez les réglages IA et utilisez « Vérifier le serveur ».',
   'media.transcribe.answers': 'Transcrire les réponses',
   'media.transcribe.notConfigured': 'Configurez d’abord la transcription dans les réglages IA.',
   'media.transcribe.confirmTitle': 'Envoyer pour transcription ?',
@@ -857,6 +858,8 @@ const fr: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribe': 'Transcrire mes réponses ensuite',
   'assistant.video.transcribeLocal': 'La reconnaissance vocale s’exécute sur cet appareil après l’enregistrement.',
   'assistant.video.transcribeRemote': 'Après l’enregistrement, vos réponses sont envoyées déchiffrées à {host} pour être converties en texte.',
+  'assistant.video.spokenLanguage': 'Langue parlée',
+  'assistant.video.autoDetect': 'Détection automatique',
 };
 
 export default fr;

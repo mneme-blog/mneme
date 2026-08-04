@@ -133,6 +133,12 @@ services:
       # bars takes tqdm's disabled path, which never touches that lock. A
       # container has no terminal to draw them on anyway.
       HF_HUB_DISABLE_PROGRESS_BARS: "1"
+      # CTranslate2's "default" compute type on CPU is float32 — for large-v3-
+      # turbo that is ~3 GB resident and markedly slower. int8 is the standard
+      # CPU quantization: roughly a third of the memory, faster, and no accuracy
+      # cost worth hearing at this model size. Harmless on a GPU image, which
+      # picks its own preferred type.
+      WHISPER__COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
     volumes:
       - whisper_models:/home/ubuntu/.cache/huggingface/hub
     healthcheck:
@@ -146,13 +152,17 @@ services:
   # is not in its cache is answered with 404 (its routers/stt.py), which reaches
   # the user as an unexplained "404" on the Transcribe button. So install the
   # client's default model into the cache volume once, here — it needs egress to
-  # huggingface.co and takes a few minutes the first time; afterwards the call
-  # is idempotent (200 downloaded / 201 already present) and the container exits
+  # huggingface.co and pulls ~1.6 GB the first time; afterwards the call is
+  # idempotent (200 downloaded / 201 already present) and the container exits
   # immediately. It runs in the whisper image itself (already pulled, ships
   # curl), so it costs no extra download. WHISPER_MODEL overrides the model;
   # keep it in step with the app's DEFAULT_TRANSCRIPTION_MODEL
   # (apps/client/src/ai/types.ts). The client's AI settings can install a model
   # too ("Check server" → "Download model").
+  #
+  # It retries: a download that long fails often enough that one-shot-and-give-up
+  # would leave an otherwise healthy deployment answering every transcription
+  # with "the server has no model", and nothing on the box says to try again.
   whisper-model:
     image: ghcr.io/speaches-ai/speaches:0.8.2-cpu
     restart: "no"
@@ -161,8 +171,14 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >
-        curl -fsS -X POST "http://whisper:8000/v1/models/${WHISPER_MODEL:-Systran/faster-whisper-small}" >/dev/null &&
-        echo "whisper model ready: ${WHISPER_MODEL:-Systran/faster-whisper-small}"
+        echo "installing speech model ${WHISPER_MODEL:-deepdml/faster-whisper-large-v3-turbo-ct2} (first run downloads ~1.6 GB)";
+        for i in 1 2 3 4 5; do
+          if curl -fsS --max-time 7200 -X POST "http://whisper:8000/v1/models/${WHISPER_MODEL:-deepdml/faster-whisper-large-v3-turbo-ct2}" >/dev/null; then echo "whisper model ready: ${WHISPER_MODEL:-deepdml/faster-whisper-large-v3-turbo-ct2}"; exit 0; fi;
+          echo "attempt $$i failed; retrying in 10s";
+          sleep 10;
+        done;
+        echo "could not install the speech model - transcription will report no model until it succeeds";
+        exit 1
 
   web:
     # Same story as `server` above: released image by default, still buildable

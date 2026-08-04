@@ -849,7 +849,8 @@ const ja: Partial<Record<MessageKey, string>> = {
   'media.transcribe.show': '文字起こしを表示',
   'media.transcribe.hide': '文字起こしを隠す',
   'media.transcribe.failed': '文字起こしに失敗しました: {message}',
-  'media.transcribe.modelMissing': '文字起こしサーバーにモデルがインストールされていません。AI 設定を開き「サーバーを確認」を使ってください。',
+  'media.transcribe.modelMissing':
+    '文字起こしサーバーにまだモデルがありません。新規インストールの場合はダウンロード中で、数分かかります。そうでなければ AI 設定を開いて「サーバーを確認」を実行してください。',
   'media.transcribe.answers': '回答を文字起こし',
   'media.transcribe.notConfigured': 'まず AI 設定で文字起こしを設定してください。',
   'media.transcribe.confirmTitle': '文字起こしのために送信しますか？',
@@ -858,6 +859,8 @@ const ja: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribe': '保存後に回答を文字起こしする',
   'assistant.video.transcribeLocal': '保存後、音声認識はこの端末上で実行されます。',
   'assistant.video.transcribeRemote': '保存後、回答は復号された状態で {host} に送信され、テキスト化されます。',
+  'assistant.video.spokenLanguage': '話す言語',
+  'assistant.video.autoDetect': '自動検出',
 };
 
 export default ja;

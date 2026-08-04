@@ -846,7 +846,8 @@ const nl: Partial<Record<MessageKey, string>> = {
   'media.transcribe.show': 'Transcript tonen',
   'media.transcribe.hide': 'Transcript verbergen',
   'media.transcribe.failed': 'Transcriberen mislukt: {message}',
-  'media.transcribe.modelMissing': 'De transcriptieserver heeft geen model geïnstalleerd. Open de AI-instellingen en gebruik ‘Server controleren’.',
+  'media.transcribe.modelMissing':
+    'De transcriptieserver heeft nog geen model. Bij een nieuwe installatie wordt er nu een gedownload, wat een paar minuten duurt. Open anders de AI-instellingen en gebruik "Server controleren".',
   'media.transcribe.answers': 'Antwoorden transcriberen',
   'media.transcribe.notConfigured': 'Stel eerst transcriptie in bij de AI-instellingen.',
   'media.transcribe.confirmTitle': 'Versturen voor transcriptie?',
@@ -855,6 +856,8 @@ const nl: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribe': 'Mijn antwoorden daarna transcriberen',
   'assistant.video.transcribeLocal': 'Spraak-naar-tekst draait na het opslaan op dit apparaat.',
   'assistant.video.transcribeRemote': 'Na het opslaan worden je antwoorden ontsleuteld naar {host} gestuurd en in tekst omgezet.',
+  'assistant.video.spokenLanguage': 'Gesproken taal',
+  'assistant.video.autoDetect': 'Automatisch herkennen',
 };
 
 export default nl;

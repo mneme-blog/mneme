@@ -159,6 +159,10 @@ export const assistant = {
   'assistant.video.transcribe': 'Transcribe my answers afterwards',
   'assistant.video.transcribeLocal': 'Speech-to-text runs on this device after saving.',
   'assistant.video.transcribeRemote': 'After saving, your answers are sent decrypted to {host} to be turned into text.',
+  // Asked rather than inferred from the UI language: speech-to-text treats the
+  // language as a constraint, so a wrong one returns confident nonsense.
+  'assistant.video.spokenLanguage': 'Spoken language',
+  'assistant.video.autoDetect': 'Detect automatically',
   'assistant.video.discardTitle': 'Discard this interview?',
   'assistant.video.discardBody': 'Your recorded answers have not been saved yet and will be lost.',
   'assistant.video.discard': 'Discard',

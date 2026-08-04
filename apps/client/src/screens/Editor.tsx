@@ -240,13 +240,17 @@ function EntryEditor({
       resolve: (att: MediaAttachment) => mediaBlob(entry.id, att),
       onRemoved: (att: MediaAttachment) => removeMedia(att.id),
       onOpenImage: (att: MediaAttachment) => openImageRef.current(att),
+      // `language` is passed only by the video-interview card, which knows the
+      // language its session was recorded in. A lone recording stays on
+      // auto-detect: an arbitrary upload has nothing to constrain it with, and
+      // a wrong constraint yields confident nonsense rather than an error.
       transcribe: transcriptionConfig(aiSettings)
-        ? async (att: MediaAttachment): Promise<string> => {
+        ? async (att: MediaAttachment, language?: string): Promise<string> => {
             const cfg = transcriptionConfig(aiSettingsRef.current);
             if (!cfg) throw new Error(t('media.transcribe.notConfigured'));
             const blob = await mediaBlob(entry.id, att);
             if (!blob) throw new Error(t('media.retryUnavailable'));
-            return transcribe(cfg, blob, { mime: att.mime });
+            return transcribe(cfg, blob, { mime: att.mime, language });
           }
         : undefined,
       transcribeDest: (() => {

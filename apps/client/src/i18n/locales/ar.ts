@@ -850,7 +850,8 @@ const ar: Partial<Record<MessageKey, string>> = {
   'media.transcribe.show': 'إظهار النص المفرّغ',
   'media.transcribe.hide': 'إخفاء النص المفرّغ',
   'media.transcribe.failed': 'تعذّر التفريغ: {message}',
-  'media.transcribe.modelMissing': 'لا يوجد نموذج مثبَّت على خادم التفريغ. افتح إعدادات الذكاء الاصطناعي واستخدم «فحص الخادم».',
+  'media.transcribe.modelMissing':
+    'لا يملك خادم التفريغ نموذجًا بعد. في التثبيت الجديد يجري تنزيل واحد الآن، ويستغرق ذلك بضع دقائق. وإلا فافتح إعدادات الذكاء الاصطناعي واستخدم «فحص الخادم».',
   'media.transcribe.answers': 'تفريغ الإجابات',
   'media.transcribe.notConfigured': 'قم أولًا بإعداد التفريغ في إعدادات الذكاء الاصطناعي.',
   'media.transcribe.confirmTitle': 'إرسال للتفريغ النصي؟',
@@ -859,6 +860,8 @@ const ar: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribe': 'فرّغ إجاباتي نصيًا بعد الحفظ',
   'assistant.video.transcribeLocal': 'يعمل تحويل الكلام إلى نص على هذا الجهاز بعد الحفظ.',
   'assistant.video.transcribeRemote': 'بعد الحفظ تُرسل إجاباتك مفكوكة التشفير إلى {host} لتحويلها إلى نص.',
+  'assistant.video.spokenLanguage': 'لغة التحدث',
+  'assistant.video.autoDetect': 'كشف تلقائي',
 };
 
 export default ar;
