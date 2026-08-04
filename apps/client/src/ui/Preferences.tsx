@@ -16,7 +16,17 @@ import { PALETTES, SKINS, type ThemeControls, type ThemeMode } from '../hooks/us
 import { compactCount, dayStreak, journaledDays, longestStreak, monthWords, totalWords } from '../state/stats';
 import { APP_VERSION, buildTimeLabel } from '../buildinfo';
 import { hexA } from './color';
-import { t, useI18n, type MessageKey } from '../i18n';
+import { fmtNumber, t, useI18n, type MessageKey } from '../i18n';
+import {
+  ANSWER_LIMITS,
+  VIDEO_QUALITY,
+  answerLimitSeconds,
+  fmtDuration,
+  megabytesPerMinute,
+  setAnswerLimitSeconds,
+  setVideoQuality,
+  videoQuality,
+} from './recorder';
 
 const MODES: { id: ThemeMode; icon: IconName }[] = [
   { id: 'light', icon: 'sun' },
@@ -35,6 +45,71 @@ const TABS: { id: TabId; icon: IconName }[] = [
   { id: 'vault', icon: 'shield' },
   { id: 'info', icon: 'info' },
 ];
+
+/** Camera capture settings. Both knobs are device-local localStorage (see
+    ui/recorder.ts for why they are not fields on InterviewType), so this holds
+    its own state rather than reading from the synced app data. */
+function VideoSection({ desk }: { desk: boolean }): VNode {
+  const [quality, setQuality] = useState(videoQuality);
+  const [limit, setLimit] = useState(answerLimitSeconds);
+
+  return (
+    <div>
+      <SectionLabel>{t('prefs.video.section')}</SectionLabel>
+      <div style={{ fontFamily: 'var(--ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-2)', margin: '0 2px 8px' }}>
+        {t('prefs.video.quality')}
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {(['low', 'medium', 'high'] as const).map((q) => {
+          const active = quality === q;
+          return (
+            <button
+              key={q}
+              onClick={() => { setVideoQuality(q); setQuality(q); }}
+              style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '11px 4px 9px', borderRadius: 12, cursor: 'pointer', border: `1px solid ${active ? 'var(--accent-line)' : 'var(--line)'}`, background: active ? 'var(--accent-soft)' : 'var(--paper)', color: active ? 'var(--accent-ink)' : 'var(--ink-2)', fontFamily: 'var(--ui)', fontSize: 12.5, fontWeight: active ? 700 : 500 }}
+            >
+              {/* Ids mirror the 'prefs.video.quality.*' catalog entries. */}
+              <span>{t(`prefs.video.quality.${q}` as MessageKey)}</span>
+              {/* The two numbers that actually decide this: frame size, and what
+                  a minute of it costs on disk and in the vault quota. */}
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: active ? 'var(--accent-ink)' : 'var(--ink-3)', whiteSpace: 'nowrap' }}>
+                {VIDEO_QUALITY[q].width}×{VIDEO_QUALITY[q].height}
+              </span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>
+                {t('prefs.video.perMinute', { mb: fmtNumber(megabytesPerMinute(q)) })}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <p style={{ fontFamily: 'var(--ui)', fontSize: 11.5, color: 'var(--ink-3)', margin: '8px 2px 0', lineHeight: 1.5 }}>
+        {t('prefs.video.quality.hint')}
+      </p>
+
+      <div style={{ fontFamily: 'var(--ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-2)', margin: '16px 2px 8px' }}>
+        {t('prefs.video.limit')}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: desk ? 'repeat(5, 1fr)' : 'repeat(3, 1fr)', gap: 8 }}>
+        {ANSWER_LIMITS.map((s) => {
+          const active = limit === s;
+          return (
+            <button
+              key={s}
+              onClick={() => { setAnswerLimitSeconds(s); setLimit(s); }}
+              style={{ padding: '10px 4px', borderRadius: 12, cursor: 'pointer', border: `1px solid ${active ? 'var(--accent-line)' : 'var(--line)'}`, background: active ? 'var(--accent-soft)' : 'var(--paper)', color: active ? 'var(--accent-ink)' : 'var(--ink-2)', fontFamily: 'var(--mono)', fontSize: 12.5, fontWeight: active ? 700 : 500 }}
+            >
+              {/* "M:SS" — digits only, so it needs no translation. */}
+              {fmtDuration(s * 1000)}
+            </button>
+          );
+        })}
+      </div>
+      <p style={{ fontFamily: 'var(--ui)', fontSize: 11.5, color: 'var(--ink-3)', margin: '8px 2px 0', lineHeight: 1.5 }}>
+        {t('prefs.video.limit.hint')}
+      </p>
+    </div>
+  );
+}
 
 /** Group heading inside a tab pane; `first` drops the top margin so a pane
     doesn't open with a double gap above its first group. */
@@ -350,6 +425,7 @@ export function PreferencesSheet({ desk, theme, onClose, ownerId, status, onLock
         {onInterviewTypes && <Row icon="list" label={t('prefs.assistant.interviewTypes')} onClick={handOff(onInterviewTypes)} />}
         <Row icon="feather" label={t('prefs.assistant.ai')} onClick={handOff(onAiSettings)} />
       </div>
+      <VideoSection desk={desk} />
     </div>
   );
 

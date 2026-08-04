@@ -689,6 +689,17 @@ const ja: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interview': '毎日のインタビュー',
   'prefs.assistant.interviewTypes': 'インタビューの種類',
   'prefs.assistant.ai': 'AI アシスタント',
+
+  'prefs.video.section': '動画の録画',
+  'prefs.video.quality': '画質',
+  'prefs.video.quality.low': '小',
+  'prefs.video.quality.medium': 'バランス',
+  'prefs.video.quality.high': '高精細',
+  'prefs.video.perMinute': '≈{mb} MB/分',
+  'prefs.video.quality.hint': '新しい録画に適用されます。録画済みのクリップはそのままです。結合したフィルムは最初のクリップのサイズを引き継ぎます。',
+  'prefs.video.limit': '回答の時間制限',
+  'prefs.video.limit.hint': 'ビデオインタビューの 1 つの回答が自動停止するまでの最大録画時間です。',
+
   'prefs.vault.section': 'ボールト',
   'prefs.vault.yourVault': 'あなたのボールト',
   'prefs.vault.idLabel': 'ボールト ID',

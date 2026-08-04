@@ -64,6 +64,18 @@ export const prefs = {
   'prefs.assistant.interviewTypes': 'Interview types',
   'prefs.assistant.ai': 'AI assistant',
 
+  'prefs.video.section': 'Video recording',
+  'prefs.video.quality': 'Quality',
+  'prefs.video.quality.low': 'Small',
+  'prefs.video.quality.medium': 'Balanced',
+  'prefs.video.quality.high': 'Sharp',
+  'prefs.video.perMinute': '≈{mb} MB/min',
+  'prefs.video.quality.hint':
+    'Applies to new recordings — clips you already made keep the size they were recorded at. A stitched film adopts the size of its first clip.',
+  'prefs.video.limit': 'Answer time limit',
+  'prefs.video.limit.hint':
+    'How long a single video-interview answer may run before recording stops itself.',
+
   'prefs.vault.section': 'Vault',
   'prefs.vault.yourVault': 'Your vault',
   'prefs.vault.idLabel': 'vault id',

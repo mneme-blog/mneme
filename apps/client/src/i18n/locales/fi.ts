@@ -694,6 +694,17 @@ const fi: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interview': 'Päivittäinen haastattelu',
   'prefs.assistant.interviewTypes': 'Haastattelutyypit',
   'prefs.assistant.ai': 'Tekoälyavustaja',
+
+  'prefs.video.section': 'Videotallennus',
+  'prefs.video.quality': 'Laatu',
+  'prefs.video.quality.low': 'Pieni',
+  'prefs.video.quality.medium': 'Tasapainoinen',
+  'prefs.video.quality.high': 'Terävä',
+  'prefs.video.perMinute': '≈{mb} Mt/min',
+  'prefs.video.quality.hint': 'Koskee uusia tallenteita — jo tallennetut klipit säilyttävät kokonsa. Koostettu elokuva ottaa ensimmäisen klippinsä koon.',
+  'prefs.video.limit': 'Vastauksen aikaraja',
+  'prefs.video.limit.hint': 'Kuinka kauan yksittäinen videohaastattelun vastaus saa kestää, ennen kuin tallennus pysähtyy itsestään.',
+
   'prefs.vault.section': 'Holvi',
   'prefs.vault.yourVault': 'Holvisi',
   'prefs.vault.idLabel': 'holvin tunnus',

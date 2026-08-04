@@ -9,6 +9,9 @@ import { JSDOM } from 'jsdom';
 
 const dom = new JSDOM('<!doctype html><html><body><div id="mount"></div></body></html>', {
   pretendToBeVisual: true,
+  // An explicit origin — jsdom refuses localStorage on the default opaque one,
+  // and the capture-quality check reads it.
+  url: 'https://localhost/',
 });
 const g = globalThis as Record<string, unknown>;
 g.window = dom.window;
@@ -20,6 +23,7 @@ Object.defineProperty(globalThis, 'navigator', {
   configurable: true,
   writable: true,
 });
+g.localStorage = dom.window.localStorage;
 g.MutationObserver = dom.window.MutationObserver;
 g.Element = dom.window.Element;
 g.HTMLElement = dom.window.HTMLElement;
@@ -259,6 +263,38 @@ async function main(): Promise<void> {
   assert(built.content?.[1].type === 'paragraph', 'a trailing paragraph parks the cursor after the atom');
   assert(same(docMediaIds(built), ['clip-one', 'clip-two', 'film-id']), 'the built doc reports the same media ids');
   console.log('ok: buildVideoInterviewDoc');
+
+  // ── capture quality: constraints stay soft, bitrate is actually capped ──
+  const { cameraConstraints, recorderOptions, videoQuality, setVideoQuality, VIDEO_QUALITY } =
+    await import('../src/ui/recorder');
+  localStorage.removeItem('mneme.video.quality');
+  assert(videoQuality() === 'medium', 'an unset quality defaults to 720p');
+  localStorage.setItem('mneme.video.quality', 'ultra');
+  assert(videoQuality() === 'medium', 'an unknown stored quality falls back to the default');
+  for (const level of ['low', 'medium', 'high'] as const) {
+    setVideoQuality(level);
+    assert(videoQuality() === level, `${level} round-trips through localStorage`);
+    const video = cameraConstraints().video as MediaTrackConstraints;
+    // `exact` here would mean OverconstrainedError — no camera at all — on any
+    // device without the requested mode. Every constraint must stay `ideal`.
+    assert(JSON.stringify(video).includes('exact') === false, `${level} constrains with ideal, never exact`);
+    assert((video.width as { ideal: number }).ideal === VIDEO_QUALITY[level].width, `${level} asks for its frame width`);
+    assert((video.height as { ideal: number }).ideal === VIDEO_QUALITY[level].height, `${level} asks for its frame height`);
+    assert(video.facingMode === 'user', `${level} still selects the front camera`);
+    assert(
+      recorderOptions('video/webm').videoBitsPerSecond === VIDEO_QUALITY[level].bitsPerSecond,
+      `${level} caps the recorder bitrate (the browser default ~2.5 Mbps ignores frame size)`,
+    );
+    assert(recorderOptions('video/webm').mimeType === 'video/webm', `${level} keeps the chosen container`);
+    assert(!('mimeType' in recorderOptions(undefined)), 'an unsupported format leaves mimeType to the browser');
+  }
+  assert(
+    VIDEO_QUALITY.low.bitsPerSecond < VIDEO_QUALITY.medium.bitsPerSecond &&
+      VIDEO_QUALITY.medium.bitsPerSecond < VIDEO_QUALITY.high.bitsPerSecond,
+    'the levels are ordered by bitrate',
+  );
+  localStorage.removeItem('mneme.video.quality');
+  console.log('ok: capture quality (defaults, ideal-only constraints, bitrate cap)');
 
   // ── timeline: whole frames, no drift across segments ──
   const { planTimeline, estimateSeconds, CARD_SECONDS, FILM_FPS: FPS } = await import('../src/video/timeline');

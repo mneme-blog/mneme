@@ -689,6 +689,17 @@ const ar: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interview': 'مقابلة يومية',
   'prefs.assistant.interviewTypes': 'أنواع المقابلات',
   'prefs.assistant.ai': 'مساعد الذكاء الاصطناعي',
+
+  'prefs.video.section': 'تسجيل الفيديو',
+  'prefs.video.quality': 'الجودة',
+  'prefs.video.quality.low': 'صغيرة',
+  'prefs.video.quality.medium': 'متوازنة',
+  'prefs.video.quality.high': 'حادة',
+  'prefs.video.perMinute': '≈{mb} م.ب/دقيقة',
+  'prefs.video.quality.hint': 'ينطبق على التسجيلات الجديدة — أما المقاطع المسجَّلة سابقًا فتحتفظ بحجمها. ويأخذ الفيلم المجمَّع حجم مقطعه الأول.',
+  'prefs.video.limit': 'الحد الزمني للإجابة',
+  'prefs.video.limit.hint': 'المدة التي يمكن أن تستغرقها إجابة واحدة في مقابلة الفيديو قبل أن يتوقف التسجيل تلقائيًا.',
+
   'prefs.vault.section': 'الخزنة',
   'prefs.vault.yourVault': 'خزنتك',
   'prefs.vault.idLabel': 'معرّف الخزنة',

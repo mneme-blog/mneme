@@ -705,6 +705,17 @@ const it: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interview': 'Intervista quotidiana',
   'prefs.assistant.interviewTypes': 'Tipi di intervista',
   'prefs.assistant.ai': 'Assistente IA',
+
+  'prefs.video.section': 'Registrazione video',
+  'prefs.video.quality': 'Qualità',
+  'prefs.video.quality.low': 'Piccola',
+  'prefs.video.quality.medium': 'Bilanciata',
+  'prefs.video.quality.high': 'Nitida',
+  'prefs.video.perMinute': '≈{mb} MB/min',
+  'prefs.video.quality.hint': 'Vale per le nuove registrazioni: i clip già registrati mantengono la loro dimensione. Un film montato adotta la dimensione del suo primo clip.',
+  'prefs.video.limit': 'Tempo massimo per risposta',
+  'prefs.video.limit.hint': 'Quanto può durare una singola risposta dell’intervista video prima che la registrazione si fermi da sola.',
+
   'prefs.vault.section': 'Caveau',
   'prefs.vault.yourVault': 'Il tuo caveau',
   'prefs.vault.idLabel': 'id caveau',
