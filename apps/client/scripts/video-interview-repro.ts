@@ -296,6 +296,26 @@ async function main(): Promise<void> {
   localStorage.removeItem('mneme.video.quality');
   console.log('ok: capture quality (defaults, ideal-only constraints, bitrate cap)');
 
+  // ── the on-camera countdown rounds UP ──
+  // A nearest-rounding countdown parks on 0:00 for the last half second while
+  // the camera is still rolling, which reads as a frozen timer. 0:00 must mean
+  // the recorder has stopped, nothing else.
+  const { fmtCountdown, fmtDuration, answerLimitSeconds, setAnswerLimitSeconds } = await import('../src/ui/recorder');
+  assert(fmtCountdown(90_000) === '1:30', 'a full 90 s answer starts at 1:30');
+  assert(fmtCountdown(400) === '0:01', '0.4 s left still shows a second, not 0:00');
+  assert(fmtDuration(400) === '0:00', 'the elapsed clock keeps rounding to nearest');
+  assert(fmtCountdown(0) === '0:00', 'the limit reached shows 0:00');
+  assert(fmtCountdown(-500) === '0:00', 'an overshooting tick never shows negative time');
+  assert(fmtCountdown(61_000) === '1:01', 'minutes and seconds are zero-padded');
+  // The chip counts down against this limit, so an out-of-range stored value
+  // must not silently make the bar or the clock nonsensical.
+  localStorage.setItem('mneme.videoInterview.maxSeconds', '9000');
+  assert(answerLimitSeconds() === 90, 'an out-of-range stored limit falls back to the default');
+  setAnswerLimitSeconds(30);
+  assert(answerLimitSeconds() === 30, 'a chosen limit round-trips through localStorage');
+  localStorage.removeItem('mneme.videoInterview.maxSeconds');
+  console.log('ok: answer countdown (rounds up, clamps at zero, limit fallback)');
+
   // ── timeline: whole frames, no drift across segments ──
   const { planTimeline, estimateSeconds, CARD_SECONDS, FILM_FPS: FPS } = await import('../src/video/timeline');
   const durations = [42.0, 17.5, 63.2, 8.4, 91.9];

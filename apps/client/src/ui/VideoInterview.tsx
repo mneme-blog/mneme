@@ -20,7 +20,7 @@ import { Btn } from './primitives';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ProviderBadge } from './ProviderBadge';
 import { useVisualViewport } from '../hooks/useVisualViewport';
-import { answerLimitSeconds, cameraConstraints, fmtDuration, pickMimeType, recorderOptions } from './recorder';
+import { answerLimitSeconds, cameraConstraints, fmtCountdown, pickMimeType, recorderOptions } from './recorder';
 import { t } from '../i18n';
 import { useAppData } from '../state/data';
 import type { InterviewType, MediaAttachment } from '../sync/engine';
@@ -360,6 +360,12 @@ export function VideoInterviewSheet({
 
   // ── layout ──────────────────────────────────────────────────
   const answered = takes.current.filter(Boolean).length;
+  // The limit stops the recorder on its own, so the clock counts DOWN — the
+  // number people need on camera is how long they still have, not how long they
+  // have been talking. Digits only (fmtCountdown), so it needs no translation.
+  const limitMs = limit * 1000;
+  const remainingMs = Math.max(0, limitMs - elapsed);
+  const ending = remainingMs <= 10_000;
   const shell: JSX.CSSProperties = desk
     ? { width: 'min(460px, 42vw)', flexShrink: 0, borderInlineStart: '1px solid var(--line)', background: 'var(--surface)', display: 'flex', flexDirection: 'column', height: '100%' }
     : { position: 'fixed', insetInline: 0, bottom: 0, zIndex: 70, height: Math.round(vp.height * 0.9), background: 'var(--surface)', borderRadius: '24px 24px 0 0', border: '1px solid var(--line)', display: 'flex', flexDirection: 'column', boxShadow: '0 -12px 40px rgba(30,20,12,.22)' };
@@ -514,12 +520,26 @@ export function VideoInterviewSheet({
                   <video ref={liveRef} autoPlay muted playsInline style={{ display: 'block', width: '100%', maxHeight: '42vh', transform: 'scaleX(-1)' }} />
                 )}
                 {stage === 'recording' && (
-                  <span style={{ position: 'absolute', top: 10, insetInlineStart: 10, display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(20,14,8,.7)', borderRadius: 999, padding: '4px 11px' }}>
-                    <span style={{ width: 9, height: 9, borderRadius: 9, background: '#E4573D' }} />
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 12.5, color: '#fff' }}>{fmtDuration(elapsed)}</span>
-                  </span>
+                  <>
+                    <span style={{ position: 'absolute', top: 10, insetInlineStart: 10, display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(20,14,8,.7)', borderRadius: 999, padding: '4px 11px' }}>
+                      <span class={ending ? 'mneme-pulse' : undefined} style={{ width: 9, height: 9, borderRadius: 9, background: '#E4573D' }} />
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 12.5, color: ending ? '#FFA893' : '#fff', fontVariantNumeric: 'tabular-nums' }}>
+                        {fmtCountdown(remainingMs)}
+                      </span>
+                    </span>
+                    {/* Drains left-to-right (start-to-end in RTL) so the clock
+                        reads unmistakably as time left, not time spent. */}
+                    <span style={{ position: 'absolute', insetInline: 0, bottom: 0, height: 3, background: 'rgba(255,255,255,.18)' }}>
+                      <span style={{ display: 'block', height: '100%', width: `${(remainingMs / limitMs) * 100}%`, background: ending ? '#E4573D' : '#fff', transition: 'width .25s linear' }} />
+                    </span>
+                  </>
                 )}
               </div>
+            )}
+            {stage === 'idle' && !error && (
+              <p style={{ ...pStyle, color: 'var(--ink-3)', fontSize: 12, marginTop: 8 }}>
+                {t('assistant.video.maxLength', { seconds: String(limit) })}
+              </p>
             )}
           </>
         )}
