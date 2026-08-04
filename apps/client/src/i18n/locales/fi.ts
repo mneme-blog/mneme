@@ -857,7 +857,8 @@ const fi: Partial<Record<MessageKey, string>> = {
   'media.transcribe.edit': 'Muokkaa',
   'media.transcribe.editHint': 'Tyhjennä kenttä, niin litterointi poistetaan.',
   'media.transcribe.failed': 'Litterointi epäonnistui: {message}',
-  'media.transcribe.modelMissing': 'Litterointipalvelimella ei ole mallia asennettuna. Avaa tekoälyasetukset ja käytä ”Tarkista palvelin”.',
+  'media.transcribe.modelMissing':
+    'Litterointipalvelimella ei ole vielä mallia. Uudessa asennuksessa se lataa mallia parhaillaan, mihin menee muutama minuutti. Muussa tapauksessa avaa tekoälyasetukset ja käytä Tarkista palvelin -painiketta.',
   'media.transcribe.answers': 'Litteroi vastaukset',
   'media.transcribe.notConfigured': 'Määritä ensin litterointi tekoälyasetuksissa.',
   'media.transcribe.confirmTitle': 'Lähetetäänkö litteroitavaksi?',
@@ -866,6 +867,8 @@ const fi: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribe': 'Litteroi vastaukseni jälkeenpäin',
   'assistant.video.transcribeLocal': 'Puheentunnistus tapahtuu tallennuksen jälkeen tällä laitteella.',
   'assistant.video.transcribeRemote': 'Tallennuksen jälkeen vastauksesi lähetetään purettuina osoitteeseen {host} tekstiksi muunnettaviksi.',
+  'assistant.video.spokenLanguage': 'Puhuttu kieli',
+  'assistant.video.autoDetect': 'Tunnista automaattisesti',
 };
 
 export default fi;

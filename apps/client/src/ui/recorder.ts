@@ -111,3 +111,14 @@ export function fmtDuration(ms: number): string {
   const s = Math.round(ms / 1000);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
+
+/**
+ * "M:SS" for time *remaining*. Rounds up, unlike fmtDuration: a countdown that
+ * rounded to nearest would sit on 0:00 for half a second while the camera is
+ * still rolling, which reads as a frozen or broken timer. 0:00 here means the
+ * recorder has actually stopped.
+ */
+export function fmtCountdown(ms: number): string {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}

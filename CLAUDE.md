@@ -325,6 +325,11 @@ encrypted body. **`docMediaIds` is security-critical here**: one node references
 **Per-question time limit is device-local `localStorage`, deliberately NOT a field on
 `InterviewType`** — `sync/engine.ts` encodes that record field by field, so a new field is silently
 stripped the moment an older build edits and re-pushes it (LWW field loss, no conflict, no warning).
+Because that limit stops the recorder on its own, the on-camera clock **counts down**, with a bar
+draining along the bottom of the preview (the digits alone read the same whether they count up or
+down) and a red last-10-seconds state. `fmtCountdown` rounds **up** where `fmtDuration` rounds to
+nearest: a nearest-rounded countdown parks on `0:00` for the last half second while the camera is
+still rolling, which reads as a frozen timer.
 **Capture quality** is device-local for the same reason: `mneme.video.quality` = low 640×360 /
 **medium 1280×720 (default)** / high 1920×1080, each with a `videoBitsPerSecond` cap — the cap is the
 real file-size lever, since browsers default to ~2.5 Mbps whatever the frame size. Constraints are
@@ -394,15 +399,31 @@ transcription isn't resurrected), or the legacy attachments array. An emptied bo
 ProseMirror handles the keystrokes and typing moves the document instead of filling the box. The **video interview offers auto-transcribe
 at start** (toggle in the plan step, default off, carries the destination copy): after save a
 detached loop transcribes clip-by-clip and writes back via `setTranscriptAttr`/`attachTranscript`
-(the `setFilmAttr` pattern — the sheet is gone when results land), passing whisper's `language`
-**constraint** as the app locale — justified there because the questions were asked in it;
-**arbitrary uploads stay on auto-detect** (a wrong `language` silently yields garbage).
+(the `setFilmAttr` pattern — the sheet is gone when results land). Whisper's `language` is a
+**constraint, not a hint** — told the wrong one it transliterates or translates, returning fluent
+nonsense instead of an error — so it is **asked for, never inferred**: a **spoken-language picker**
+sits under the auto-transcribe toggle in the plan step (`SPOKEN_LANGUAGES`/`spokenLanguage()` in
+`ai/transcribe.ts`, device-local `mneme.transcribe.language`, `''` = auto-detect and distinct from
+unset; names rendered by `Intl.DisplayNames` so the list needs no i18n). This replaced deriving it
+from the **app UI language**, which is a different fact entirely — an English UI is no evidence the
+diary is kept in English, and that assumption is what made non-English answers come back as
+gibberish. The choice is stored on the session (`lang` in the `videoInterview` node attrs, inside the
+encrypted body) so a later "Transcribe answers" — another day, another device — still constrains
+correctly; sessions without it mean auto-detect. **Arbitrary uploads stay on auto-detect**: an
+unrelated recording has nothing to justify a constraint.
 **Speaches does not fetch models on demand** — a transcription for a model that is not in its cache
 is answered **404** (its `routers/stt.py`), which shipped as an unexplained "404" on the Transcribe
 button. Two halves fix it and both must stay: a one-shot **`whisper-model`** service in both compose
 files installs the default model into the cache volume on `up` (`POST /v1/models/{id}`, idempotent,
-runs in the whisper image so it pulls nothing extra, `WHISPER_MODEL` overrides — keep it in step with
-`DEFAULT_TRANSCRIPTION_MODEL`; the whisper service also needs **`HF_HUB_DISABLE_PROGRESS_BARS=1`**,
+runs in the whisper image so it pulls nothing extra, **retried 5×** because a multi-minute download
+that fails once would otherwise strand a deployment on "no model" with nothing saying to retry;
+`WHISPER_MODEL` overrides — keep it in step with `DEFAULT_TRANSCRIPTION_MODEL`. That default is
+**`deepdml/faster-whisper-large-v3-turbo-ct2`** (~1.6 GB), which replaced `faster-whisper-small`
+(~0.5 GB) because small's non-English accuracy made transcripts read as guesswork; turbo is the full
+large-v3 encoder with a 4-layer decoder, so it is near-large-v3 quality at a fraction of the decode
+cost. It needs **`WHISPER__COMPUTE_TYPE=int8`** on the CPU image — CTranslate2's `default` on CPU is
+float32, ~3 GB resident and markedly slower. The whisper service also needs
+**`HF_HUB_DISABLE_PROGRESS_BARS=1`**,
 which is load-bearing rather than cosmetic — without it a download dies mid-flight in
 huggingface_hub's threaded tqdm bar, `AttributeError: … 'tqdm' has no attribute '_lock'`
 (huggingface_hub#3285), surfacing as a 500 from the install endpoint), and the client makes the state
@@ -414,7 +435,8 @@ so no per-use disclosure) with a **Download model** action on the `modelMissing`
 just don't match ours also reads as `modelMissing`, hence the copy says "does not list". Regression
 check: `pnpm --filter client exec tsx scripts/transcribe-repro.ts` (mocked fetch — wire shape incl.
 language, config gating incl. the same-origin default, check/install endpoints + verdicts, write-back
-transform, docToText/coercion contracts, CSP). Deliberately NOT built: in-browser whisper (wasm model
+transform, docToText/coercion contracts incl. the session `lang`, CSP); the stored spoken-language
+preference is covered in `scripts/video-interview-repro.ts`, which has a DOM. Deliberately NOT built: in-browser whisper (wasm model
 download vs. the CSP/bundle posture) and transcription of the stitched film (per-answer transcripts
 are strictly more useful).
 

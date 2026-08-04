@@ -60,6 +60,61 @@ export function transcriptionConfig(settings: AiSettings | null | undefined): Tr
   };
 }
 
+// ── spoken language ─────────────────────────────────────────────
+// Whisper's `language` is a hard constraint, and a wrong one does not fail
+// loudly: told "English" over German speech it transliterates or translates,
+// returning fluent nonsense that reads like a bad transcript rather than an
+// error. The video interview used to infer it from the app's UI language, which
+// is a different fact entirely — an English UI is no evidence the diary is kept
+// in English — so the language is now asked for and remembered here.
+//
+// Device-local, like the video quality and the answer limit, and for the same
+// reason: sync/engine.ts encodes InterviewType field by field, so a new field
+// there is silently dropped the moment an older build re-pushes the record.
+const SPOKEN_LANGUAGE_KEY = 'mneme.transcribe.language';
+
+/**
+ * Offered languages, as ISO-639-1 codes whisper accepts. A subset of its ~99,
+ * chosen for coverage rather than completeness — names are rendered by Intl in
+ * the reader's own language (languageName), so the list itself needs no
+ * translation and adding a code costs nothing.
+ */
+export const SPOKEN_LANGUAGES = [
+  'ar', 'ca', 'cs', 'da', 'de', 'el', 'en', 'es', 'fi', 'fr', 'he', 'hi', 'hu',
+  'id', 'it', 'ja', 'ko', 'nl', 'no', 'pl', 'pt', 'ro', 'ru', 'sv', 'th', 'tr',
+  'uk', 'vi', 'zh',
+];
+
+/** The stored spoken language, or '' for auto-detect (also the unset state). */
+export function spokenLanguage(): string {
+  const raw = localStorage.getItem(SPOKEN_LANGUAGE_KEY);
+  if (raw === null) return '';
+  return SPOKEN_LANGUAGES.includes(raw) ? raw : '';
+}
+
+/** Persist the choice; '' stores auto-detect explicitly (distinct from unset). */
+export function setSpokenLanguage(code: string): void {
+  localStorage.setItem(SPOKEN_LANGUAGE_KEY, SPOKEN_LANGUAGES.includes(code) ? code : '');
+}
+
+/** True once the user has actually chosen, so a default can stop being applied. */
+export function spokenLanguageChosen(): boolean {
+  return localStorage.getItem(SPOKEN_LANGUAGE_KEY) !== null;
+}
+
+/**
+ * A language's name in `inLocale` — "Deutsch" for a German reader, "German"
+ * for an English one. Falls back to the bare code where Intl.DisplayNames is
+ * missing or has no name for it, which is ugly but never wrong.
+ */
+export function languageName(code: string, inLocale: string): string {
+  try {
+    return new Intl.DisplayNames([inLocale], { type: 'language' }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
 /** True when the server is loopback — nothing leaves the device. */
 export function transcriptionLocal(cfg: TranscriptionSettings): boolean {
   return httpUrlScope(cfg.baseUrl) === 'loopback';

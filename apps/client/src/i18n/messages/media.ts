@@ -114,9 +114,11 @@ export const media = {
   'media.transcribe.failed': 'Could not transcribe: {message}',
   // The 404 a whisper server gives for a model it has not downloaded. Points at
   // the settings, where "Check server" can install it — a bare status code here
-  // sends people looking for a bug that isn't in the app.
+  // sends people looking for a bug that isn't in the app. It names the fresh-
+  // install case first because that is when it is overwhelmingly seen: the
+  // bundled server downloads its model on the very first start.
   'media.transcribe.modelMissing':
-    'The transcription server does not have its model installed. Open the AI settings and use "Check server".',
+    'The transcription server has no model yet. On a new install it is still downloading one, which takes a few minutes. Otherwise open the AI settings and use "Check server".',
   'media.transcribe.answers': 'Transcribe answers',
   'media.transcribe.notConfigured': 'Set up transcription in the AI settings first.',
   // Per-use disclosure before any decrypted audio leaves the device (shown only

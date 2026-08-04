@@ -44,8 +44,10 @@ export interface VideoInterviewHandlers {
   /** Open the render dialog for this session; omit to hide the render affordance. */
   onRender?: (data: VideoInterviewData) => void;
   /** Speech-to-text for one answer clip (ai/transcribe.ts). Present only when a
-   *  transcription server is configured — presence gates the affordance. */
-  transcribe?: (att: MediaAttachment) => Promise<string>;
+   *  transcription server is configured — presence gates the affordance.
+   *  `language` is the session's spoken language (ISO-639-1); omitted means
+   *  auto-detect, which is what pre-picker sessions carry. */
+  transcribe?: (att: MediaAttachment, language?: string) => Promise<string>;
   /** Where transcription goes — drives the non-local per-use confirm. */
   transcribeDest?: TranscribeDestination;
 }
@@ -408,7 +410,9 @@ export function videoInterviewNode(handlers: VideoInterviewHandlers): Node {
             for (let i = 0; i < data.cards.length; i++) {
               const card = data.cards[i];
               if (!card.clip || card.transcript) continue;
-              const text = await handlers.transcribe!(card.clip);
+              // data.lang is the language this session was recorded in; absent
+              // on pre-picker sessions, which means auto-detect.
+              const text = await handlers.transcribe!(card.clip, data.lang);
               if (!writeTranscript(i, text)) return;
             }
           };

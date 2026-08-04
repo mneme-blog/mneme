@@ -796,7 +796,8 @@ const zh: Partial<Record<MessageKey, string>> = {
   'media.transcribe.edit': '编辑',
   'media.transcribe.editHint': '清空文本框即可删除转写文本。',
   'media.transcribe.failed': '转写失败：{message}',
-  'media.transcribe.modelMissing': '转写服务器尚未安装模型。请打开 AI 设置并使用“检查服务器”。',
+  'media.transcribe.modelMissing':
+    '转录服务器还没有模型。全新安装时它正在下载模型，需要几分钟。否则请打开 AI 设置并使用"检查服务器"。',
   'media.transcribe.answers': '转写回答',
   'media.transcribe.notConfigured': '请先在 AI 设置中配置转写。',
   'media.transcribe.confirmTitle': '发送以进行转写？',
@@ -805,6 +806,8 @@ const zh: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribe': '保存后转写我的回答',
   'assistant.video.transcribeLocal': '保存后语音转文字在本设备上运行。',
   'assistant.video.transcribeRemote': '保存后，你的回答将以解密状态发送到 {host} 转成文字。',
+  'assistant.video.spokenLanguage': '说话语言',
+  'assistant.video.autoDetect': '自动检测',
 };
 
 export default zh;

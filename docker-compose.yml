@@ -75,18 +75,30 @@ services:
       # bars takes tqdm's disabled path, which never touches that lock. A
       # container has no terminal to draw them on anyway.
       HF_HUB_DISABLE_PROGRESS_BARS: "1"
+      # CTranslate2's "default" compute type on CPU is float32 — for large-v3-
+      # turbo that is ~3 GB resident and markedly slower. int8 is the standard
+      # CPU quantization: roughly a third of the memory, faster, and no accuracy
+      # cost worth hearing at this model size. Harmless on a GPU image, which
+      # picks its own preferred type.
+      WHISPER__COMPUTE_TYPE: int8
     volumes: [whispermodels:/home/ubuntu/.cache/huggingface/hub]
     ports: ["8000:8000"]
 
   # Speaches does NOT fetch a model on demand: a transcription for a model that
   # is not in its cache is answered with 404 (its routers/stt.py), which reaches
   # the user as an unexplained "404" on the Transcribe button. So install the
-  # client's default model once, here. Idempotent (200 downloaded / 201 already
-  # present), so it is a single HTTP call on every later `up`. Runs in the
-  # whisper image itself — already pulled, and it ships curl — so this costs no
-  # extra download. WHISPER_MODEL overrides it; keep it in step with the app's
-  # DEFAULT_TRANSCRIPTION_MODEL (apps/client/src/ai/types.ts). The client's AI
-  # settings can install a model too ("Check server" → "Download model").
+  # client's default model once, here — a fresh clone needs no setup step of its
+  # own, `docker compose up -d` leaves a working speech server behind. The call
+  # is idempotent (200 downloaded / 201 already present), so every later `up` is
+  # a single fast HTTP call. Runs in the whisper image itself — already pulled,
+  # and it ships curl — so this costs no extra download. WHISPER_MODEL overrides
+  # the model; keep it in step with the app's DEFAULT_TRANSCRIPTION_MODEL
+  # (apps/client/src/ai/types.ts). The client's AI settings can install one too
+  # ("Check server" → "Download model") if this ever fails.
+  #
+  # The first run pulls ~1.6 GB from Hugging Face and takes minutes. It retries,
+  # because a download that long fails often enough that one-shot-and-give-up
+  # would strand people on "the server has no model" with no hint to retry.
   whisper-model:
     image: ghcr.io/speaches-ai/speaches:0.8.2-cpu
     depends_on: [whisper]
@@ -95,8 +107,14 @@ services:
     command:
       - >
         until curl -fsS http://whisper:8000/health >/dev/null 2>&1; do sleep 2; done;
-        curl -fsS -X POST "http://whisper:8000/v1/models/${WHISPER_MODEL:-Systran/faster-whisper-small}" >/dev/null &&
-        echo "whisper model ready: ${WHISPER_MODEL:-Systran/faster-whisper-small}"
+        echo "installing speech model ${WHISPER_MODEL:-deepdml/faster-whisper-large-v3-turbo-ct2} (first run downloads ~1.6 GB)";
+        for i in 1 2 3 4 5; do
+          if curl -fsS --max-time 7200 -X POST "http://whisper:8000/v1/models/${WHISPER_MODEL:-deepdml/faster-whisper-large-v3-turbo-ct2}" >/dev/null; then echo "whisper model ready: ${WHISPER_MODEL:-deepdml/faster-whisper-large-v3-turbo-ct2}"; exit 0; fi;
+          echo "attempt $$i failed; retrying in 10s";
+          sleep 10;
+        done;
+        echo "could not install the speech model - transcription will report no model until it succeeds";
+        exit 1
 
   # Optional: client dev server in compose (otherwise just run `pnpm dev`).
   client:

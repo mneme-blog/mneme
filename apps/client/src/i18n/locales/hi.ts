@@ -852,7 +852,8 @@ const hi: Partial<Record<MessageKey, string>> = {
   'media.transcribe.edit': 'संपादित करें',
   'media.transcribe.editHint': 'ट्रांसक्रिप्ट हटाने के लिए बॉक्स खाली कर दें।',
   'media.transcribe.failed': 'ट्रांसक्राइब नहीं हो सका: {message}',
-  'media.transcribe.modelMissing': 'ट्रांसक्रिप्शन सर्वर पर कोई मॉडल इंस्टॉल नहीं है। AI सेटिंग्स खोलें और "सर्वर जाँचें" का उपयोग करें।',
+  'media.transcribe.modelMissing':
+    'ट्रांसक्रिप्शन सर्वर पर अभी कोई मॉडल नहीं है। नई इंस्टॉलेशन में वह अभी डाउनलोड हो रहा है, जिसमें कुछ मिनट लगते हैं। अन्यथा AI सेटिंग्स खोलें और "सर्वर जाँचें" का उपयोग करें।',
   'media.transcribe.answers': 'उत्तर ट्रांसक्राइब करें',
   'media.transcribe.notConfigured': 'पहले AI सेटिंग्स में ट्रांसक्रिप्शन सेट करें।',
   'media.transcribe.confirmTitle': 'ट्रांसक्रिप्शन के लिए भेजें?',
@@ -861,6 +862,8 @@ const hi: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribe': 'बाद में मेरे उत्तर ट्रांसक्राइब करें',
   'assistant.video.transcribeLocal': 'सहेजने के बाद वाक्-से-टेक्स्ट इसी डिवाइस पर चलता है।',
   'assistant.video.transcribeRemote': 'सहेजने के बाद आपके उत्तर डिक्रिप्ट होकर {host} पर भेजे जाते हैं और टेक्स्ट में बदले जाते हैं।',
+  'assistant.video.spokenLanguage': 'बोली जाने वाली भाषा',
+  'assistant.video.autoDetect': 'अपने आप पहचानें',
 };
 
 export default hi;

@@ -868,7 +868,8 @@ const it: Partial<Record<MessageKey, string>> = {
   'media.transcribe.edit': 'Modifica',
   'media.transcribe.editHint': 'Svuota il campo per rimuovere la trascrizione.',
   'media.transcribe.failed': 'Trascrizione non riuscita: {message}',
-  'media.transcribe.modelMissing': 'Il server di trascrizione non ha un modello installato. Apri le impostazioni IA e usa «Verifica server».',
+  'media.transcribe.modelMissing':
+    'Il server di trascrizione non ha ancora un modello. In una nuova installazione lo sta scaricando, cosa che richiede qualche minuto. Altrimenti apri le impostazioni IA e usa «Verifica server».',
   'media.transcribe.answers': 'Trascrivi le risposte',
   'media.transcribe.notConfigured': 'Configura prima la trascrizione nelle impostazioni IA.',
   'media.transcribe.confirmTitle': 'Inviare per la trascrizione?',
@@ -877,6 +878,8 @@ const it: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribe': 'Trascrivi le mie risposte dopo',
   'assistant.video.transcribeLocal': 'La conversione in testo avviene su questo dispositivo dopo il salvataggio.',
   'assistant.video.transcribeRemote': 'Dopo il salvataggio, le tue risposte vengono inviate decifrate a {host} per essere convertite in testo.',
+  'assistant.video.spokenLanguage': 'Lingua parlata',
+  'assistant.video.autoDetect': 'Rilevamento automatico',
 };
 
 export default it;
