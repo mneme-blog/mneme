@@ -78,10 +78,14 @@ Implemented in `crypto/aead.ts` (`encrypt` / `decrypt`, both taking an optional 
 stores this whole blob as opaque `BYTEA` and its deepest cryptographic insight is `len >= 1`.
 
 **A note on AAD (associated data):** the envelope *supports* authenticated-but-not-encrypted context,
-and **media chunks use it** — each chunk binds its media id and chunk index, so a relay can't shuffle
-or splice chunks undetected. **Entry bodies do not yet bind their framing** (`entry_id` / `deleted` /
-`lww_clock`) into the AEAD; that's a tracked hardening item — see [SECURITY.md](./SECURITY.md) §6.1.
-Honesty over polish.
+and it is used in two places. **Media chunks** bind their media id and chunk index, so a relay can't
+shuffle or splice chunks undetected. **Record bodies** — entries, templates, journals, interview
+types, AI settings — bind the cleartext wire id they are stored under (`mneme:record:v1:<entry_id>`),
+so the relay cannot hand one record's ciphertext back under another record's id. Blobs written before
+that binding existed carry no AAD and are still accepted (they open via a fallback); every client
+re-pushes its records once on upgrade (local DB migration v9) so those legacy blobs are replaced.
+Still **not** bound: `deleted` and `lww_clock`, which the relay can therefore still flip or rewind —
+see [SECURITY.md](./SECURITY.md) §6.7. Honesty over polish.
 
 ---
 
@@ -199,7 +203,7 @@ exfiltrated while the old phrase was valid — encryption is not time travel.
 ## 8. Threats, caveats, and the honest asterisks
 
 This document describes the mechanism. For the adversary model, the accepted metadata leaks, and the
-known gaps (browser-delivered-code risk, no CSP yet, AAD not binding entry framing, wall-clock
+known gaps (browser-delivered-code risk, no freshness guarantee, wall-clock
 `lww_clock`, etc.), read [SECURITY.md](./SECURITY.md) — it is deliberately not written to flatter the
 project. For where the code lives and how the pieces connect, see
 [ARCHITECTURE.md](./ARCHITECTURE.md).

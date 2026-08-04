@@ -144,7 +144,25 @@ export const MIGRATIONS: string[] = [
   UPDATE journals SET dirty = 1 WHERE deleted = 0 AND pristine = 0;
   CREATE INDEX journals_dirty ON journals(dirty) WHERE dirty = 1;
   `,
-  // ── v9 (FUTURE) — FTS5 full-text index (§3 mandates FTS5 for search) ──
+  // ── v9 — re-push every record once, so its ciphertext carries the id binding ──
+  // Record bodies are now encrypted with the wire id as AAD (sync/engine.ts), so
+  // the relay can no longer hand back one record's ciphertext under another
+  // record's id. Blobs written before that change carry no binding and stay
+  // relabellable for as long as they sit on the relay, and nothing would ever
+  // rewrite them: a record is only re-pushed when it is edited.
+  //
+  // So mark everything dirty once. The outbox re-encrypts and re-pushes each
+  // record on the next sync — same content, same clock, now bound — and LWW
+  // makes that a no-op for every other device. Pristine seeds are left alone:
+  // they are deliberately local-only until first edited, and pushing them here
+  // would put built-in templates and sample notebooks on the relay for everyone.
+  `
+  UPDATE entries SET dirty = 1;
+  UPDATE templates SET dirty = 1 WHERE pristine = 0;
+  UPDATE interview_types SET dirty = 1 WHERE pristine = 0;
+  UPDATE journals SET dirty = 1 WHERE pristine = 0 AND record_id IS NOT NULL;
+  `,
+  // ── v10 (FUTURE) — FTS5 full-text index (§3 mandates FTS5 for search) ──
   // The published wa-sqlite 1.0.0 wasm builds are compiled WITHOUT the FTS5
   // module, so creating this table fails today ("no such module: fts5"). When we
   // ship an FTS5-enabled wasm, append the migration below as a forward-only step

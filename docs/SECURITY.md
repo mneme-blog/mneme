@@ -356,7 +356,15 @@ whether you are handed one at all. A malicious relay can:
   should exist;
 - **drop or reorder** records, or simply stop answering.
 
-This is inherent to a dumb E2EE blob relay and is **accepted**, not solved. Detecting it would need
+What it can **no longer** do is serve one record's ciphertext under a *different* record's id. Each
+record body is encrypted with its cleartext wire id as AAD (`mneme:record:v1:<entry_id>`), so a
+relabelled blob fails its tag: the relay cannot overwrite entry B with entry A's content, duplicate an
+entry across ids, or resurrect a tombstoned record under a new id. (Blobs written before this binding
+carry no AAD and stay relabellable until the owning device re-pushes them, which every client does
+once on upgrade — local DB migration v9.) `deleted` and `lww_clock` are still cleartext and still
+unauthenticated, which is what leaves the rollback and re-tombstone moves above.
+
+The rest is inherent to a dumb E2EE blob relay and is **accepted**, not solved. Detecting it would need
 the client to authenticate the *set* of records — a signed manifest, a hash chain, or a Merkle root
 over the oplog carried inside the ciphertext — which is real design work and not currently built.
 
