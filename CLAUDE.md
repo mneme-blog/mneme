@@ -621,10 +621,11 @@ Plain-English deep-dives live in [`docs/`](docs/): `ARCHITECTURE.md` (diagrams),
 (E2EE model + attack vectors), `API.md` (relay endpoints), `CONTRIBUTING.md`. This §0 stays the
 quick operating guide; `docs/` expands on it; §1–§12 below remain the binding decisions.
 
-Two security audits sit at the repo root and are kept verbatim as a record: `Fable-Findings.md`
-(2026-07-13, 18 findings, all closed) and `Opus-Findings.md` (2026-08-05, 12 findings — H1 the
-unauthenticated whisper proxy, M1 missing relay security headers, M2 unbound record ciphertexts, M3
-unthrottled admin token, plus six Low and two accepted Info items).
+Both security audits live in **`SECURITY-AUDITS.md`** at the repo root, newest first, kept verbatim
+as a record (findings are never edited after the fact — what changed is appended in bold): the
+second pass (2026-08-05, 12 findings — H1 the unauthenticated whisper proxy, M1 missing relay
+security headers, M2 unbound record ciphertexts, M3 unthrottled admin token, plus six Low and two
+accepted Info items) and the first (2026-07-13, 18 findings, issues #40–#57). All closed.
 
 ### Lint / format (per §11)
 TS: strict mode (eslint + prettier). Go: `gofmt` / `golangci-lint`. Rust: `clippy`.
