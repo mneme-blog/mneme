@@ -159,11 +159,15 @@ unsafe_inputs() {
 }
 
 warn_unsafe_inputs() {
-  local unsafe
+  local unsafe path
   unsafe=$(unsafe_inputs)
   [[ -n $unsafe ]] || return 0
   log "WARNING: this service runs as root but executes files that root does not exclusively own:"
-  log "$(printf '  %s\n' $unsafe)"
+  # One log line per path, read rather than word-split: a path may contain
+  # spaces, and the dashboard tails this log line by line anyway.
+  while IFS= read -r path; do
+    log "  $path"
+  done <<<"$unsafe"
   log "anyone who can write those paths can run code as root through an update. Fix with:"
   log "  sudo chown -R root:root $REPO_DIR/deploy && sudo chmod -R go-w $REPO_DIR/deploy"
   log "(see docs/SECURITY.md §6.17)"
