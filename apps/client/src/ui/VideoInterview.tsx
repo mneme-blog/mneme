@@ -80,14 +80,14 @@ export function VideoInterviewSheet({
   /** Preselected start — skips the pick phase. */
   initial?: InterviewType;
 }): VNode | null {
-  const { entries, journals, interviewTypes, aiSettings, createEntry, updateEntry, addMedia, mediaBlob, attachTranscript } = useAppData();
+  const { entries, journals, interviewTypes, aiSettings, createEntry, updateEntry, addMedia, mediaBlob, attachTranscript, transcribeToken } = useAppData();
 
   const [phase, setPhase] = useState<Phase>('pick');
   // Opt-in: turn the answers into text right after saving. Off by default; the
   // toggle row itself carries the destination disclosure when the configured
   // transcription server is not on this device (on phones it practically never
   // is), so consent lands at the moment of choice.
-  const trCfg = transcriptionConfig(aiSettings);
+  const trCfg = transcriptionConfig(aiSettings, transcribeToken);
   const [autoTranscribe, setAutoTranscribe] = useState(false);
   // The language the answers will be SPOKEN in — not the app's UI language,
   // which is what this used to assume. '' is auto-detect. Until the user has

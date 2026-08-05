@@ -523,28 +523,65 @@ fully supported: leave `UPDATE_SPOOL_DIR` unset and update on the host by hand.
 Note also that a server-side rollback does **not** roll back client-side state: local device databases
 migrate forward-only too, so a device that has opened the newer client stays migrated (§11).
 
-### 6.18 The bundled speech-to-text service — ⚠️ Accepted (unauthenticated compute, allowlisted)
+### 6.18 The bundled speech-to-text service — ✅ Mitigated (authorized + quota'd)
 The deployment ships a whisper server (the `whisper` compose service) and Caddy proxies it at
 `/whisper` so the client's default transcription endpoint is same-origin — which is what makes it
-work with no CSP or CORS configuration. **That route is unauthenticated, and it cannot be otherwise:**
-the relay's device auth belongs to the relay, and the client posts audio here directly (browser →
-whisper, never through the relay — §2). Nothing about E2EE changes: the recording is decrypted on the
+work with no CSP or CORS configuration. Nothing about E2EE changes: the recording is decrypted on the
 device that owns it, sent to a server the deployment itself runs, and the transcript comes back into
-the encrypted entry body. But it means the origin exposes one endpoint that is **not** owner-scoped,
-throttled, or quota'd.
+the encrypted entry body (§2).
 
-What is done about it: the proxy forwards only the three endpoints the app calls — `POST
-/v1/audio/transcriptions` (with a 512 MB body cap), `GET /v1/models`, and `POST /v1/models/{id}`
-**restricted to the single model the deployment configures** (`WHISPER_MODEL`). Everything else the
-image serves — model deletion, text-to-speech, its own UI — is a 404. Without that allowlist, the
-install endpoint alone is "fetch any Hugging Face repository onto my server" for any passer-by, and
-the transcription endpoint is a CPU-exhaustion primitive with no token bucket in front of it.
+**The relay cannot carry that audio**, and this is the constraint that shapes the whole design:
+routing recordings through the relay process would put journal plaintext through the one component
+the architecture keeps blind. So the relay does not carry it — it **authorizes** it:
 
-What remains, and is accepted: **anyone who can reach the site can spend transcription CPU.** On the
-intended LAN deployment that is the same trust boundary as everything else on the origin. A site
-reachable from the internet should put authentication in front of `/whisper`, or drop the `whisper`
-and `whisper-model` services and point the client's transcription setting at a server of its own —
-the feature degrades cleanly to "off" when the endpoint is absent.
+```
+browser ──POST /whisper/v1/audio/transcriptions (audio + Bearer <vault session>)──► Caddy
+                                                                                     │
+                                 ┌── GET /v1/transcribe/authorize (HEADERS ONLY) ─────┤
+                                 │   ── 204 · 401 · 429 ─────────────────────────────►
+                               relay                                                  │
+                          (never sees a byte of audio)                                ▼
+                                                                            whisper:8000
+                                                                   (Authorization stripped)
+```
+
+Caddy's `forward_auth` rewrites the authorization sub-request to a **bodyless GET**, so the relay
+receives the session token and the declared upload size and nothing else. On anything but a 2xx the
+client gets the relay's answer and the speech container is never contacted at all.
+
+What that gives:
+
+- **Only signed-in devices.** The client attaches its relay session token, and *only* for the bundled
+  endpoint — the rule is one predicate (`isBundledTranscriptionUrl`: the stored URL is the path form
+  `/whisper`, which cannot name another host). A transcription server the **user** configured, at any
+  address including loopback, never receives the vault session token; it keeps using its own key.
+- **A per-vault daily quota**, in units that say what they count: `TRANSCRIBE_QUOTA_REQUESTS_PER_DAY`
+  (recordings, default **50**) and `TRANSCRIBE_QUOTA_MEGABYTES_PER_DAY` (audio, default unlimited).
+  The relay logs the effective policy at startup, so it is readable rather than inferred.
+- **Burst control**, `TRANSCRIBE_RATE_REQUESTS_PER_MINUTE` / `_BURST_REQUESTS` (default 6/6) per
+  vault — what actually bounds how much CPU one signed-in device can occupy.
+- **A hard upload cap** on the wire, `TRANSCRIBE_MAX_UPLOAD_MEGABYTES` (default 512), enforced by
+  Caddy. The megabyte quota above is charged from a client-declared size and is therefore advisory;
+  this one is not.
+- **A per-IP bucket on failures**, so an unauthenticated caller cannot make the relay do a session
+  lookup per request forever.
+- **An endpoint allowlist**, unchanged: only `POST /v1/audio/transcriptions`, `GET /v1/models` and
+  `POST /v1/models/{WHISPER_MODEL}` are proxied. The rest of the image's API — model deletion,
+  text-to-speech, its own UI — is a 404, and the install endpoint is pinned to one model because an
+  open one is "fetch any Hugging Face repository onto my server".
+- **No secrets to the speech container.** Caddy strips `Authorization` before the upstream hop: the
+  vault session token is for the relay's gate, and the whisper container has no business seeing it.
+
+Deliberate residuals, so they are choices rather than surprises:
+
+- **Quota counters are in memory.** A relay restart forgives the day's usage. The alternative —
+  persisting them — would have the relay write down how often each vault transcribes, a per-owner
+  behavioural record it otherwise has no reason to keep, and §3's accepted-leak list is deliberately
+  short. Bounding runaway use does not require billing-grade accounting.
+- **The gate fails closed.** If the relay is down, transcription stops. That is the correct direction.
+- **In `pnpm dev` there is no Caddy**, so the vite proxy forwards to a local whisper without a gate.
+  Dev only; the production path is the one described here.
+- **A signed-in user can still spend their allowance.** This bounds abuse, not use.
 
 ---
 

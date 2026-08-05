@@ -865,6 +865,10 @@ const es: Partial<Record<MessageKey, string>> = {
   'media.transcribe.modelMissing':
     'El servidor de transcripción aún no tiene modelo. En una instalación nueva lo está descargando, lo que tarda unos minutos. Si no, abre los ajustes de IA y usa «Comprobar servidor».',
   'media.transcribe.answers': 'Transcribir respuestas',
+  'media.transcribe.signedOut':
+    'Este dispositivo no ha iniciado sesión en el servidor de sincronización, que debe autorizar las transcripciones. Suele reconectarse solo: inténtalo de nuevo en un momento.',
+  'media.transcribe.limitReached':
+    'Esta caja fuerte ha alcanzado su límite de transcripción de hoy. Se reinicia a medianoche UTC; el operador puede aumentarlo.',
   'media.transcribe.notConfigured': 'Configura primero la transcripción en los ajustes de IA.',
   'media.transcribe.confirmTitle': '¿Enviar para transcribir?',
   'media.transcribe.confirmBody': 'Esta grabación sale de este dispositivo descifrada y se envía a {host} para convertirla en texto. La transcripción se guarda después cifrada de extremo a extremo, como el resto de la entrada.',

@@ -119,6 +119,14 @@ export const media = {
   // bundled server downloads its model on the very first start.
   'media.transcribe.modelMissing':
     'The transcription server has no model yet. On a new install it is still downloading one, which takes a few minutes. Otherwise open the AI settings and use "Check server".',
+  // The relay gates the bundled transcription server (it authorizes the request
+  // without ever seeing the audio — docs/SECURITY.md §6.18). Its two refusals
+  // are worth their own words: neither is "the server is broken", and both are
+  // things the person can act on.
+  'media.transcribe.signedOut':
+    'This device is not signed in to the sync server, which has to approve transcriptions. It usually reconnects by itself — try again in a moment.',
+  'media.transcribe.limitReached':
+    'This vault has reached its transcription limit for today. It resets at midnight UTC; the operator can raise it.',
   'media.transcribe.answers': 'Transcribe answers',
   'media.transcribe.notConfigured': 'Set up transcription in the AI settings first.',
   // Per-use disclosure before any decrypted audio leaves the device (shown only

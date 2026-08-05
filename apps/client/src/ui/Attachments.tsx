@@ -193,9 +193,13 @@ export function TranscriptStrip({
       setError(
         err.hint === 'auth'
           ? t('assistant.error.keyRejectedShort')
-          : err.hint === 'model'
-            ? t('media.transcribe.modelMissing')
-            : t('media.transcribe.failed', { message: err.message }),
+          : err.hint === 'session'
+            ? t('media.transcribe.signedOut')
+            : err.hint === 'quota'
+              ? t('media.transcribe.limitReached')
+              : err.hint === 'model'
+                ? t('media.transcribe.modelMissing')
+                : t('media.transcribe.failed', { message: err.message }),
       );
     } finally {
       setBusy(false);
@@ -551,12 +555,12 @@ export function ImageGallery({
  * recordings are inline mediaAttachment nodes and never reach this list.
  */
 export function AttachmentList({ entry }: { entry: JournalEntry }): VNode | null {
-  const { mediaBlob, updateEntry, removeMedia, aiSettings } = useAppData();
+  const { mediaBlob, updateEntry, removeMedia, aiSettings, transcribeToken } = useAppData();
   const attachments = entry.attachments ?? [];
   if (!attachments.length) return null;
   // Legacy attachments transcribe too; the text lands in the attachments array
   // (their storage), which travels inside the encrypted entry like bodyJson.
-  const cfg = transcriptionConfig(aiSettings);
+  const cfg = transcriptionConfig(aiSettings, transcribeToken);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, margin: '18px 0 6px' }}>
       {attachments.map((att) => (

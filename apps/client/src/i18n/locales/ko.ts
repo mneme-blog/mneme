@@ -799,6 +799,10 @@ const ko: Partial<Record<MessageKey, string>> = {
   'media.transcribe.modelMissing':
     '전사 서버에 아직 모델이 없습니다. 새로 설치한 경우 지금 내려받는 중이며 몇 분 걸립니다. 그렇지 않다면 AI 설정에서 "서버 확인"을 사용하세요.',
   'media.transcribe.answers': '답변 전사하기',
+  'media.transcribe.signedOut':
+    '이 기기가 동기화 서버에 로그인되어 있지 않습니다. 전사는 서버의 승인이 필요합니다. 보통 자동으로 다시 연결되니 잠시 후 다시 시도해 주세요.',
+  'media.transcribe.limitReached':
+    '이 보관함의 오늘 전사 한도에 도달했습니다. 한도는 UTC 자정에 초기화되며, 운영자가 늘릴 수 있습니다.',
   'media.transcribe.notConfigured': '먼저 AI 설정에서 전사를 설정하세요.',
   'media.transcribe.confirmTitle': '전사를 위해 전송할까요?',
   'media.transcribe.confirmBody': '이 녹음은 복호화된 상태로 이 기기를 떠나 {host}(으)로 전송되어 텍스트로 변환됩니다. 전사 텍스트는 이후 항목의 다른 내용과 마찬가지로 종단간 암호화되어 저장됩니다.',

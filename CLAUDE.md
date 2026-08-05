@@ -395,13 +395,23 @@ speaking the OpenAI `/v1/audio/transcriptions` shape. **The deployment bundles o
 container (`whisper` service in both compose files — all-MIT stack) proxied **same-origin** at
 `/whisper` (Caddy `handle_path` inside the
 `/mneme` block; vite dev proxy mirrors it), and the client **defaults to it** —
-that proxy is **unauthenticated and cannot be otherwise** (the browser posts audio to it directly, so
-the relay's device auth does not apply), which is why it forwards an **allowlist** and 404s the rest
-of the image's API (second-audit finding H1): `POST /v1/audio/transcriptions` (512 MB body cap),
-`GET /v1/models`, and `POST /v1/models/{id}` **pinned to `WHISPER_MODEL`** — an open install endpoint
-is "pull any Hugging Face repo onto my server" for any passer-by. Keep `WHISPER_MODEL` on the `web`
-container in step with the `whisper-model` service. It remains open *compute* on the network by
-design (docs/SECURITY.md §6.18) —
+that proxy **cannot carry the relay's device auth** (the browser posts audio to it directly, and
+routing it through the relay would put plaintext through the one blind component), so it is gated two
+ways (second-audit finding H1 + its follow-up). **Allowlist:** only `POST /v1/audio/transcriptions`
+(body cap `TRANSCRIBE_MAX_UPLOAD_MEGABYTES`, default 512), `GET /v1/models`, and `POST
+/v1/models/{id}` **pinned to `WHISPER_MODEL`** — an open install endpoint is "pull any Hugging Face
+repo onto my server" for any passer-by; keep `WHISPER_MODEL` on the `web` container in step with the
+`whisper-model` service. **Authorization:** Caddy `forward_auth` → `GET /v1/transcribe/authorize`
+(`internal/api/transcribe.go`), which rewrites the sub-request to a **bodyless GET** — so the relay
+sees the session token and the declared size, never audio — and answers 204/401/429. The client
+attaches its relay session token **only** for the bundled endpoint, decided by one predicate
+(`isBundledTranscriptionUrl`: the stored URL is the path form, which cannot name another host); a
+user-configured server, loopback included, never receives it. Per-vault bounds are in-memory and
+unit-named (`TRANSCRIBE_QUOTA_REQUESTS_PER_DAY` = recordings, default 50;
+`TRANSCRIBE_QUOTA_MEGABYTES_PER_DAY`; `TRANSCRIBE_RATE_REQUESTS_PER_MINUTE`/`_BURST_REQUESTS`), the
+relay logs the effective policy at startup, and Caddy strips `Authorization` before the whisper hop.
+Counters are deliberately not persisted — that would make the relay record how often a vault
+transcribes (docs/SECURITY.md §6.18) —
 `defaultTranscriptionSettings()` stores the relative path `/whisper` (resolved against the app
 origin at use; `bundledWhisperUrl()` respects a path-form `VITE_RELAY_URL`), an absent
 `AiSettings.transcription` field falls back to that default, and clearing the URL stores `''` = off.

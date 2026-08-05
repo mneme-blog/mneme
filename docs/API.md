@@ -30,6 +30,7 @@ the auth model.
 | GET | `/v1/media/{id}/chunks/{n}` | ✅ | download one encrypted media chunk |
 | DELETE | `/v1/media/{id}` | ✅ | delete one media object (index + chunks) |
 | DELETE | `/v1/account` | ✅ | wipe the owner entirely (phrase rotation) |
+| GET | `/v1/transcribe/authorize` | ✅ | may this device use the bundled speech-to-text server? (asked by the proxy; never carries audio) |
 | GET | `/admin` | – | admin dashboard page (404 unless `ADMIN_TOKEN` is set) |
 | GET | `/admin/stats` | 🔑 | aggregate stats JSON (`Bearer <ADMIN_TOKEN>`) |
 | GET | `/admin/version` | 🔑 | running build vs. latest GitHub release |
@@ -59,6 +60,7 @@ Errors are `{ "error": "message" }` with an appropriate status (400/401/404/500)
 | Request body | 32 MiB | – | any JSON endpoint |
 | Media chunk | 2 MiB | – | `PUT /v1/media/{id}/chunks/{n}` |
 | Record id | 1–128 chars of `[A-Za-z0-9_.:-]` | – | `entry_id` on `sync/push`, `reminder_id` on `PUT /v1/reminders` → `400` |
+| Transcriptions | 50 recordings/vault/day, 6/min | `TRANSCRIBE_QUOTA_REQUESTS_PER_DAY`, `TRANSCRIBE_QUOTA_MEGABYTES_PER_DAY`, `TRANSCRIBE_RATE_REQUESTS_PER_MINUTE`, `TRANSCRIBE_RATE_BURST_REQUESTS` | `GET /v1/transcribe/authorize` → `429` |
 
 The three auth endpoints are unauthenticated and are the only way in, so they are throttled per
 client IP (token bucket, in-process — a distributed attacker is the reverse proxy's job). A normal
@@ -248,6 +250,38 @@ brand-new owner, and only then calls this endpoint with the *old* session token.
 phrase still passes TOFU registration (it's just a keypair) but opens an empty vault.
 
 ---
+
+
+## Transcription gate
+
+### `GET /v1/transcribe/authorize`
+
+Answers whether the calling device may use the deployment's bundled speech-to-text service. **This
+endpoint never carries audio.** The browser posts the recording straight to the speech server; the
+reverse proxy asks this endpoint first (Caddy `forward_auth`, which rewrites the sub-request to a
+bodyless `GET`) and forwards to the speech server only on a 2xx. Routing the recording through the
+relay instead would put journal plaintext through it, which the architecture forbids (CLAUDE.md §2).
+
+Requires the ordinary device session (`Authorization: Bearer <session token>`). The client attaches it
+only for the deployment's own bundled endpoint — never for a transcription server the user configured.
+
+Request headers, set by the proxy:
+
+| Header | Meaning |
+|---|---|
+| `X-Mneme-Transcribe-Kind` | `transcribe` (charged), `models` or `install` (authenticated, free) |
+| `X-Mneme-Upload-Bytes` | the original request's `Content-Length`, for the megabyte quota |
+
+Responses:
+
+| Status | Meaning |
+|---|---|
+| `204` | go ahead |
+| `401` | no valid session — the client reports "not signed in", not "bad key" |
+| `429` | out of daily allowance, or asking too fast; carries `Retry-After` |
+
+Bodies are deliberately bare: they say nothing about the vault, its usage, or whether it exists.
+See docs/SECURITY.md §6.18 for the full design and the accepted residuals.
 
 ## Admin
 

@@ -153,6 +153,11 @@ Mneme has an AI assistant that can both **read** and **write** in your journal:
   Assistant → Transcription has a **Check server** button that says whether it is reachable and has
   its model ready — and offers to download the model if it doesn't. Before a recording is sent
   anywhere other than your own device, you get a confirmation naming exactly where it goes.
+  That bundled server is not left open to whoever can reach the site: every transcription is
+  authorized by the relay first (which never sees the audio — only whether your device is signed
+  in), with a per-vault daily allowance the operator configures. Defaults to 50 recordings a day;
+  see `TRANSCRIBE_QUOTA_REQUESTS_PER_DAY` in `.env.prod.example` and the relay's startup log, which
+  prints the policy in force.
 
 Here's the important part. The AI feature is **never** routed through the Mneme server — requests go
 straight from your device to the model. You choose the model, and **the recommended choice is a

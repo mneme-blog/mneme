@@ -20,6 +20,11 @@
 //    dropped, and coercion round-trips it.
 //  - the CSP: loopback whisper servers on any port are reachable in the
 //    production policy; anything else still needs CSP_CONNECT_EXTRA.
+//  - the relay gate: the bundled server is authorized by the relay, so requests
+//    to it carry the vault session token — and requests to a server the USER
+//    configured must never carry it, whatever its address. That rule lives in
+//    one predicate; this pins it, along with the two refusals the gate can
+//    return (401 → 'session', 429 → 'quota').
 //
 // Run: pnpm --filter client exec tsx scripts/transcribe-repro.ts
 import {
@@ -33,6 +38,7 @@ import {
   transcriptionInstallEndpoint,
   transcriptionModelsEndpoint,
   transcriptionLocal,
+  isBundledTranscriptionUrl,
   languageName,
   SPOKEN_LANGUAGES,
 } from '../src/ai/transcribe';
@@ -88,6 +94,26 @@ try {
   check('absent field → bundled default on', bundled !== null && bundled.baseUrl.startsWith('https://mneme.example/'));
   check('bundled default on a LAN host is NOT local (phones!)', bundled !== null && !transcriptionLocal(bundled));
   check('cleared URL still means off', transcriptionConfig(settings({ transcription: { baseUrl: '', apiKey: '', model: '' } })) === null);
+
+  // ── the relay session token goes to the bundled server and NOWHERE else ──
+  // The whole point of the path form is that it cannot name another host, which
+  // is why it is the test for "may this request carry the vault's session".
+  const token = (): string => 'session-token';
+  check('path form is the bundled endpoint', isBundledTranscriptionUrl('/whisper'));
+  check('absolute URL is never bundled — even on this origin',
+    !isBundledTranscriptionUrl('https://mneme.example/whisper'));
+  check('LAN address is not bundled', !isBundledTranscriptionUrl('http://192.168.1.9:8000'));
+
+  const gated = transcriptionConfig(settings({ transcription: undefined }), token);
+  check('bundled config carries the relay token', gated?.relayToken?.() === 'session-token');
+  const own = transcriptionConfig(
+    settings({ transcription: { baseUrl: 'https://whisper.example', apiKey: 'k', model: '' } }), token);
+  check('a user-configured server never gets the vault token', own !== null && own.relayToken === undefined);
+  const loopback = transcriptionConfig(
+    settings({ transcription: { baseUrl: 'http://localhost:8000', apiKey: '', model: '' } }), token);
+  check('not even a loopback server gets the vault token', loopback !== null && loopback.relayToken === undefined);
+  check('no token available → bundled config has none',
+    transcriptionConfig(settings({ transcription: undefined }))?.relayToken === undefined);
 } finally {
   delete (globalThis as Record<string, unknown>).location;
 }
@@ -138,12 +164,44 @@ try {
 
   await transcribe({ ...goodCfg, apiKey: '' }, new Blob(['x'], { type: 'audio/mpeg' }), { language: 'de' });
   check('no auth header without a key', captured!.auth === undefined);
+
   check('mp3 mime → .mp3 filename', captured!.file.name === 'recording.mp3');
   check('language pinned when the caller knows it', captured!.language === 'de');
+  // The relay's gate authenticates with the vault session instead of a key.
+  const gatedCfg = { ...goodCfg, apiKey: '', relayToken: (): string => 'session-token' };
+  await transcribe(gatedCfg, new Blob(['x'], { type: 'audio/webm' }));
+  check('bundled requests authenticate with the session token', captured!.auth === 'Bearer session-token');
+  // Read per request, not captured once: the session is replaced on
+  // re-authentication and a stale token would 401 an otherwise fine device.
+  let live = 'first';
+  await transcribe({ ...goodCfg, apiKey: '', relayToken: (): string => live }, new Blob(['x'], { type: 'audio/webm' }));
+  check('token read at request time (1/2)', captured!.auth === 'Bearer first');
+  live = 'second';
+  await transcribe({ ...goodCfg, apiKey: '', relayToken: (): string => live }, new Blob(['x'], { type: 'audio/webm' }));
+  check('token read at request time (2/2)', captured!.auth === 'Bearer second');
 
   respond = () => new Response('nope', { status: 401 });
   const authErr = await transcribe(goodCfg, new Blob(['x'])).then(() => null, (e: unknown) => e);
   check('401 → AiError auth', authErr instanceof AiError && authErr.hint === 'auth');
+
+  // Behind the relay's gate the same status means something else entirely: the
+  // vault session expired. "Your API key was rejected" would be a lie, and the
+  // bundled server has no key to reject.
+  const gated401 = await transcribe(gatedCfg, new Blob(['x'])).then(() => null, (e: unknown) => e);
+  check('401 behind the gate → AiError session', gated401 instanceof AiError && gated401.hint === 'session');
+
+  respond = () => new Response('{"error":"daily transcription limit reached for this vault"}', { status: 429 });
+  const quotaErr = await transcribe(gatedCfg, new Blob(['x'])).then(() => null, (e: unknown) => e);
+  check('429 → AiError quota', quotaErr instanceof AiError && quotaErr.hint === 'quota');
+  const quotaCheck = await checkTranscription(gatedCfg);
+  check('429 on the model listing → quota verdict', !quotaCheck.ok && quotaCheck.reason === 'quota');
+  respond = () => new Response('nope', { status: 401 });
+  const sessionCheck = await checkTranscription(gatedCfg);
+  check('401 on the model listing behind the gate → session verdict',
+    !sessionCheck.ok && sessionCheck.reason === 'session');
+  const keyCheck = await checkTranscription(goodCfg);
+  check('401 on a user-configured server stays an auth verdict',
+    !keyCheck.ok && keyCheck.reason === 'auth');
 
   respond = () => new Response('boom', { status: 500 });
   const netErr = await transcribe(goodCfg, new Blob(['x'])).then(() => null, (e: unknown) => e);
