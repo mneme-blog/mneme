@@ -141,9 +141,13 @@ export function VideoInterviewCardView({
       setTranscribeError(
         err.hint === 'auth'
           ? t('assistant.error.keyRejectedShort')
-          : err.hint === 'model'
-            ? t('media.transcribe.modelMissing')
-            : t('media.transcribe.failed', { message: err.message }),
+          : err.hint === 'session'
+            ? t('media.transcribe.signedOut')
+            : err.hint === 'quota'
+              ? t('media.transcribe.limitReached')
+              : err.hint === 'model'
+                ? t('media.transcribe.modelMissing')
+                : t('media.transcribe.failed', { message: err.message }),
       );
     } finally {
       setTranscribing(false);

@@ -851,6 +851,10 @@ const nl: Partial<Record<MessageKey, string>> = {
   'media.transcribe.modelMissing':
     'De transcriptieserver heeft nog geen model. Bij een nieuwe installatie wordt er nu een gedownload, wat een paar minuten duurt. Open anders de AI-instellingen en gebruik "Server controleren".',
   'media.transcribe.answers': 'Antwoorden transcriberen',
+  'media.transcribe.signedOut':
+    'Dit apparaat is niet aangemeld bij de synchronisatieserver, die transcripties moet goedkeuren. Meestal maakt het vanzelf opnieuw verbinding — probeer het zo weer.',
+  'media.transcribe.limitReached':
+    'Deze kluis heeft haar transcriptielimiet voor vandaag bereikt. Die wordt om middernacht UTC gereset; de beheerder kan hem verhogen.',
   'media.transcribe.notConfigured': 'Stel eerst transcriptie in bij de AI-instellingen.',
   'media.transcribe.confirmTitle': 'Versturen voor transcriptie?',
   'media.transcribe.confirmBody': 'Deze opname verlaat dit apparaat ontsleuteld en wordt naar {host} gestuurd om in tekst omgezet te worden. Het transcript wordt daarna end-to-end versleuteld opgeslagen, net als de rest van de notitie.',

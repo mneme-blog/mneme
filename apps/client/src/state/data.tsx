@@ -47,6 +47,17 @@ interface AppData {
   // Which factor seals the seed on this device — drives the unlock view and the
   // Preferences "Device unlock" row. null while unresolved or when no seal exists.
   vaultMethod: 'passphrase' | 'securityKey' | null;
+  /**
+   * The vault's current relay session token, or null when not signed in.
+   *
+   * A getter, not a value: the session lives in a ref and is replaced on
+   * re-authentication, so anything that captured a token at render time would
+   * go stale. Narrow on purpose — it exists for the transcription gate
+   * (ai/transcribe.ts), where the relay authorizes a request whose audio it
+   * must never see, and it is attached only to the bundled same-origin
+   * endpoint. Nothing else should reach for this.
+   */
+  transcribeToken: () => string | null;
   // The vault's opaque owner id while unlocked (base64url(sha256(ownerPub)) —
   // already cleartext on the relay, so showing it leaks nothing). Its first 8
   // chars match the truncated vault label in the operator admin dashboard.
@@ -1719,6 +1730,9 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
     [interviewTypes, locale],
   );
 
-  const value: AppData = { status, hasVault, vaultMethod, ownerId, pendingApproval, approvalHint, retryApproval, pendingCount, pendingJournalIds, syncTotal, saving, bootstrapping, entries: liveEntries, journals: journalsWithCounts, templates: localizedTemplates, interviewTypes: localizedInterviewTypes, aiSettings, saveAiSettings, signIn, unlock, unlockWithKey, setDeviceUnlock, lock, createEntry, updateEntry, attachFilm, attachTranscript, deleteEntry, newJournal, updateJournal, deleteJournal, createTemplate, updateTemplate, deleteTemplate, createInterviewType, updateInterviewType, deleteInterviewType, addMedia, removeMedia, mediaBlob, mediaThumb, rotatePhrase, deleteVault, relayUrl, setRelayUrl };
+  // Read through to the live ref every time (see the interface comment).
+  const transcribeToken = useCallback(() => session.current?.token ?? null, []);
+
+  const value: AppData = { status, hasVault, transcribeToken, vaultMethod, ownerId, pendingApproval, approvalHint, retryApproval, pendingCount, pendingJournalIds, syncTotal, saving, bootstrapping, entries: liveEntries, journals: journalsWithCounts, templates: localizedTemplates, interviewTypes: localizedInterviewTypes, aiSettings, saveAiSettings, signIn, unlock, unlockWithKey, setDeviceUnlock, lock, createEntry, updateEntry, attachFilm, attachTranscript, deleteEntry, newJournal, updateJournal, deleteJournal, createTemplate, updateTemplate, deleteTemplate, createInterviewType, updateInterviewType, deleteInterviewType, addMedia, removeMedia, mediaBlob, mediaThumb, rotatePhrase, deleteVault, relayUrl, setRelayUrl };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

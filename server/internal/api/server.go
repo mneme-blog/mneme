@@ -33,6 +33,10 @@ type Server struct {
 	// adminLimiter bounds guesses at ADMIN_TOKEN. Charged on failure only, so a
 	// dashboard holding a valid token never spends from it (see adminAuth).
 	adminLimiter *rateLimiter
+	// transcribeLimiter and transcribeQuota bound what one vault may ask of the
+	// bundled speech-to-text server (internal/api/transcribe.go).
+	transcribeLimiter *rateLimiter
+	transcribeQuota   *transcribeQuota
 }
 
 func New(st *store.Store, bl blobs.Store, cfg config.Config) *Server {
@@ -57,6 +61,10 @@ func New(st *store.Store, bl blobs.Store, cfg config.Config) *Server {
 		spool:        deploy.NewSpool(cfg.UpdateSpoolDir),
 		authLimiter:  newRateLimiter(cfg.RateLimit.AuthPerMinute, cfg.RateLimit.AuthBurst),
 		adminLimiter: newRateLimiter(cfg.RateLimit.AdminPerMinute, cfg.RateLimit.AdminBurst),
+		transcribeLimiter: newRateLimiter(
+			cfg.Transcribe.RateRequestsPerMinute, cfg.Transcribe.RateBurstRequests),
+		transcribeQuota: newTranscribeQuota(
+			cfg.Transcribe.QuotaRequestsPerDay, cfg.Transcribe.QuotaMegabytesPerDay),
 	}
 }
 
@@ -93,6 +101,10 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("GET /v1/media/{id}/chunks/{n}", s.auth(http.HandlerFunc(s.handleGetMediaChunk)))
 	mux.Handle("DELETE /v1/media/{id}", s.auth(http.HandlerFunc(s.handleDeleteMedia)))
 	mux.Handle("DELETE /v1/account", s.auth(http.HandlerFunc(s.handleDeleteAccount)))
+	// Asked by the reverse proxy (forward_auth) before it lets a recording reach
+	// the bundled speech-to-text server. Never carries audio — see transcribe.go.
+	mux.Handle("GET /v1/transcribe/authorize",
+		s.transcribeGate(s.auth(http.HandlerFunc(s.handleTranscribeAuthorize))))
 
 	// Admin (aggregate stats only; every path is a 404 unless ADMIN_TOKEN is set)
 	mux.HandleFunc("GET /admin", s.handleAdminPage)

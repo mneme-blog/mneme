@@ -871,6 +871,10 @@ const it: Partial<Record<MessageKey, string>> = {
   'media.transcribe.modelMissing':
     'Il server di trascrizione non ha ancora un modello. In una nuova installazione lo sta scaricando, cosa che richiede qualche minuto. Altrimenti apri le impostazioni IA e usa «Verifica server».',
   'media.transcribe.answers': 'Trascrivi le risposte',
+  'media.transcribe.signedOut':
+    'Questo dispositivo non è connesso al server di sincronizzazione, che deve autorizzare le trascrizioni. Di solito si riconnette da solo: riprova tra un momento.',
+  'media.transcribe.limitReached':
+    'Questa cassaforte ha raggiunto il limite di trascrizioni per oggi. Si azzera a mezzanotte UTC; l’operatore può aumentarlo.',
   'media.transcribe.notConfigured': 'Configura prima la trascrizione nelle impostazioni IA.',
   'media.transcribe.confirmTitle': 'Inviare per la trascrizione?',
   'media.transcribe.confirmBody': 'Questa registrazione lascia questo dispositivo decifrata e viene inviata a {host} per essere convertita in testo. La trascrizione viene poi salvata cifrata end-to-end come il resto della voce.',

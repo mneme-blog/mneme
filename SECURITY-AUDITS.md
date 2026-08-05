@@ -41,7 +41,7 @@ what changed is appended to each item in bold. Summary of the work:
 
 | | Finding | Resolution |
 |---|---|---|
-| H1 | Unauthenticated, unrestricted whisper proxy | Caddy forwards an allowlist (transcribe + model list + install pinned to `WHISPER_MODEL`), 512 MB body cap, everything else 404 |
+| H1 | Unauthenticated, unrestricted whisper proxy | Caddy forwards an allowlist (transcribe + model list + install pinned to `WHISPER_MODEL`), 512 MB body cap, everything else 404 — and, in follow-up work, the route is now **authenticated**: Caddy `forward_auth` → the relay, per-vault daily quota + rate limit, `Authorization` stripped before the whisper hop (docs/SECURITY.md §6.18) |
 | M1 | No security headers on relay responses | `internal/api/headers.go` — nosniff / DENY / no-referrer / `default-src 'none'` everywhere, plus a hash-pinned CSP for the dashboard |
 | M2 | Record ciphertext not bound to its id | `mneme:record:v1:<entry_id>` as AAD on every record kind + a one-shot re-push (client DB v9) |
 | M3 | Admin token guesses unthrottled | Failed `/admin` authentications go through a per-IP bucket (`RATE_LIMIT_ADMIN_*`) |
@@ -102,7 +102,7 @@ blob" — cheap to close, and worth closing before the docs claim more than the 
 | Backup / restore (`internal/backup`) | **A−** | Airtight name regex, atomic writes, no keys or plaintext in archives. Minus: unbounded member reads on restore (L4). |
 | One-click updates (`internal/deploy`, `deploy/updater/`) | **A−** | Two verbs, tag validated on both sides, backup-first, health-gated, auto-rollback. Minus: root agent runs scripts out of an operator-writable checkout (L1). |
 | Update check (`api/version.go`) | **B** | Bounded reads, cached, disable-able. Minus: follows an arbitrary asset URL named by the feed (L2). |
-| Deploy / exposure (`Caddyfile`, `docker-compose.prod.yml`) | **C** | TLS, CSP, nosniff and Permissions-Policy on the SPA — and an unauthenticated, unrestricted proxy to the whisper container next to it (H1). |
+| Deploy / exposure (`Caddyfile`, `docker-compose.prod.yml`) | **C** | TLS, CSP, nosniff and Permissions-Policy on the SPA — and an unauthenticated, unrestricted proxy to the whisper container next to it (H1). *(As remediated: allowlisted, relay-authorized and quota'd — the rating stands as audited.)* |
 | Client content rendering / XSS (`editor/`, `import/`) | **A−** | Link allowlist in all four places, explicit KaTeX hardening, text-node rendering, no `eval`. |
 | AI assistant / privacy (`ai/`) | **A−** | Browser→provider only, key sealed at rest, fenced prompts, per-use disclosure for non-local transcription. |
 
@@ -115,7 +115,7 @@ Ordered by severity. Each item: what it is, where, why it matters, and the fix.
 ### 🔴 High
 
 - [x] **H1 — The bundled speech-to-text server is proxied to every client of the deployment
-  with no authentication and no restriction on which of its endpoints are reachable.** — **Fixed:** the `/whisper` route now forwards only `POST /v1/audio/transcriptions` (512 MB body cap), `GET /v1/models`, and `POST /v1/models/{id}` restricted to the deployment's `WHISPER_MODEL`; every other path is a 404. What remains — open transcription compute for anyone on the network — is written down as an accepted LAN trade in docs/SECURITY.md §6.18, with the two ways out (put auth in front of it, or drop the whisper services).
+  with no authentication and no restriction on which of its endpoints are reachable.** — **Fixed in two steps.** First the `/whisper` route was reduced to an allowlist: only `POST /v1/audio/transcriptions` (512 MB body cap), `GET /v1/models`, and `POST /v1/models/{id}` restricted to the deployment's `WHISPER_MODEL`; every other path is a 404. That left open transcription compute for anyone on the network, recorded at the time as an accepted LAN trade — and then closed rather than accepted: the route is now **authenticated** by the relay through Caddy `forward_auth`, which asks `GET /v1/transcribe/authorize` with the request's headers only (a bodyless GET), so a caller without a valid vault session never reaches the speech server and the relay still never sees a byte of audio. It carries a per-vault daily quota and rate limit (`TRANSCRIBE_*`, counters in memory, the effective policy logged at startup), the client attaches its session token to the bundled endpoint and to nothing else, and `Authorization` is stripped before the whisper hop. See docs/SECURITY.md §6.18, now ✅ rather than ⚠️.
   `deploy/web/Caddyfile:63-69` (`handle_path /whisper/*` → `reverse_proxy whisper:8000`),
   `docker-compose.prod.yml:123-181` (the `whisper` / `whisper-model` services).
   **Problem:** the relay's own API is behind device auth, per-IP throttling, a per-owner quota

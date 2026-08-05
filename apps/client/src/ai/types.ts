@@ -34,7 +34,19 @@ export interface AiProvider {
 
 // 'model': the server answered, but does not have the requested model — a
 // whisper server without the model downloaded 404s every transcription.
-export type AiErrorHint = 'auth' | 'network' | 'refused' | 'aborted' | 'model';
+// 'session': the bundled transcription server is gated by the relay, and the
+//   vault session behind that gate is missing or expired — a different problem
+//   from 'auth' (a rejected API key) and a different thing to tell the user.
+// 'quota': the relay refused because this vault has used up its transcription
+//   allowance for the day, or is asking too fast.
+export type AiErrorHint =
+  | 'auth'
+  | 'network'
+  | 'refused'
+  | 'aborted'
+  | 'model'
+  | 'session'
+  | 'quota';
 
 export class AiError extends Error {
   readonly hint: AiErrorHint;

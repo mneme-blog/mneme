@@ -853,6 +853,10 @@ const fr: Partial<Record<MessageKey, string>> = {
   'media.transcribe.modelMissing':
     'Le serveur de transcription n\'a pas encore de modèle. Sur une nouvelle installation, il est en train d\'en télécharger un, ce qui prend quelques minutes. Sinon, ouvrez les réglages IA et utilisez « Vérifier le serveur ».',
   'media.transcribe.answers': 'Transcrire les réponses',
+  'media.transcribe.signedOut':
+    'Cet appareil n’est pas connecté au serveur de synchronisation, qui doit autoriser les transcriptions. La reconnexion se fait normalement toute seule — réessayez dans un instant.',
+  'media.transcribe.limitReached':
+    'Ce coffre a atteint sa limite de transcription pour aujourd’hui. Elle se réinitialise à minuit UTC ; l’opérateur peut l’augmenter.',
   'media.transcribe.notConfigured': 'Configurez d’abord la transcription dans les réglages IA.',
   'media.transcribe.confirmTitle': 'Envoyer pour transcription ?',
   'media.transcribe.confirmBody': 'Cet enregistrement quitte cet appareil déchiffré et est envoyé à {host} pour être converti en texte. La transcription est ensuite stockée chiffrée de bout en bout comme le reste de l’entrée.',
