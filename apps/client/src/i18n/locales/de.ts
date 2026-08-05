@@ -865,6 +865,10 @@ const de: Partial<Record<MessageKey, string>> = {
   'media.transcribe.modelMissing':
     'Der Transkriptionsserver hat noch kein Modell. Bei einer neuen Installation lädt er gerade eines herunter, das dauert ein paar Minuten. Ansonsten öffne die KI-Einstellungen und nutze „Server prüfen“.',
   'media.transcribe.answers': 'Antworten transkribieren',
+  'media.transcribe.signedOut':
+    'Dieses Gerät ist nicht am Sync-Server angemeldet, der Transkriptionen freigeben muss. Normalerweise verbindet es sich von selbst wieder — versuche es gleich noch einmal.',
+  'media.transcribe.limitReached':
+    'Dieser Tresor hat sein Transkriptionslimit für heute erreicht. Es wird um Mitternacht UTC zurückgesetzt; der Betreiber kann es erhöhen.',
   'media.transcribe.notConfigured': 'Richte zuerst die Transkription in den KI-Einstellungen ein.',
   'media.transcribe.confirmTitle': 'Zur Transkription senden?',
   'media.transcribe.confirmBody': 'Diese Aufnahme verlässt dieses Gerät entschlüsselt und wird an {host} gesendet, um in Text umgewandelt zu werden. Das Transkript wird danach wie der Rest des Eintrags Ende-zu-Ende-verschlüsselt gespeichert.',

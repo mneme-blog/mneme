@@ -60,60 +60,100 @@
 		# no CSP or CORS configuration; handle_path strips the prefix, so the
 		# service sees the bare OpenAI-style /v1/audio/transcriptions path.
 		#
-		# ⚠️ SECURITY: this route is UNAUTHENTICATED — the relay's device auth
-		# does not apply to it, and it cannot: the client posts here before it
-		# has anything the whisper server could check. Everything else on this
-		# origin is owner-scoped, throttled and quota'd; this is not. So the
-		# proxy forwards only the three endpoints the app actually calls, and
-		# 404s the rest of the image's API (model deletion, text-to-speech, its
-		# own UI). Without that allowlist anyone who can reach the site could
-		# spend the host's CPU at will, delete its models, or make it download
-		# arbitrary Hugging Face repositories through the install endpoint.
+		# Two gates, because one is not enough on its own:
 		#
-		# It is still an open compute endpoint for anyone on the network. On a
-		# LAN that is the intended trade (see docs/SECURITY.md §6.18); a site
-		# reachable from the internet needs authentication in front of it, or
-		# the two whisper services removed.
+		#  1. An ALLOWLIST of the three endpoints the app actually calls. The
+		#     rest of the image's API — model deletion, text-to-speech, its own
+		#     UI — is a 404. The install endpoint is pinned to the single model
+		#     this deployment configures, because an open one is "fetch any
+		#     Hugging Face repository onto my server" for whoever asks.
+		#
+		#  2. AUTHENTICATION, via forward_auth to the relay. The relay cannot
+		#     carry the audio itself (journal plaintext must never pass through
+		#     it — docs/SECURITY.md §2), so it authorizes instead: Caddy asks
+		#     `GET /v1/transcribe/authorize` with the request's HEADERS ONLY —
+		#     forward_auth rewrites the sub-request to a bodyless GET — and
+		#     forwards to whisper only on 2xx. A caller without a valid vault
+		#     session never reaches the speech server at all, and the relay
+		#     applies the per-vault daily quota and rate limit there
+		#     (TRANSCRIBE_* in .env.prod; the relay logs the effective policy at
+		#     startup).
+		#
+		# The client's Authorization header is stripped before the request goes
+		# to whisper: it carries a vault session token, and the speech container
+		# has no business seeing it. (This site block enables no access log, so
+		# nothing writes that header to disk either; if you add a `log`
+		# directive, keep Caddy's default redaction of Authorization.)
+		#
+		# `route` blocks keep the written order — cap the body, authorize, then
+		# proxy — instead of relying on Caddy's directive ordering.
 		handle_path /whisper/* {
-			# Transcribe one recording. Audio can be long — give slow CPU
-			# transcriptions room to finish, and cap what may be uploaded.
+			# Transcribe one recording. Audio can be long, so the response
+			# timeout is generous; the body cap is what bounds a single upload.
 			@transcribe {
 				method POST
 				path /v1/audio/transcriptions
 			}
 			handle @transcribe {
-				request_body {
-					max_size 512MB
-				}
-				reverse_proxy whisper:8000 {
-					transport http {
-						response_header_timeout 600s
+				route {
+					request_body {
+						max_size {$TRANSCRIBE_MAX_UPLOAD_MEGABYTES:512}MB
+					}
+					forward_auth server:8080 {
+						uri /v1/transcribe/authorize
+						header_up X-Mneme-Transcribe-Kind transcribe
+						# The auth sub-request has no body, so the size the
+						# quota charges has to travel as its own header.
+						header_up X-Mneme-Upload-Bytes {http.request.header.Content-Length}
+					}
+					reverse_proxy whisper:8000 {
+						header_up -Authorization
+						transport http {
+							response_header_timeout 600s
+						}
 					}
 				}
 			}
 
 			# The installed-model listing, behind AI settings → "Check server".
+			# Authenticated like the rest, but free of quota: it sends no audio
+			# and starts no work, and charging it would let someone burn their
+			# day by opening a settings sheet.
 			@models {
 				method GET
 				path /v1/models /v1/models/*
 			}
 			handle @models {
-				reverse_proxy whisper:8000
+				route {
+					forward_auth server:8080 {
+						uri /v1/transcribe/authorize
+						header_up X-Mneme-Transcribe-Kind models
+					}
+					reverse_proxy whisper:8000 {
+						header_up -Authorization
+					}
+				}
 			}
 
-			# "Download model" — Speaches' install endpoint. Restricted to the
-			# model this deployment configures (WHISPER_MODEL, kept in step with
-			# the client's DEFAULT_TRANSCRIPTION_MODEL): the id is a Hugging Face
-			# repo path, so an unrestricted POST here is "fetch anything from
-			# huggingface.co onto my server" for any passer-by.
+			# "Download model" — Speaches' install endpoint, offered by the
+			# settings sheet after a check finds the model missing. Pinned to
+			# WHISPER_MODEL (keep it in step with the whisper-model service and
+			# the client's DEFAULT_TRANSCRIPTION_MODEL).
 			@install {
 				method POST
 				path /v1/models/{$WHISPER_MODEL:deepdml/faster-whisper-large-v3-turbo-ct2}
 			}
 			handle @install {
-				reverse_proxy whisper:8000 {
-					transport http {
-						response_header_timeout 7200s
+				route {
+					forward_auth server:8080 {
+						uri /v1/transcribe/authorize
+						header_up X-Mneme-Transcribe-Kind install
+					}
+					reverse_proxy whisper:8000 {
+						header_up -Authorization
+						transport http {
+							response_header_timeout 7200s
+						}
 					}
 				}
 			}

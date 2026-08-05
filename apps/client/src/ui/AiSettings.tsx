@@ -11,7 +11,13 @@ import { t } from '../i18n';
 import { useAppData } from '../state/data';
 import { makeProvider } from '../ai/provider';
 import { ollamaHostLabel, ollamaScope } from '../ai/ollamaUrl';
-import { resolveTranscriptionUrl, checkTranscription, installTranscriptionModel } from '../ai/transcribe';
+import {
+  resolveTranscriptionUrl,
+  checkTranscription,
+  installTranscriptionModel,
+  isBundledTranscriptionUrl,
+  type TranscriptionRequestConfig,
+} from '../ai/transcribe';
 import {
   toAiError,
   defaultAiSettings,
@@ -60,7 +66,7 @@ function cloudPrivacy(): VNode {
 }
 
 export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () => void }): VNode {
-  const { aiSettings, saveAiSettings } = useAppData();
+  const { aiSettings, saveAiSettings, transcribeToken } = useAppData();
   const [form, setForm] = useState<AiSettings>(() => aiSettings ?? defaultAiSettings());
   // Where the Ollama backend actually points. Recomputed as the field is typed,
   // so the badge and the copy can never claim "on this device" for a URL that
@@ -125,8 +131,19 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
   // The transcription settings as the transcribe path would use them: the
   // resolved absolute URL (the stored value may be the same-origin path form)
   // and the model default filled in, so the check tests what actually runs.
-  const trCfg = (): TranscriptionSettings | null =>
-    trResolved ? { baseUrl: trResolved, apiKey: tr.apiKey, model: tr.model.trim() || DEFAULT_TRANSCRIPTION_MODEL } : null;
+  // Built from the DRAFT settings in this sheet rather than the saved ones, so
+  // "Check server" tests what is on screen. The bundled endpoint is gated by the
+  // relay, so it carries the session token — same rule as transcriptionConfig,
+  // same single predicate.
+  const trCfg = (): TranscriptionRequestConfig | null =>
+    trResolved
+      ? {
+          baseUrl: trResolved,
+          apiKey: tr.apiKey,
+          model: tr.model.trim() || DEFAULT_TRANSCRIPTION_MODEL,
+          ...(isBundledTranscriptionUrl(tr.baseUrl) ? { relayToken: transcribeToken } : {}),
+        }
+      : null;
 
   // Checks the server without sending a recording — nothing decrypted leaves
   // the device here, so this needs no per-use disclosure.
@@ -138,6 +155,8 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
     if (res.ok) setTrCheck({ state: 'ok' });
     else if (res.reason === 'modelMissing') setTrCheck({ state: 'missing' });
     else if (res.reason === 'auth') setTrCheck({ state: 'fail', message: t('assistant.error.keyRejectedShort') });
+    else if (res.reason === 'session') setTrCheck({ state: 'fail', message: t('media.transcribe.signedOut') });
+    else if (res.reason === 'quota') setTrCheck({ state: 'fail', message: t('media.transcribe.limitReached') });
     else setTrCheck({ state: 'fail', message: t('assistant.transcribe.unreachable', { message: res.message }) });
   };
 
@@ -152,7 +171,14 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
       const err = toAiError(e);
       setTrCheck({
         state: 'fail',
-        message: err.hint === 'auth' ? t('assistant.error.keyRejectedShort') : t('assistant.transcribe.installFailed', { message: err.message }),
+        message:
+          err.hint === 'auth'
+            ? t('assistant.error.keyRejectedShort')
+            : err.hint === 'session'
+              ? t('media.transcribe.signedOut')
+              : err.hint === 'quota'
+                ? t('media.transcribe.limitReached')
+                : t('assistant.transcribe.installFailed', { message: err.message }),
       });
     }
   };

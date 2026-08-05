@@ -140,6 +140,10 @@ func runServer() error {
 	if cfg.Backup.Dir == "" {
 		log.Printf("scheduled backups disabled (BACKUP_DIR not set)")
 	}
+	// Say the transcription policy out loud. The numbers are per vault per day
+	// and the units are in the variable names, because "50" alone could as
+	// easily mean minutes of audio or words of transcript as recordings.
+	log.Printf("%s", cfg.Transcribe.Summary())
 	// Safe today — auth is a Bearer header and no cookie is ever set, so a
 	// reflected origin buys a cross-origin page nothing. Still worth saying out
 	// loud: it is the most permissive setting there is, and it is only one

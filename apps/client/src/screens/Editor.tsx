@@ -91,7 +91,7 @@ function EntryEditor({
   onWords: (n: number) => void;
   onOpenEntry: (id: string) => void;
 }): VNode {
-  const { entries, journals, updateEntry, addMedia, removeMedia, mediaBlob, aiSettings } = useAppData();
+  const { entries, journals, updateEntry, addMedia, removeMedia, mediaBlob, aiSettings, transcribeToken } = useAppData();
   const [capturing, setCapturing] = useState<'video' | 'audio' | null>(null);
   // The location composer behind the "/" Location command.
   const [locating, setLocating] = useState(false);
@@ -244,9 +244,9 @@ function EntryEditor({
       // language its session was recorded in. A lone recording stays on
       // auto-detect: an arbitrary upload has nothing to constrain it with, and
       // a wrong constraint yields confident nonsense rather than an error.
-      transcribe: transcriptionConfig(aiSettings)
+      transcribe: transcriptionConfig(aiSettings, transcribeToken)
         ? async (att: MediaAttachment, language?: string): Promise<string> => {
-            const cfg = transcriptionConfig(aiSettingsRef.current);
+            const cfg = transcriptionConfig(aiSettingsRef.current, transcribeToken);
             if (!cfg) throw new Error(t('media.transcribe.notConfigured'));
             const blob = await mediaBlob(entry.id, att);
             if (!blob) throw new Error(t('media.retryUnavailable'));
@@ -254,7 +254,7 @@ function EntryEditor({
           }
         : undefined,
       transcribeDest: (() => {
-        const cfg = transcriptionConfig(aiSettings);
+        const cfg = transcriptionConfig(aiSettings, transcribeToken);
         return cfg ? transcriptionDestination(cfg) : undefined;
       })(),
     }),

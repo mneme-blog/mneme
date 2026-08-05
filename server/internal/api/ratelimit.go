@@ -50,16 +50,8 @@ func newRateLimiter(perMinute int, burst int) *rateLimiter {
 	}
 }
 
-// allow consumes one token for key, reporting whether the request may proceed.
-// Nil-safe: a Server assembled without a limiter behaves like one where the
-// limiter is disabled, rather than panicking.
-func (l *rateLimiter) allow(key string, now time.Time) bool {
-	if l == nil || !l.enabled {
-		return true
-	}
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
+// refill brings key's bucket up to date and returns it. Caller holds the lock.
+func (l *rateLimiter) refill(key string, now time.Time) *bucket {
 	// Opportunistic GC: buckets that have had time to refill completely carry no
 	// information, so dropping them can't let anyone exceed their allowance.
 	if now.Sub(l.lastGC) > 10*time.Minute {
@@ -74,19 +66,61 @@ func (l *rateLimiter) allow(key string, now time.Time) bool {
 
 	b, ok := l.buckets[key]
 	if !ok {
-		l.buckets[key] = &bucket{tokens: l.burst - 1, last: now}
-		return true
+		b = &bucket{tokens: l.burst, last: now}
+		l.buckets[key] = b
+		return b
 	}
 	b.tokens += now.Sub(b.last).Seconds() * l.rate
 	if b.tokens > l.burst {
 		b.tokens = l.burst
 	}
 	b.last = now
+	return b
+}
+
+// allow consumes one token for key, reporting whether the request may proceed.
+// Nil-safe: a Server assembled without a limiter behaves like one where the
+// limiter is disabled, rather than panicking.
+func (l *rateLimiter) allow(key string, now time.Time) bool {
+	if l == nil || !l.enabled {
+		return true
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	b := l.refill(key, now)
 	if b.tokens < 1 {
 		return false
 	}
 	b.tokens--
 	return true
+}
+
+// available reports whether key has budget WITHOUT spending any.
+//
+// Paired with charge() for a gate that should only cost the caller when the
+// request turns out to be unauthenticated: checking and charging have to be
+// separate there, because whether it was a failure is only known after the
+// handler has run.
+func (l *rateLimiter) available(key string, now time.Time) bool {
+	if l == nil || !l.enabled {
+		return true
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.refill(key, now).tokens >= 1
+}
+
+// charge spends one token for key, if it has one.
+func (l *rateLimiter) charge(key string, now time.Time) {
+	if l == nil || !l.enabled {
+		return
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if b := l.refill(key, now); b.tokens >= 1 {
+		b.tokens--
+	}
 }
 
 // limit wraps a handler with per-IP rate limiting.

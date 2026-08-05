@@ -2,6 +2,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -43,6 +44,7 @@ type Config struct {
 	TrustProxyHeaders bool
 	RateLimit         RateLimitConfig
 	Quota             QuotaConfig
+	Transcribe        TranscribeConfig
 	S3                S3Config
 	Backup            BackupConfig
 }
@@ -71,6 +73,52 @@ type RateLimitConfig struct {
 type QuotaConfig struct {
 	// BytesPerOwner covers entry ciphertext plus finalized media bytes.
 	BytesPerOwner int64
+}
+
+// TranscribeConfig governs the transcription gate: the relay authorizes each
+// call to the bundled speech-to-text service, and the audio itself goes straight
+// from the browser to that service (it must never pass through this process —
+// CLAUDE.md §2). Every name carries its unit, because "50" on its own could mean
+// recordings, minutes, words or megabytes.
+//
+// Counters live in memory, like the rate limiter (§7: one binary, homelab
+// scale). Two consequences worth knowing: a relay restart resets the day's
+// usage, and the relay does not write down how often a vault transcribes —
+// deliberately, since that would be a new per-owner behavioural record it
+// otherwise has no reason to keep.
+type TranscribeConfig struct {
+	// QuotaRequestsPerDay is how many recordings one vault may send per UTC day.
+	// 0 = unlimited.
+	QuotaRequestsPerDay int
+	// QuotaMegabytesPerDay caps the audio one vault may upload per UTC day.
+	// Advisory: it is charged from the request's declared Content-Length, which a
+	// client controls. The hard per-request bound is the proxy's body cap
+	// (TRANSCRIBE_MAX_UPLOAD_MEGABYTES in deploy/web/Caddyfile). 0 = unlimited.
+	QuotaMegabytesPerDay int64
+	// RateRequestsPerMinute / RateBurstRequests throttle one vault's calls, which
+	// is what bounds how much CPU a single signed-in device can occupy. Either at
+	// 0 disables the throttle.
+	RateRequestsPerMinute int
+	RateBurstRequests     int
+}
+
+// Summary is the one-line startup report. It exists so an operator can read the
+// effective policy out of the log instead of inferring it from four env vars.
+func (t TranscribeConfig) Summary() string {
+	quota := "unlimited recordings"
+	if t.QuotaRequestsPerDay > 0 {
+		quota = fmt.Sprintf("%d recordings", t.QuotaRequestsPerDay)
+	}
+	if t.QuotaMegabytesPerDay > 0 {
+		quota += fmt.Sprintf(" / %d MB of audio", t.QuotaMegabytesPerDay)
+	}
+	rate := "no per-vault rate limit"
+	if t.RateRequestsPerMinute > 0 && t.RateBurstRequests > 0 {
+		rate = fmt.Sprintf("%d requests/minute (burst %d)", t.RateRequestsPerMinute, t.RateBurstRequests)
+	}
+	return fmt.Sprintf(
+		"transcription: %s per vault per UTC day, %s; counters are in memory and reset when the relay restarts",
+		quota, rate)
 }
 
 // S3Config is consumed by the (not-yet-wired) media blob coordination — §10 step 5.
@@ -117,6 +165,15 @@ func Load() Config {
 		},
 		Quota: QuotaConfig{
 			BytesPerOwner: envInt64("QUOTA_BYTES_PER_OWNER", 0),
+		},
+		Transcribe: TranscribeConfig{
+			// 50 recordings a day is invisible to a person keeping a journal and
+			// expensive for anything else: each one occupies a CPU core for the
+			// length of the audio.
+			QuotaRequestsPerDay:   envInt("TRANSCRIBE_QUOTA_REQUESTS_PER_DAY", 50),
+			QuotaMegabytesPerDay:  envInt64("TRANSCRIBE_QUOTA_MEGABYTES_PER_DAY", 0),
+			RateRequestsPerMinute: envInt("TRANSCRIBE_RATE_REQUESTS_PER_MINUTE", 6),
+			RateBurstRequests:     envInt("TRANSCRIBE_RATE_BURST_REQUESTS", 6),
 		},
 		S3: S3Config{
 			Endpoint:  env("S3_ENDPOINT", ""),

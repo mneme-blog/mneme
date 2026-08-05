@@ -854,6 +854,10 @@ const ja: Partial<Record<MessageKey, string>> = {
   'media.transcribe.modelMissing':
     '文字起こしサーバーにまだモデルがありません。新規インストールの場合はダウンロード中で、数分かかります。そうでなければ AI 設定を開いて「サーバーを確認」を実行してください。',
   'media.transcribe.answers': '回答を文字起こし',
+  'media.transcribe.signedOut':
+    'この端末は同期サーバーにサインインしていません。文字起こしにはその承認が必要です。通常は自動的に再接続します——少ししてからもう一度お試しください。',
+  'media.transcribe.limitReached':
+    'この保管庫は本日の文字起こし上限に達しました。UTC の深夜にリセットされます。運用者が上限を引き上げることもできます。',
   'media.transcribe.notConfigured': 'まず AI 設定で文字起こしを設定してください。',
   'media.transcribe.confirmTitle': '文字起こしのために送信しますか？',
   'media.transcribe.confirmBody': 'この録音は復号された状態でこの端末を離れ、テキスト化のため {host} に送信されます。文字起こしはその後、エントリーの他の内容と同様にエンドツーエンドで暗号化して保存されます。',

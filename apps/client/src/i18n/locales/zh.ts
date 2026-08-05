@@ -799,6 +799,10 @@ const zh: Partial<Record<MessageKey, string>> = {
   'media.transcribe.modelMissing':
     '转录服务器还没有模型。全新安装时它正在下载模型，需要几分钟。否则请打开 AI 设置并使用"检查服务器"。',
   'media.transcribe.answers': '转写回答',
+  'media.transcribe.signedOut':
+    '此设备未登录同步服务器，而转录需要经其批准。通常会自动重新连接——请稍后再试。',
+  'media.transcribe.limitReached':
+    '此保险库今天的转录额度已用完。额度在协调世界时午夜重置；运营者可以调高。',
   'media.transcribe.notConfigured': '请先在 AI 设置中配置转写。',
   'media.transcribe.confirmTitle': '发送以进行转写？',
   'media.transcribe.confirmBody': '这段录制将以解密状态离开本设备，发送到 {host} 转成文字。转写文本随后与条目其余内容一样进行端到端加密存储。',

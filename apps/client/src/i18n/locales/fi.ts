@@ -860,6 +860,10 @@ const fi: Partial<Record<MessageKey, string>> = {
   'media.transcribe.modelMissing':
     'Litterointipalvelimella ei ole vielä mallia. Uudessa asennuksessa se lataa mallia parhaillaan, mihin menee muutama minuutti. Muussa tapauksessa avaa tekoälyasetukset ja käytä Tarkista palvelin -painiketta.',
   'media.transcribe.answers': 'Litteroi vastaukset',
+  'media.transcribe.signedOut':
+    'Tämä laite ei ole kirjautuneena synkronointipalvelimeen, jonka on hyväksyttävä litteroinnit. Yhteys palautuu yleensä itsestään — yritä hetken kuluttua uudelleen.',
+  'media.transcribe.limitReached':
+    'Tämä holvi on saavuttanut tämän päivän litterointirajansa. Raja nollautuu keskiyöllä UTC-aikaa; ylläpitäjä voi nostaa sitä.',
   'media.transcribe.notConfigured': 'Määritä ensin litterointi tekoälyasetuksissa.',
   'media.transcribe.confirmTitle': 'Lähetetäänkö litteroitavaksi?',
   'media.transcribe.confirmBody': 'Tämä tallenne lähtee laitteelta purettuna ja lähetetään osoitteeseen {host} tekstiksi muunnettavaksi. Litterointi tallennetaan sen jälkeen päästä päähän salattuna kuten muukin merkintä.',

@@ -373,6 +373,8 @@
   "media.transcribe.editHint": "Empty the box to remove the transcript.",
   "media.transcribe.failed": "Could not transcribe: {message}",
   "media.transcribe.modelMissing": "The transcription server has no model yet. On a new install it is still downloading one, which takes a few minutes. Otherwise open the AI settings and use \"Check server\".",
+  "media.transcribe.signedOut": "This device is not signed in to the sync server, which has to approve transcriptions. It usually reconnects by itself — try again in a moment.",
+  "media.transcribe.limitReached": "This vault has reached its transcription limit for today. It resets at midnight UTC; the operator can raise it.",
   "media.transcribe.answers": "Transcribe answers",
   "media.transcribe.notConfigured": "Set up transcription in the AI settings first.",
   "media.transcribe.confirmTitle": "Send for transcription?",

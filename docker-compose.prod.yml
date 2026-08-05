@@ -101,6 +101,16 @@ services:
       TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-true}
       # Per-owner storage cap in bytes (entries + finalized media). 0 = unlimited.
       QUOTA_BYTES_PER_OWNER: ${QUOTA_BYTES_PER_OWNER:-0}
+      # What one vault may ask of the bundled speech-to-text service per UTC day.
+      # The relay authorizes every transcription (Caddy forward_auth) without ever
+      # seeing the audio, and logs the effective policy at startup. Units are in
+      # the names: RECORDINGS per day, MEGABYTES per day, REQUESTS per minute.
+      # 0 disables a limit. Counters are in memory and reset when the relay
+      # restarts — see docs/SECURITY.md §6.18.
+      TRANSCRIBE_QUOTA_REQUESTS_PER_DAY: ${TRANSCRIBE_QUOTA_REQUESTS_PER_DAY:-50}
+      TRANSCRIBE_QUOTA_MEGABYTES_PER_DAY: ${TRANSCRIBE_QUOTA_MEGABYTES_PER_DAY:-0}
+      TRANSCRIBE_RATE_REQUESTS_PER_MINUTE: ${TRANSCRIBE_RATE_REQUESTS_PER_MINUTE:-6}
+      TRANSCRIBE_RATE_BURST_REQUESTS: ${TRANSCRIBE_RATE_BURST_REQUESTS:-6}
       # Rolling encrypted-blob archives of every vault (see docs/MAINTENANCE.md).
       BACKUP_DIR: /backups
       BACKUP_INTERVAL: ${BACKUP_INTERVAL:-24h}
@@ -201,6 +211,10 @@ services:
       # allowlists this exact path so an open install endpoint can't be used to
       # pull arbitrary Hugging Face repositories onto the host.
       WHISPER_MODEL: ${WHISPER_MODEL:-deepdml/faster-whisper-large-v3-turbo-ct2}
+      # Hard ceiling on ONE uploaded recording, in megabytes. This is the bound
+      # that actually holds: the relay's daily megabyte quota is charged from a
+      # header the client sets, this is enforced by the proxy on the wire.
+      TRANSCRIBE_MAX_UPLOAD_MEGABYTES: ${TRANSCRIBE_MAX_UPLOAD_MEGABYTES:-512}
     ports:
       - "80:80" # redirects to https
       - "443:443"
