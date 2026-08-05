@@ -326,6 +326,16 @@
 (() => {
   const $ = id => document.getElementById(id);
   const KEY = 'mneme-admin-token';
+  // Escape at the sink. Everything this page interpolates is server-constrained
+  // today — the status column is a Postgres CHECK enum, the approval hint is
+  // charset-validated by the register handler, owner ids are base64url hashes,
+  // backup names match an anchored regex — so none of it can currently carry
+  // markup. But that is four separate invariants, each enforced somewhere else
+  // in the codebase, holding up an innerHTML. Escaping here means the page stops
+  // depending on them, and the server-side constraints become defence in depth
+  // rather than the whole defence.
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   // The relay may sit behind a reverse-proxy path prefix (e.g. /mneme/admin), so
   // derive the admin API base from the page's own URL instead of hardcoding /admin.
   const API = location.pathname.replace(/\/$/, '');
@@ -388,7 +398,7 @@
     </tr>`;
     const cols = approval ? 10 : 9;
     $('vaultRows').innerHTML = d.vaults.map(v => `<tr>
-      <td class="mono">${v.vault}</td>
+      <td class="mono">${esc(v.vault)}</td>
       ${approval ? `<td>${statusCell(v)}</td>` : ''}
       <td>${fmtDate(v.created_at)}</td>
       <td class="mono">${fmtNum(v.devices)}</td>
@@ -397,20 +407,21 @@
       <td class="mono">${fmtNum(v.media_objects)}</td>
       <td class="mono">${fmtBytes(v.media_bytes)}</td>
       <td>${fmtDate(v.last_activity)}</td>
-      <td class="rowacts">${approval ? actionButtons(v) : ''}<button class="rowdel" data-owner="${v.owner_id}" data-label="${v.vault}">Delete</button></td>
+      <td class="rowacts">${approval ? actionButtons(v) : ''}<button class="rowdel" data-owner="${esc(v.owner_id)}" data-label="${esc(v.vault)}">Delete</button></td>
     </tr>`).join('') || `<tr><td colspan="${cols}">No vaults yet.</td></tr>`;
   }
 
-  // status badge + the client-derived operator hint. Both are server-constrained
-  // (fixed enum / [a-z0-9-]), so this is safe to interpolate as HTML.
+  // Status badge + the client-derived operator hint. Both are server-constrained
+  // (fixed enum / [a-z0-9-]) — and escaped anyway, so the markup here is safe on
+  // its own terms rather than because of a CHECK constraint three files away.
   function statusCell(v) {
-    const hint = v.approval_hint ? ` <span class="mono hint">${v.approval_hint}</span>` : '';
-    return `<span class="badge b-${v.status}">${v.status}</span>${hint}`;
+    const hint = v.approval_hint ? ` <span class="mono hint">${esc(v.approval_hint)}</span>` : '';
+    return `<span class="badge b-${esc(v.status)}">${esc(v.status)}</span>${hint}`;
   }
   function actionButtons(v) {
     let html = '';
-    if (v.status !== 'approved') html += `<button class="rowok" data-approve="${v.owner_id}">Approve</button>`;
-    if (v.status !== 'rejected') html += `<button class="rowrej" data-reject="${v.owner_id}">Reject</button>`;
+    if (v.status !== 'approved') html += `<button class="rowok" data-approve="${esc(v.owner_id)}">Approve</button>`;
+    if (v.status !== 'rejected') html += `<button class="rowrej" data-reject="${esc(v.owner_id)}">Reject</button>`;
     return html;
   }
   async function setOwnerStatus(owner, action) {
@@ -455,12 +466,12 @@
     $('bkNow').textContent = s.running ? 'Backing up…' : 'Back up now';
 
     $('bkRows').innerHTML = (s.backups || []).map(b => `<tr>
-        <td class="mono">${b.name}</td>
+        <td class="mono">${esc(b.name)}</td>
         <td>${b.created_at ? new Date(b.created_at).toLocaleString() : '—'}</td>
         <td class="mono">${fmtBytes(b.bytes)}</td>
-        <td><button class="rowdel" data-dlbk="${b.name}">Download</button></td>
-        <td><button class="rowdel" data-restore="${b.name}">Restore</button></td>
-        <td><button class="rowdel" data-delbk="${b.name}">Delete</button></td>
+        <td><button class="rowdel" data-dlbk="${esc(b.name)}">Download</button></td>
+        <td><button class="rowdel" data-restore="${esc(b.name)}">Restore</button></td>
+        <td><button class="rowdel" data-delbk="${esc(b.name)}">Delete</button></td>
       </tr>`).join('') || '<tr><td colspan="6">No backups yet.</td></tr>';
   }
 
@@ -634,9 +645,6 @@
   // agent, which backs up first, pulls, restarts, health-gates, and rolls back
   // on its own if the new version does not come up. Everything below is a view
   // of the state that agent writes; the dashboard is never the thing in control.
-
-  const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   let upState = { enabled: false, running: false, latest: '', mainTag: '', cost: 'unknown', canRollback: false };
 

@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -201,6 +203,12 @@ func (u *updateChecker) fetch(ctx context.Context) versionInfo {
 
 	for _, a := range rel.Assets {
 		if a.Name == schemaAssetName {
+			if !releaseAssetHost(a.URL) {
+				// The relay's outbound destination is meant to be a documented
+				// constant, not something the response gets to choose.
+				log.Printf("update check: ignoring %s asset at an unexpected host (%s)", schemaAssetName, a.URL)
+				break
+			}
 			info.LatestSchema, info.LatestMinSafeSchema = u.fetchSchemaManifest(ctx, a.URL)
 			break
 		}
@@ -282,6 +290,27 @@ func buildMatchesCommit(current, sha string) bool {
 		a, b = b, a
 	}
 	return strings.HasPrefix(b, a)
+}
+
+// releaseAssetHost reports whether a URL from the release feed may be followed.
+//
+// The asset URL is chosen by the response, not by us, and it was previously
+// requested verbatim — so a tampered, mirrored or redirected feed could turn the
+// relay's one deliberate outbound call into a GET at any address its network can
+// reach. The relay is documented as talking to exactly one host; make that true
+// in the code rather than only in the comment. Not a full SSRF defence (DNS
+// still decides where a github.com name points) but it removes the trivial form.
+func releaseAssetHost(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "https" {
+		return false
+	}
+	host := strings.ToLower(u.Hostname())
+	switch host {
+	case "github.com", "api.github.com", "objects.githubusercontent.com", "release-assets.githubusercontent.com":
+		return true
+	}
+	return strings.HasSuffix(host, ".githubusercontent.com")
 }
 
 // fetchSchemaManifest reads a release's mneme-release.json asset. A failure here

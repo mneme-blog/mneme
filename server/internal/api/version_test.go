@@ -297,3 +297,34 @@ func TestAdminVersionEndpoint(t *testing.T) {
 		t.Errorf("payload = %+v", info)
 	}
 }
+
+// The asset URL comes from the release feed, not from us. Following it verbatim
+// made the relay's one deliberate outbound call point wherever a tampered or
+// mirrored feed said — including at addresses only the relay's network can reach.
+func TestReleaseAssetHost(t *testing.T) {
+	ok := []string{
+		"https://github.com/plasticparticle/mneme/releases/download/v1.0.0/mneme-release.json",
+		"https://objects.githubusercontent.com/x",
+		"https://release-assets.githubusercontent.com/github-production-release-asset/1/2",
+		"https://API.GITHUB.COM/repos/x/releases/assets/1",
+	}
+	bad := []string{
+		"http://github.com/x",                     // not https
+		"https://github.com.evil.test/x",          // suffix trick
+		"https://192.168.1.10/mneme-release.json", // internal address
+		"http://169.254.169.254/latest/meta-data", // cloud metadata
+		"https://evil.test/github.com",
+		"file:///etc/passwd",
+		"",
+	}
+	for _, u := range ok {
+		if !releaseAssetHost(u) {
+			t.Errorf("releaseAssetHost(%q) = false, want true", u)
+		}
+	}
+	for _, u := range bad {
+		if releaseAssetHost(u) {
+			t.Errorf("releaseAssetHost(%q) = true, want false", u)
+		}
+	}
+}

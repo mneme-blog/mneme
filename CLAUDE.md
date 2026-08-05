@@ -30,12 +30,21 @@ project. Scaffolded so far:
   `state/data.tsx`) switches passphrase ⇄ security key ⇄ off while unlocked. The key is strictly a
   device-unlock convenience — the mnemonic remains the only account/recovery anchor. Regression
   check: `pnpm --filter client exec tsx scripts/seedlock-methods.ts`). Entries are **durable**: a
-  per-owner wa-sqlite DB on OPFS (`src/db/`, forward-only client migrations, currently v8 —
-  entries, media, templates, media tombstones, journals (+sync bookkeeping), interview types; plaintext by §5a design) is the local source of
+  per-owner wa-sqlite DB on OPFS (`src/db/`, forward-only client migrations, currently v9 —
+  entries, media, templates, media tombstones, journals (+sync bookkeeping), interview types, and a
+  one-shot re-push of every record so its ciphertext carries the id binding below; plaintext by §5a design) is the local source of
   truth, seeded once with sample content and merged with synced entries; dirty-flag outboxes let
   edits, deletes, and media uploads survive offline restarts. The editor is real **TipTap**
   (`src/editor/`: toolbar, `/` slash palette, inline media nodes). Entry bodies are
-  XChaCha20-Poly1305 encrypted client-side before push.
+  XChaCha20-Poly1305 encrypted client-side before push, **bound to the record they belong to**
+  (second-audit finding M2): every record body — entries, templates, journals, interview types, AI
+  settings — takes `mneme:record:v1:<entry_id>` as AAD, so the relay cannot serve one record's
+  ciphertext under another record's id (it could otherwise overwrite entry B with entry A's content,
+  or resurrect a tombstone, undetectably). `entry_id`/`lww_clock` are still cleartext and
+  unauthenticated, so rollback/withhold stays accepted (docs/SECURITY.md §6.7). Pre-binding blobs open
+  via a fallback and are retired by the v9 migration's one-shot re-push; a record that will not
+  decrypt is skipped with a warning rather than wedging the whole pull. Regression check:
+  `pnpm --filter client exec tsx scripts/record-binding.ts`.
 - **`server/`** — the Go relay (`journald`): `/healthz` + `/readyz`, embedded forward-only migrations,
   device challenge-response auth (Ed25519), the LWW oplog `sync/push`+`sync/pull`, and CORS. Owner-scoped,
   opaque blobs only. **Registration is owner-authorized** (§6 pairing; audit finding H1, issue #40):
@@ -60,7 +69,9 @@ project. Scaffolded so far:
   single-tenant/family relay — the mnemonic-is-the-account model has no signup to gate otherwise (e2e
   `TestApprovalFlow`; docs/API.md "Admin", docs/SECURITY.md §6.8). **Abuse controls** (audit finding M3, issue #44): a per-client-IP token bucket
   (`internal/api/ratelimit.go`, `RATE_LIMIT_AUTH_PER_MINUTE`/`RATE_LIMIT_AUTH_BURST`, 0 disables) on the
-  three unauthenticated endpoints — health probes stay unthrottled. `TRUST_PROXY_HEADERS` opts into
+  three unauthenticated endpoints — health probes stay unthrottled. The same bucket bounds guesses at
+  `ADMIN_TOKEN` (`RATE_LIMIT_ADMIN_*`, default 10/10, second-audit finding M3), charged on **failed**
+  admin authentications only so the dashboard's polling never spends from it. `TRUST_PROXY_HEADERS` opts into
   reading `X-Forwarded-For`, and the **right-most** entry is used because proxies append rather than
   replace (the left-most is caller-controlled) — assumes one trusted hop. Plus a per-owner storage quota
   (`internal/api/quota.go`, `QUOTA_BYTES_PER_OWNER`, **unlimited by default**) enforced on `sync/push`
@@ -123,6 +134,14 @@ project. Scaffolded so far:
   pulling only the relay would leave a split-version deployment. Caveat that is easy to miss: a
   server-side rollback does not undo **client-side** migrations — device OPFS DBs are forward-only too.
 - **Infra** — `docker-compose.yml` (Postgres + MinIO + server, `backups` volume), `server/Dockerfile`, `.devcontainer/`.
+- **Relay-side security headers** (second-audit finding M1) — `internal/api/headers.go` sets nosniff /
+  `X-Frame-Options: DENY` / `Referrer-Policy: no-referrer` / `default-src 'none'` on **every** relay
+  response, because the Caddy header block below only covers the SPA route: `/v1/*` and `/admin` had
+  none of it, and `/admin` is a document holding `ADMIN_TOKEN` that can wipe every vault. The
+  dashboard overrides the CSP with its own — `script-src` pinned to the **sha256 of its inline
+  script**, computed at startup from the bytes actually served, so editing the page updates the hash
+  by itself (`TestDashboardCSPCoversInlineScript` pins the one assumption: exactly one inline script,
+  no `src=`).
 - **Content-Security-Policy** (§6's named XSS mitigation; audit finding H2, issue #41) — defined ONCE in
   `apps/client/csp.js` (plain JS) and shipped twice: `vite.config.ts` injects it as a `<meta http-equiv>`
   into the **production build only** (dev needs inline scripts for HMR), and `deploy/web/Caddyfile` sends
@@ -376,6 +395,13 @@ speaking the OpenAI `/v1/audio/transcriptions` shape. **The deployment bundles o
 container (`whisper` service in both compose files — all-MIT stack) proxied **same-origin** at
 `/whisper` (Caddy `handle_path` inside the
 `/mneme` block; vite dev proxy mirrors it), and the client **defaults to it** —
+that proxy is **unauthenticated and cannot be otherwise** (the browser posts audio to it directly, so
+the relay's device auth does not apply), which is why it forwards an **allowlist** and 404s the rest
+of the image's API (second-audit finding H1): `POST /v1/audio/transcriptions` (512 MB body cap),
+`GET /v1/models`, and `POST /v1/models/{id}` **pinned to `WHISPER_MODEL`** — an open install endpoint
+is "pull any Hugging Face repo onto my server" for any passer-by. Keep `WHISPER_MODEL` on the `web`
+container in step with the `whisper-model` service. It remains open *compute* on the network by
+design (docs/SECURITY.md §6.18) —
 `defaultTranscriptionSettings()` stores the relative path `/whisper` (resolved against the app
 origin at use; `bundledWhisperUrl()` respects a path-form `VITE_RELAY_URL`), an absent
 `AiSettings.transcription` field falls back to that default, and clearing the URL stores `''` = off.
@@ -594,6 +620,11 @@ Codespaces (`.devcontainer/`) covers the **server + PWA** end-to-end; Tauri is o
 Plain-English deep-dives live in [`docs/`](docs/): `ARCHITECTURE.md` (diagrams), `SECURITY.md`
 (E2EE model + attack vectors), `API.md` (relay endpoints), `CONTRIBUTING.md`. This §0 stays the
 quick operating guide; `docs/` expands on it; §1–§12 below remain the binding decisions.
+
+Two security audits sit at the repo root and are kept verbatim as a record: `Fable-Findings.md`
+(2026-07-13, 18 findings, all closed) and `Opus-Findings.md` (2026-08-05, 12 findings — H1 the
+unauthenticated whisper proxy, M1 missing relay security headers, M2 unbound record ciphertexts, M3
+unthrottled admin token, plus six Low and two accepted Info items).
 
 ### Lint / format (per §11)
 TS: strict mode (eslint + prettier). Go: `gofmt` / `golangci-lint`. Rust: `clippy`.

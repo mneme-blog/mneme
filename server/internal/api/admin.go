@@ -22,6 +22,17 @@ import (
 var dashboardHTML []byte
 
 // adminAuth gates an admin endpoint behind the configured token.
+//
+// Failed attempts are rate-limited per client IP. The comparison is
+// constant-time, which stops a timing attack but says nothing about how many
+// guesses a caller may make — and this is the most powerful surface on the
+// relay (vault deletion, backup download, restore, a stack restart onto a chosen
+// release) behind one static token an operator picks by hand. The three
+// unauthenticated client endpoints have been throttled since the last audit; the
+// one that can destroy every vault was not.
+//
+// Only failures consume budget, so the dashboard's polling — which holds a valid
+// token and polls every few seconds during an update — is never affected.
 func (s *Server) adminAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.cfg.AdminToken == "" {
@@ -30,6 +41,11 @@ func (s *Server) adminAuth(next http.Handler) http.Handler {
 		}
 		token, ok := bearerToken(r)
 		if !ok || subtle.ConstantTimeCompare([]byte(token), []byte(s.cfg.AdminToken)) != 1 {
+			if !s.adminLimiter.allow(clientIP(r, s.cfg.TrustProxyHeaders), time.Now()) {
+				w.Header().Set("Retry-After", "60")
+				writeError(w, http.StatusTooManyRequests, "too many failed admin authentications")
+				return
+			}
 			writeError(w, http.StatusUnauthorized, "invalid admin token")
 			return
 		}
@@ -46,6 +62,10 @@ func (s *Server) handleAdminPage(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
+	// Overrides the API-wide default-src 'none' from secureHeaders: this is the
+	// one response that is a document. Hash-pinned inline script, no external
+	// origin, not framable — see headers.go.
+	w.Header().Set("Content-Security-Policy", dashboardCSP)
 	_, _ = w.Write(dashboardHTML)
 }
 

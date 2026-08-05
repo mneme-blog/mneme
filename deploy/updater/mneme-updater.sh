@@ -133,6 +133,42 @@ compose() { (cd "$REPO_DIR" && "$COMPOSE" "$@"); }
 # surfaces as `cd: <REPO_DIR>: No such file or directory` from whichever compose
 # call happens to run first — while current_version() has already swallowed the
 # same failure and reported "unknown". Fail up front, and say what it means.
+# The paths this root service EXECUTES or SOURCES. Everything about the update
+# request is constrained — two verbs, a re-validated tag, a fixed registry — but
+# none of that matters if the code it runs can be edited by someone who is not
+# root: compose() runs $REPO_DIR/deploy/prod.sh as root, and prod.sh sources
+# deploy/version.env. The ordinary homelab layout (a checkout under /home owned
+# by the operator's own account) therefore makes "can write the checkout" mean
+# "can run code as root at the next update".
+#
+# Not a hard failure: it is the documented normal setup, and refusing to run
+# would break an update at the worst possible moment. But it is said out loud,
+# on every run, in the log the dashboard shows.
+unsafe_inputs() {
+  local p perms owner out=()
+  for p in "$REPO_DIR" "$REPO_DIR/deploy" "$COMPOSE" "$VERSION_ENV"; do
+    [[ -e $p ]] || continue
+    owner=$(stat -c %u "$p" 2>/dev/null || echo 0)
+    perms=$(stat -c %a "$p" 2>/dev/null || echo 0)
+    if ((owner != 0)) || ((8#$perms & 8#022)); then
+      out+=("$p")
+    fi
+  done
+  ((${#out[@]})) && printf '%s\n' "${out[@]}"
+  return 0
+}
+
+warn_unsafe_inputs() {
+  local unsafe
+  unsafe=$(unsafe_inputs)
+  [[ -n $unsafe ]] || return 0
+  log "WARNING: this service runs as root but executes files that root does not exclusively own:"
+  log "$(printf '  %s\n' $unsafe)"
+  log "anyone who can write those paths can run code as root through an update. Fix with:"
+  log "  sudo chown -R root:root $REPO_DIR/deploy && sudo chmod -R go-w $REPO_DIR/deploy"
+  log "(see docs/SECURITY.md §6.17)"
+}
+
 preflight() {
   local problem=""
   if [[ ! -d $REPO_DIR ]]; then
@@ -142,7 +178,10 @@ preflight() {
   elif [[ ! -d $SPOOL_DIR ]]; then
     problem="SPOOL_DIR ($SPOOL_DIR) is not reachable from this service"
   fi
-  [[ -z $problem ]] && return 0
+  if [[ -z $problem ]]; then
+    warn_unsafe_inputs
+    return 0
+  fi
 
   log "preflight failed: $problem"
   log "if that path does exist on the host, the unit's sandbox is hiding it — re-run deploy/updater/install.sh, which binds the checkout and spool back in when they live under /home or /root"

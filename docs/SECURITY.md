@@ -356,7 +356,15 @@ whether you are handed one at all. A malicious relay can:
   should exist;
 - **drop or reorder** records, or simply stop answering.
 
-This is inherent to a dumb E2EE blob relay and is **accepted**, not solved. Detecting it would need
+What it can **no longer** do is serve one record's ciphertext under a *different* record's id. Each
+record body is encrypted with its cleartext wire id as AAD (`mneme:record:v1:<entry_id>`), so a
+relabelled blob fails its tag: the relay cannot overwrite entry B with entry A's content, duplicate an
+entry across ids, or resurrect a tombstoned record under a new id. (Blobs written before this binding
+carry no AAD and stay relabellable until the owning device re-pushes them, which every client does
+once on upgrade — local DB migration v9.) `deleted` and `lww_clock` are still cleartext and still
+unauthenticated, which is what leaves the rollback and re-tombstone moves above.
+
+The rest is inherent to a dumb E2EE blob relay and is **accepted**, not solved. Detecting it would need
 the client to authenticate the *set* of records — a signed manifest, a hash chain, or a Merkle root
 over the oplog carried inside the ciphertext — which is real design work and not currently built.
 
@@ -498,11 +506,45 @@ The escalation is bounded by construction rather than by trust in the relay:
 Residual risks worth naming: a downgrade attack as above (mitigated only by protecting `ADMIN_TOKEN`
 — rotate it, and consider leaving updates off on an internet-reachable relay); images are pulled by
 **tag, not digest**, so the registry and the transport are trusted (GHCR over TLS); and the agent runs
-as root, so a bug in the agent script is a host-level bug. The conservative posture is unchanged and
+as root, so a bug in the agent script is a host-level bug.
+
+**The checkout is a root-privileged input.** The agent's own script is installed root-owned under
+`/usr/local/lib`, but what it *runs* is `$REPO_DIR/deploy/prod.sh` — which sources
+`deploy/version.env` — and that lives wherever the operator cloned the repository. In the documented
+homelab layout that is a home directory owned by a non-root account, so **whoever can write the
+checkout can execute code as root at the next update**. It is a smaller step than it sounds (the same
+account is normally in the `docker` group, which is already root-equivalent), and it is not made a
+hard failure for that reason — but it is now stated at install time and repeated in the agent's log
+on every run, with the fix: `chown -R root:root <repo>/deploy && chmod -R go-w <repo>/deploy`, after
+which editing `deploy/` needs sudo. A relay-side compromise gains nothing from this either way; it is
+a local-user escalation on the host. The conservative posture is unchanged and
 fully supported: leave `UPDATE_SPOOL_DIR` unset and update on the host by hand.
 
 Note also that a server-side rollback does **not** roll back client-side state: local device databases
 migrate forward-only too, so a device that has opened the newer client stays migrated (§11).
+
+### 6.18 The bundled speech-to-text service — ⚠️ Accepted (unauthenticated compute, allowlisted)
+The deployment ships a whisper server (the `whisper` compose service) and Caddy proxies it at
+`/whisper` so the client's default transcription endpoint is same-origin — which is what makes it
+work with no CSP or CORS configuration. **That route is unauthenticated, and it cannot be otherwise:**
+the relay's device auth belongs to the relay, and the client posts audio here directly (browser →
+whisper, never through the relay — §2). Nothing about E2EE changes: the recording is decrypted on the
+device that owns it, sent to a server the deployment itself runs, and the transcript comes back into
+the encrypted entry body. But it means the origin exposes one endpoint that is **not** owner-scoped,
+throttled, or quota'd.
+
+What is done about it: the proxy forwards only the three endpoints the app calls — `POST
+/v1/audio/transcriptions` (with a 512 MB body cap), `GET /v1/models`, and `POST /v1/models/{id}`
+**restricted to the single model the deployment configures** (`WHISPER_MODEL`). Everything else the
+image serves — model deletion, text-to-speech, its own UI — is a 404. Without that allowlist, the
+install endpoint alone is "fetch any Hugging Face repository onto my server" for any passer-by, and
+the transcription endpoint is a CPU-exhaustion primitive with no token bucket in front of it.
+
+What remains, and is accepted: **anyone who can reach the site can spend transcription CPU.** On the
+intended LAN deployment that is the same trust boundary as everything else on the origin. A site
+reachable from the internet should put authentication in front of `/whisper`, or drop the `whisper`
+and `whisper-model` services and point the client's transcription setting at a server of its own —
+the feature degrades cleanly to "off" when the endpoint is absent.
 
 ---
 

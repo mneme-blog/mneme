@@ -8,11 +8,34 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 
 	"github.com/plasticparticle/mneme/server/internal/blobs"
 	"github.com/plasticparticle/mneme/server/internal/store"
 )
+
+// Bounds on what a single archive member may claim. Restore is the one place the
+// relay parses a file it did not just write — reachable from
+// POST /admin/backups/{name}/restore and from `journald restore`, i.e. from any
+// archive an operator was persuaded to put in BACKUP_DIR. Without a bound, one
+// member declaring gigabytes is read straight into memory (gzip makes that cheap
+// to author), and disaster recovery is exactly when a corrupt or hostile archive
+// is plausible. tar.Reader never returns more than the declared size, so
+// checking the header is a complete check.
+const (
+	// A chunk is one client-encrypted ~1 MiB block; the relay refuses to store a
+	// larger one (api.maxChunkBytes), so it can never legitimately restore one.
+	maxRestoreChunkBytes = 2 << 20
+	// The bookkeeping tables are NDJSON and are decoded into memory whole. Sized
+	// so a genuinely large vault still restores: entry_blobs.ndjson is the big
+	// one, at roughly the vault's ciphertext size plus base64 overhead.
+	maxRestoreTableBytes = 2 << 30
+)
+
+// chunkKeyRe is the exact shape Create writes: media/{owner_id}/{media_id}/{n},
+// with both ids in the base64url/hex alphabet the relay derives them from.
+var chunkKeyRe = regexp.MustCompile(`^media/[A-Za-z0-9_-]{1,128}/[A-Za-z0-9_-]{1,128}/[0-9]{1,6}$`)
 
 // Restore replays an archive built by Create: it re-uploads every media chunk to
 // object storage and replaces ALL relay bookkeeping data in one transaction (see
@@ -48,6 +71,16 @@ func Restore(ctx context.Context, sink Sink, bl blobs.Store, r io.Reader) (*Mani
 			return nil, fmt.Errorf("read archive: %w", err)
 		}
 
+		// Bound before reading anything: a member is only ever a small JSON
+		// document, an NDJSON table, or one media chunk.
+		limit := int64(maxRestoreTableBytes)
+		if strings.HasPrefix(hdr.Name, mediaDir) {
+			limit = maxRestoreChunkBytes
+		}
+		if hdr.Size > limit {
+			return nil, fmt.Errorf("archive member %s is %d bytes, above the %d-byte limit — refusing to read it", hdr.Name, hdr.Size, limit)
+		}
+
 		switch {
 		case hdr.Name == manifestName:
 			man = &Manifest{}
@@ -80,6 +113,13 @@ func Restore(ctx context.Context, sink Sink, bl blobs.Store, r io.Reader) (*Mani
 			// The manifest is always first in the archive, so it is validated by now.
 			if man == nil {
 				return nil, errors.New("archive media precedes its manifest (corrupt archive)")
+			}
+			// The member name becomes the object key verbatim. Nothing but a
+			// chunk path may be written, so a crafted archive cannot place an
+			// object outside the media namespace (or traverse, for a blob store
+			// that maps keys onto a filesystem).
+			if !chunkKeyRe.MatchString(hdr.Name) {
+				return nil, fmt.Errorf("archive member %s is not a media chunk path", hdr.Name)
 			}
 			chunk, rerr := io.ReadAll(tr)
 			if rerr != nil {

@@ -53,9 +53,14 @@ type Config struct {
 // authenticated actor behind it. Per client IP, in-process (§7: one binary,
 // homelab scale) — a distributed attacker is the reverse proxy's problem.
 // Setting either value to 0 disables the limiter.
+// Admin* bounds guesses at ADMIN_TOKEN on /admin/*. Charged on failed
+// authentications only, so a dashboard holding a valid token never spends from
+// it — which is why the budget can be much tighter than the client one.
 type RateLimitConfig struct {
-	AuthPerMinute int // sustained rate per IP
-	AuthBurst     int // bucket ceiling, i.e. how much back-to-back is tolerated
+	AuthPerMinute  int // sustained rate per IP
+	AuthBurst      int // bucket ceiling, i.e. how much back-to-back is tolerated
+	AdminPerMinute int
+	AdminBurst     int
 }
 
 // QuotaConfig bounds what a single owner may store. maxMediaChunks caps one
@@ -105,6 +110,10 @@ func Load() Config {
 			// three calls, and a retry loop a handful more.
 			AuthPerMinute: envInt("RATE_LIMIT_AUTH_PER_MINUTE", 30),
 			AuthBurst:     envInt("RATE_LIMIT_AUTH_BURST", 15),
+			// Forgiving enough that an operator mistyping the token a few times
+			// is not locked out for long, tight enough that guessing is hopeless.
+			AdminPerMinute: envInt("RATE_LIMIT_ADMIN_PER_MINUTE", 10),
+			AdminBurst:     envInt("RATE_LIMIT_ADMIN_BURST", 10),
 		},
 		Quota: QuotaConfig{
 			BytesPerOwner: envInt64("QUOTA_BYTES_PER_OWNER", 0),

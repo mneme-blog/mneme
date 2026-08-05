@@ -53,10 +53,12 @@ Errors are `{ "error": "message" }` with an appropriate status (400/401/404/500)
 | Limit | Default | Env | Applies to |
 |---|---|---|---|
 | Auth rate limit | 30/min per IP, burst 15 | `RATE_LIMIT_AUTH_PER_MINUTE`, `RATE_LIMIT_AUTH_BURST` | `/v1/register`, `/v1/auth/*` → `429` |
+| Admin auth rate limit | 10/min per IP, burst 10 | `RATE_LIMIT_ADMIN_PER_MINUTE`, `RATE_LIMIT_ADMIN_BURST` | failed `/admin/*` authentications → `429` (a valid token is never charged) |
 | Per-owner storage | unlimited | `QUOTA_BYTES_PER_OWNER` | `sync/push`, media chunk upload → `413` |
 | Push batch | 500 entries | – | `/v1/sync/push` → `413` |
 | Request body | 32 MiB | – | any JSON endpoint |
 | Media chunk | 2 MiB | – | `PUT /v1/media/{id}/chunks/{n}` |
+| Record id | 1–128 chars of `[A-Za-z0-9_.:-]` | – | `entry_id` on `sync/push`, `reminder_id` on `PUT /v1/reminders` → `400` |
 
 The three auth endpoints are unauthenticated and are the only way in, so they are throttled per
 client IP (token bucket, in-process — a distributed attacker is the reverse proxy's job). A normal

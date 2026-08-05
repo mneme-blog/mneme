@@ -171,6 +171,49 @@ interface AiSettingsBody {
 
 type RecordBody = EntryBody | TemplateBody | InterviewTypeBody | JournalBody | AiSettingsBody;
 
+// ── binding a ciphertext to the record it belongs to ────────────────────────
+//
+// entry_id and lww_clock travel in cleartext and the AEAD tag does not cover
+// them, so on its own the tag proves only "someone with the data key wrote
+// this" — not "…wrote it for THIS record". A malicious or compromised relay
+// could take the perfectly valid ciphertext of entry A, hand it back under
+// entry B's id with a higher clock, and every device would decrypt it happily
+// and overwrite B with A's content. The same move duplicates one entry across
+// arbitrarily many ids and resurrects a tombstoned one under a new id.
+//
+// docs/SECURITY.md §6.7 accepts that a dumb relay can withhold or roll back a
+// blob. Substituting one record's content for another's is a stronger move, is
+// not what that section accepts, and costs one AAD to remove: the wire id is
+// authenticated alongside the body, so a relabelled blob fails its tag.
+const RECORD_AAD_PREFIX = 'mneme:record:v1:';
+
+function recordAad(recordId: string): Uint8Array {
+  return utf8(RECORD_AAD_PREFIX + recordId);
+}
+
+/** Encrypt a record body, bound to the wire id it will be stored under. */
+function encryptRecord(dataKey: Uint8Array, recordId: string, body: RecordBody): Uint8Array {
+  return encrypt(dataKey, utf8(JSON.stringify(body)), recordAad(recordId));
+}
+
+/**
+ * Decrypt a pulled record.
+ *
+ * Blobs written before the binding existed carry no AAD, so they are tried
+ * unbound as a fallback — those stay relabellable until they are next pushed,
+ * which is why the client marks every record dirty once when it upgrades (db
+ * migration v9). A blob written WITH the binding cannot be moved: the fallback
+ * fails for it too, because its tag covers an id that is no longer the one it
+ * arrived under.
+ */
+export function decryptRecord(dataKey: Uint8Array, recordId: string, blob: Uint8Array): Uint8Array {
+  try {
+    return decrypt(dataKey, blob, recordAad(recordId));
+  } catch {
+    return decrypt(dataKey, blob);
+  }
+}
+
 export function encryptEntry(dataKey: Uint8Array, e: JournalEntry): Uint8Array {
   const body: EntryBody = {
     journalId: e.journalId,
@@ -182,7 +225,7 @@ export function encryptEntry(dataKey: Uint8Array, e: JournalEntry): Uint8Array {
     createdAt: e.createdAt,
     updatedAt: e.updatedAt,
   };
-  return encrypt(dataKey, utf8(JSON.stringify(body)));
+  return encryptRecord(dataKey, e.id, body);
 }
 
 export function toPushEntry(dataKey: Uint8Array, e: JournalEntry): PushEntry {
@@ -252,7 +295,7 @@ export function toPushTemplate(dataKey: Uint8Array, t: TemplateRecord): PushEntr
   return {
     entry_id: t.id,
     lww_clock: t.updatedAt,
-    ciphertext: toBase64(encrypt(dataKey, utf8(JSON.stringify(body)))),
+    ciphertext: toBase64(encryptRecord(dataKey, t.id, body)),
     deleted: t.deleted ?? false,
   };
 }
@@ -281,7 +324,7 @@ export function toPushInterviewType(dataKey: Uint8Array, t: InterviewType): Push
   return {
     entry_id: t.id,
     lww_clock: t.updatedAt,
-    ciphertext: toBase64(encrypt(dataKey, utf8(JSON.stringify(body)))),
+    ciphertext: toBase64(encryptRecord(dataKey, t.id, body)),
     deleted: t.deleted ?? false,
   };
 }
@@ -312,7 +355,7 @@ export function toPushJournal(dataKey: Uint8Array, j: JournalRecord): PushEntry 
   return {
     entry_id: j.recordId,
     lww_clock: j.updatedAt,
-    ciphertext: toBase64(encrypt(dataKey, utf8(JSON.stringify(body)))),
+    ciphertext: toBase64(encryptRecord(dataKey, j.recordId, body)),
     deleted: j.deleted ?? false,
   };
 }
@@ -337,7 +380,7 @@ export function toPushAiSettings(dataKey: Uint8Array, rec: AiSettingsRecord): Pu
   return {
     entry_id: rec.recordId,
     lww_clock: rec.updatedAt,
-    ciphertext: toBase64(encrypt(dataKey, utf8(JSON.stringify(body)))),
+    ciphertext: toBase64(encryptRecord(dataKey, rec.recordId, body)),
     deleted: rec.deleted ?? rec.settings === null,
   };
 }
@@ -377,7 +420,20 @@ export async function pullEntries(
   const journals: JournalRecord[] = [];
   const aiSettings: AiSettingsRecord[] = [];
   for (const item of resp.entries) {
-    const body = JSON.parse(fromUtf8(decrypt(dataKey, fromBase64(item.ciphertext)))) as RecordBody;
+    let body: RecordBody;
+    try {
+      body = JSON.parse(
+        fromUtf8(decryptRecord(dataKey, item.entry_id, fromBase64(item.ciphertext))),
+      ) as RecordBody;
+    } catch {
+      // A record that will not open — tampered with, relabelled, or written by
+      // a build we don't understand. Skip it and keep going: throwing here
+      // wedges the whole vault's sync on one bad record, from this cursor
+      // onwards, forever. The local DB is the source of truth (§5a), so
+      // dropping a record we cannot authenticate loses nothing we had.
+      console.warn(`sync: skipping record ${item.entry_id} — it did not decrypt`);
+      continue;
+    }
     if (body.kind === 'template') {
       templates.push({
         id: item.entry_id,
