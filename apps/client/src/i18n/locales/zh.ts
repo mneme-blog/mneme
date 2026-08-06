@@ -812,6 +812,27 @@ const zh: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribeRemote': '保存后，你的回答将以解密状态发送到 {host} 转成文字。',
   'assistant.video.spokenLanguage': '说话语言',
   'assistant.video.autoDetect': '自动检测',
+
+  // ── badges (gamification awards) ──
+  'badges.celebrate.title': '获得徽章',
+  'badges.celebrate.dismiss': '太棒了！',
+  'badges.gallery.title': '徽章',
+  'badges.first-words.name': '最初的文字',
+  'badges.first-words.desc': '写下你的第一条记录。',
+  'badges.streak-3.name': '连续三天',
+  'badges.streak-3.desc': '连续三天写作。',
+  'badges.streak-7.name': '坚持一周',
+  'badges.streak-7.desc': '连续七天写作。',
+  'badges.wordsmith.name': '文字匠人',
+  'badges.wordsmith.desc': '累计写下 1,000 字。',
+  'badges.deep-dive.name': '深度书写',
+  'badges.deep-dive.desc': '写下一条不少于 1,000 字的记录。',
+  'badges.first-interview.name': '首次访谈',
+  'badges.first-interview.desc': '完成你的第一次引导式访谈。',
+  'badges.on-camera.name': '出镜',
+  'badges.on-camera.desc': '录制你的第一次视频访谈。',
+  'badges.memory-keeper.name': '记忆守护者',
+  'badges.memory-keeper.desc': '在记录中加入照片、音频或视频。',
 };
 
 export default zh;

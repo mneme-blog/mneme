@@ -864,6 +864,27 @@ const nl: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribeRemote': 'Na het opslaan worden je antwoorden ontsleuteld naar {host} gestuurd en in tekst omgezet.',
   'assistant.video.spokenLanguage': 'Gesproken taal',
   'assistant.video.autoDetect': 'Automatisch herkennen',
+
+  // ── badges (gamification awards) ──
+  'badges.celebrate.title': 'Badge verdiend',
+  'badges.celebrate.dismiss': 'Mooi!',
+  'badges.gallery.title': 'Badges',
+  'badges.first-words.name': 'Eerste woorden',
+  'badges.first-words.desc': 'Schrijf je eerste notitie.',
+  'badges.streak-3.name': 'Drie op rij',
+  'badges.streak-3.desc': 'Schrijf drie dagen op rij.',
+  'badges.streak-7.name': 'Een hele week',
+  'badges.streak-7.desc': 'Schrijf zeven dagen op rij.',
+  'badges.wordsmith.name': 'Woordsmid',
+  'badges.wordsmith.desc': 'Schrijf in totaal 1.000 woorden.',
+  'badges.deep-dive.name': 'Diepgang',
+  'badges.deep-dive.desc': 'Schrijf één notitie van minstens 1.000 woorden.',
+  'badges.first-interview.name': 'Eerste interview',
+  'badges.first-interview.desc': 'Rond je eerste begeleide interview af.',
+  'badges.on-camera.name': 'Voor de camera',
+  'badges.on-camera.desc': 'Neem je eerste video-interview op.',
+  'badges.memory-keeper.name': 'Herinneringsbewaarder',
+  'badges.memory-keeper.desc': 'Voeg een foto, audio of video toe aan een notitie.',
 };
 
 export default nl;

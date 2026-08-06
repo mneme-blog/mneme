@@ -242,6 +242,22 @@ input {
   animation: mneme-spin 0.8s linear infinite;
 }
 
+/* Badge celebration card entrance (ui/BadgeCelebration.tsx): a small pop —
+   scale up with a slight overshoot while fading in. */
+@keyframes mneme-badge-pop {
+  0% { opacity: 0; transform: scale(0.86); }
+  70% { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.mneme-badge-pop {
+  animation: mneme-badge-pop 0.35s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mneme-badge-pop {
+    animation: none;
+  }
+}
+
 /* RTL locales (Arabic): mirror direction-bearing glyphs — forward/back
    chevrons and arrows opt in via <Icon dirFlip> (ui/Icon.tsx). */
 [dir='rtl'] .dir-flip {

@@ -878,6 +878,27 @@ const de: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribeRemote': 'Nach dem Speichern werden deine Antworten entschlüsselt an {host} gesendet und in Text umgewandelt.',
   'assistant.video.spokenLanguage': 'Gesprochene Sprache',
   'assistant.video.autoDetect': 'Automatisch erkennen',
+
+  // ── badges (gamification awards) ──
+  'badges.celebrate.title': 'Abzeichen verdient',
+  'badges.celebrate.dismiss': 'Schön!',
+  'badges.gallery.title': 'Abzeichen',
+  'badges.first-words.name': 'Erste Worte',
+  'badges.first-words.desc': 'Schreibe deinen ersten Eintrag.',
+  'badges.streak-3.name': 'Drei in Folge',
+  'badges.streak-3.desc': 'Schreibe an drei Tagen in Folge.',
+  'badges.streak-7.name': 'Eine starke Woche',
+  'badges.streak-7.desc': 'Schreibe an sieben Tagen in Folge.',
+  'badges.wordsmith.name': 'Wortschmied',
+  'badges.wordsmith.desc': 'Schreibe insgesamt 1.000 Wörter.',
+  'badges.deep-dive.name': 'Tiefgang',
+  'badges.deep-dive.desc': 'Schreibe einen einzelnen Eintrag mit mindestens 1.000 Wörtern.',
+  'badges.first-interview.name': 'Erstes Interview',
+  'badges.first-interview.desc': 'Schließe dein erstes geführtes Interview ab.',
+  'badges.on-camera.name': 'Vor der Kamera',
+  'badges.on-camera.desc': 'Nimm dein erstes Video-Interview auf.',
+  'badges.memory-keeper.name': 'Erinnerungshüter',
+  'badges.memory-keeper.desc': 'Füge einem Eintrag ein Foto, eine Audio- oder Videoaufnahme hinzu.',
 };
 
 export default de;

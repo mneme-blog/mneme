@@ -873,6 +873,27 @@ const fi: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribeRemote': 'Tallennuksen jälkeen vastauksesi lähetetään purettuina osoitteeseen {host} tekstiksi muunnettaviksi.',
   'assistant.video.spokenLanguage': 'Puhuttu kieli',
   'assistant.video.autoDetect': 'Tunnista automaattisesti',
+
+  // ── badges (gamification awards) ──
+  'badges.celebrate.title': 'Merkki ansaittu',
+  'badges.celebrate.dismiss': 'Hienoa!',
+  'badges.gallery.title': 'Merkit',
+  'badges.first-words.name': 'Ensimmäiset sanat',
+  'badges.first-words.desc': 'Kirjoita ensimmäinen merkintäsi.',
+  'badges.streak-3.name': 'Kolme putkeen',
+  'badges.streak-3.desc': 'Kirjoita kolmena päivänä peräkkäin.',
+  'badges.streak-7.name': 'Kokonainen viikko',
+  'badges.streak-7.desc': 'Kirjoita seitsemänä päivänä peräkkäin.',
+  'badges.wordsmith.name': 'Sanaseppä',
+  'badges.wordsmith.desc': 'Kirjoita yhteensä 1\u00a0000 sanaa.',
+  'badges.deep-dive.name': 'Syväsukellus',
+  'badges.deep-dive.desc': 'Kirjoita yksi vähintään 1\u00a0000 sanan merkintä.',
+  'badges.first-interview.name': 'Ensimmäinen haastattelu',
+  'badges.first-interview.desc': 'Tee ensimmäinen ohjattu haastattelusi loppuun.',
+  'badges.on-camera.name': 'Kameran edessä',
+  'badges.on-camera.desc': 'Nauhoita ensimmäinen videohaastattelusi.',
+  'badges.memory-keeper.name': 'Muistojen vartija',
+  'badges.memory-keeper.desc': 'Lisää merkintään valokuva, ääntä tai videota.',
 };
 
 export default fi;
