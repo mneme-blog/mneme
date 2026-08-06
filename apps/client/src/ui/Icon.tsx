@@ -10,7 +10,8 @@ export type IconName =
   | 'pin' | 'clock' | 'copy' | 'eye' | 'eyeoff' | 'shield' | 'arrowR' | 'sun'
   | 'grid' | 'timeline' | 'x' | 'video' | 'olist' | 'code' | 'divider' | 'trash'
   | 'file' | 'download' | 'math' | 'monitor' | 'table' | 'link' | 'edit'
-  | 'rowplus' | 'colplus' | 'rowminus' | 'colminus' | 'key' | 'info' | 'film';
+  | 'rowplus' | 'colplus' | 'rowminus' | 'colminus' | 'key' | 'info' | 'film'
+  | 'award';
 
 interface IconProps {
   name: IconName;
@@ -85,6 +86,7 @@ export function Icon({ name, size = 20, stroke = 1.7, style = {}, color = 'curre
     colminus: <><rect x="3.5" y="3.5" width="8" height="17" rx="2" {...P} /><path d="M7.5 3.5v17M15.5 12h5" {...P} /></>,
     key: <><circle cx="8" cy="14.5" r="4.5" {...P} /><path d="M11.2 11.3L19.5 3M15.5 7l3 3M13 9.5l2 2" {...P} /></>,
     info: <><circle cx="12" cy="12" r="8.5" {...P} /><path d="M12 11v5.2" {...P} /><circle cx="12" cy="7.8" r="1.1" fill={color} stroke="none" /></>,
+    award: <><circle cx="12" cy="9.5" r="5.5" {...P} /><path d="M8.8 14l-1.8 7 5-2.8 5 2.8-1.8-7" {...P} /></>,
   };
   return (
     <svg

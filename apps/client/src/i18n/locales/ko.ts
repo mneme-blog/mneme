@@ -812,6 +812,27 @@ const ko: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribeRemote': '저장 후 답변이 복호화된 상태로 {host}(으)로 전송되어 텍스트로 변환됩니다.',
   'assistant.video.spokenLanguage': '말하는 언어',
   'assistant.video.autoDetect': '자동 감지',
+
+  // ── badges (gamification awards) ──
+  'badges.celebrate.title': '배지 획득',
+  'badges.celebrate.dismiss': '좋아요!',
+  'badges.gallery.title': '배지',
+  'badges.first-words.name': '첫 문장',
+  'badges.first-words.desc': '첫 항목을 작성하세요.',
+  'badges.streak-3.name': '3일 연속',
+  'badges.streak-3.desc': '3일 연속으로 작성하세요.',
+  'badges.streak-7.name': '일주일 연속',
+  'badges.streak-7.desc': '7일 연속으로 작성하세요.',
+  'badges.wordsmith.name': '단어 장인',
+  'badges.wordsmith.desc': '총 1,000단어를 작성하세요.',
+  'badges.deep-dive.name': '깊이 있게',
+  'badges.deep-dive.desc': '1,000단어 이상인 항목을 하나 작성하세요.',
+  'badges.first-interview.name': '첫 인터뷰',
+  'badges.first-interview.desc': '첫 가이드 인터뷰를 완료하세요.',
+  'badges.on-camera.name': '카메라 앞에서',
+  'badges.on-camera.desc': '첫 영상 인터뷰를 녹화하세요.',
+  'badges.memory-keeper.name': '추억 지킴이',
+  'badges.memory-keeper.desc': '항목에 사진, 오디오 또는 동영상을 추가하세요.',
 };
 
 export default ko;

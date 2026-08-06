@@ -884,6 +884,27 @@ const it: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribeRemote': 'Dopo il salvataggio, le tue risposte vengono inviate decifrate a {host} per essere convertite in testo.',
   'assistant.video.spokenLanguage': 'Lingua parlata',
   'assistant.video.autoDetect': 'Rilevamento automatico',
+
+  // ── badges (gamification awards) ──
+  'badges.celebrate.title': 'Badge ottenuto',
+  'badges.celebrate.dismiss': 'Ottimo!',
+  'badges.gallery.title': 'Badge',
+  'badges.first-words.name': 'Prime parole',
+  'badges.first-words.desc': 'Scrivi la tua prima voce.',
+  'badges.streak-3.name': 'Tre di fila',
+  'badges.streak-3.desc': 'Scrivi per tre giorni di fila.',
+  'badges.streak-7.name': 'Una settimana intera',
+  'badges.streak-7.desc': 'Scrivi per sette giorni di fila.',
+  'badges.wordsmith.name': 'Artigiano delle parole',
+  'badges.wordsmith.desc': 'Scrivi 1.000 parole in totale.',
+  'badges.deep-dive.name': 'In profondità',
+  'badges.deep-dive.desc': 'Scrivi una singola voce di almeno 1.000 parole.',
+  'badges.first-interview.name': 'Prima intervista',
+  'badges.first-interview.desc': 'Completa la tua prima intervista guidata.',
+  'badges.on-camera.name': 'Davanti alla videocamera',
+  'badges.on-camera.desc': 'Registra la tua prima intervista video.',
+  'badges.memory-keeper.name': 'Custode dei ricordi',
+  'badges.memory-keeper.desc': 'Aggiungi una foto, un audio o un video a una voce.',
 };
 
 export default it;

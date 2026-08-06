@@ -868,6 +868,27 @@ const ar: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribeRemote': 'بعد الحفظ تُرسل إجاباتك مفكوكة التشفير إلى {host} لتحويلها إلى نص.',
   'assistant.video.spokenLanguage': 'لغة التحدث',
   'assistant.video.autoDetect': 'كشف تلقائي',
+
+  // ── badges (gamification awards) ──
+  'badges.celebrate.title': 'حصلت على شارة',
+  'badges.celebrate.dismiss': 'رائع!',
+  'badges.gallery.title': 'الشارات',
+  'badges.first-words.name': 'الكلمات الأولى',
+  'badges.first-words.desc': 'اكتب مدخلك الأول.',
+  'badges.streak-3.name': 'ثلاثة أيام متتالية',
+  'badges.streak-3.desc': 'اكتب في ثلاثة أيام متتالية.',
+  'badges.streak-7.name': 'أسبوع كامل',
+  'badges.streak-7.desc': 'اكتب في سبعة أيام متتالية.',
+  'badges.wordsmith.name': 'صائغ الكلمات',
+  'badges.wordsmith.desc': 'اكتب 1,000 كلمة في المجموع.',
+  'badges.deep-dive.name': 'غوص عميق',
+  'badges.deep-dive.desc': 'اكتب مدخلًا واحدًا من 1,000 كلمة أو أكثر.',
+  'badges.first-interview.name': 'المقابلة الأولى',
+  'badges.first-interview.desc': 'أكمل مقابلتك الموجهة الأولى.',
+  'badges.on-camera.name': 'أمام الكاميرا',
+  'badges.on-camera.desc': 'سجّل مقابلتك بالفيديو الأولى.',
+  'badges.memory-keeper.name': 'حارس الذكريات',
+  'badges.memory-keeper.desc': 'أضف صورة أو تسجيلًا صوتيًا أو فيديو إلى مدخل.',
 };
 
 export default ar;

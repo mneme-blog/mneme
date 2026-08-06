@@ -28,6 +28,8 @@ import { GuidedInterviewSheet } from './ui/GuidedInterview';
 import { InterviewTypesSheet } from './ui/InterviewTypes';
 import { VideoInterviewSheet } from './ui/VideoInterview';
 import { ComposeChooser } from './ui/ComposeChooser';
+import { BadgeCelebration } from './ui/BadgeCelebration';
+import { useBadges } from './hooks/useBadges';
 import type { InterviewType } from './sync/engine';
 import { t } from './i18n';
 
@@ -225,6 +227,9 @@ export function App(): VNode {
   const desk = useIsDesktop();
   const theme = useTheme();
   const { status, hasVault, vaultMethod, ownerId, pendingApproval, approvalHint, retryApproval, bootstrapping, entries, journals, templates, aiSettings, newJournal, updateJournal, deleteJournal, signIn, unlock, unlockWithKey, setDeviceUnlock, lock, createEntry, rotatePhrase, deleteVault } = useAppData();
+  // Gamification badges: derived from the decrypted entries; celebrates one
+  // newly earned badge at a time (state/badges.ts, quiet catch-up on first run).
+  const badges = useBadges();
   const [flow, setFlowRaw] = useState<Flow>('journals');
   const [modal, setModal] = useState(false);
   const [rotateOpen, setRotateOpen] = useState(false);
@@ -474,6 +479,7 @@ export function App(): VNode {
         {importOpen && <ImportDayOneSheet desk onClose={() => setImportOpen(false)} />}
         {aiSettingsOpen && <AiSettingsSheet desk onClose={() => setAiSettingsOpen(false)} />}
         {interviewTypesOpen && <InterviewTypesSheet desk onClose={() => setInterviewTypesOpen(false)} />}
+        {badges.celebration && <BadgeCelebration id={badges.celebration} onDismiss={badges.dismissCelebration} />}
       </div>
     );
   }
@@ -513,6 +519,7 @@ export function App(): VNode {
       {interviewOpen && <GuidedInterviewSheet desk={false} onClose={() => { setInterviewOpen(false); setInterviewStart(null); }} onOpenEntry={openEntry} onManageTypes={() => setInterviewTypesOpen(true)} initial={interviewStart?.start} journalId={interviewStart?.journalId} onVideo={(it) => setVideoInterview({ start: it, journalId: interviewStart?.journalId })} />}
       {videoInterview && <VideoInterviewSheet desk={false} onClose={() => setVideoInterview(null)} onOpenEntry={openEntry} onManageTypes={() => setInterviewTypesOpen(true)} initial={videoInterview.start} journalId={videoInterview.journalId} />}
       {interviewTypesOpen && <InterviewTypesSheet desk={false} onClose={() => setInterviewTypesOpen(false)} />}
+      {badges.celebration && <BadgeCelebration id={badges.celebration} onDismiss={badges.dismissCelebration} />}
     </div>
   );
 }

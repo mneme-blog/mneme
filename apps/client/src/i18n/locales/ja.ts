@@ -867,6 +867,27 @@ const ja: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribeRemote': '保存後、回答は復号された状態で {host} に送信され、テキスト化されます。',
   'assistant.video.spokenLanguage': '話す言語',
   'assistant.video.autoDetect': '自動検出',
+
+  // ── badges (gamification awards) ──
+  'badges.celebrate.title': 'バッジ獲得',
+  'badges.celebrate.dismiss': 'やったね！',
+  'badges.gallery.title': 'バッジ',
+  'badges.first-words.name': '最初のことば',
+  'badges.first-words.desc': '最初のエントリーを書きましょう。',
+  'badges.streak-3.name': '3日連続',
+  'badges.streak-3.desc': '3日続けて書きましょう。',
+  'badges.streak-7.name': '1週間の継続',
+  'badges.streak-7.desc': '7日続けて書きましょう。',
+  'badges.wordsmith.name': '言葉の職人',
+  'badges.wordsmith.desc': '合計1,000語を書きましょう。',
+  'badges.deep-dive.name': '深掘り',
+  'badges.deep-dive.desc': '1,000語以上のエントリーを1つ書きましょう。',
+  'badges.first-interview.name': '初めてのインタビュー',
+  'badges.first-interview.desc': '初めてのガイド付きインタビューを完了しましょう。',
+  'badges.on-camera.name': 'カメラの前で',
+  'badges.on-camera.desc': '初めてのビデオインタビューを録画しましょう。',
+  'badges.memory-keeper.name': '思い出の番人',
+  'badges.memory-keeper.desc': 'エントリーに写真・音声・動画を追加しましょう。',
 };
 
 export default ja;

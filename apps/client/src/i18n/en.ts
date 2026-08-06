@@ -15,6 +15,7 @@ import { vault } from './messages/vault';
 import { templates } from './messages/templates';
 import { shell } from './messages/shell';
 import { prefs } from './messages/prefs';
+import { badges } from './messages/badges';
 
 export const en = {
   ...common,
@@ -29,6 +30,7 @@ export const en = {
   ...templates,
   ...shell,
   ...prefs,
+  ...badges,
 } as const;
 
 export type MessageKey = keyof typeof en;

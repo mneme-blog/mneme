@@ -14,6 +14,8 @@ import { useAppData, type SyncStatus } from '../state/data';
 import { normalizeRelayUrl } from '../sync/relay';
 import { PALETTES, SKINS, type ThemeControls, type ThemeMode } from '../hooks/useTheme';
 import { compactCount, dayStreak, journaledDays, longestStreak, monthWords, totalWords } from '../state/stats';
+import { BADGE_ORDER, evaluateBadges } from '../state/badges';
+import { BadgeMedallion, badgeName, badgeDesc } from './BadgeCelebration';
 import { APP_VERSION, buildTimeLabel } from '../buildinfo';
 import { hexA } from './color';
 import { fmtNumber, t, useI18n, type MessageKey } from '../i18n';
@@ -269,7 +271,7 @@ export function PreferencesSheet({ desk, theme, onClose, ownerId, status, onLock
   /** Interview-types manager — reached from Preferences on both desktop and mobile; null when assistant is off. */
   onInterviewTypes?: (() => void) | null;
 }): VNode {
-  const { entries, vaultMethod } = useAppData();
+  const { entries, vaultMethod, interviewTypes } = useAppData();
   const i18n = useI18n();
   const [tab, setTab] = useState<TabId>('appearance');
   // Dismiss only on a click that both *starts* and *ends* on the backdrop
@@ -300,6 +302,13 @@ export function PreferencesSheet({ desk, theme, onClose, ownerId, status, onLock
       month: monthWords(live, d.getUTCFullYear(), d.getUTCMonth()),
     };
   }, [entries]);
+
+  // Gallery state only — the pure evaluation, not useBadges(): a second
+  // stateful instance would race app.tsx's catch-up writes to localStorage.
+  const earnedBadges = useMemo(
+    () => evaluateBadges(entries, interviewTypes.filter((it) => !it.deleted).map((it) => it.name)),
+    [entries, interviewTypes],
+  );
 
   const appearance = (
     <div>
@@ -412,6 +421,23 @@ export function PreferencesSheet({ desk, theme, onClose, ownerId, status, onLock
       <p style={{ fontFamily: 'var(--ui)', fontSize: 11.5, color: 'var(--ink-3)', margin: '12px 2px 0', lineHeight: 1.5 }}>
         {t('prefs.writing.note')}
       </p>
+
+      <SectionLabel>{t('badges.gallery.title')}</SectionLabel>
+      <div style={{ display: 'grid', gridTemplateColumns: desk ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)', gap: 8 }}>
+        {BADGE_ORDER.map((id) => {
+          const has = earnedBadges.has(id);
+          return (
+            <div
+              key={id}
+              title={badgeDesc(id)}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '14px 8px 12px', borderRadius: 12, border: `1px solid ${has ? 'var(--accent-line)' : 'var(--line)'}`, background: has ? 'var(--accent-soft)' : 'var(--paper)', textAlign: 'center' }}
+            >
+              <BadgeMedallion earned={has} size={44} />
+              <span style={{ fontFamily: 'var(--ui)', fontSize: 11.5, fontWeight: has ? 700 : 500, color: has ? 'var(--accent-ink)' : 'var(--ink-3)', lineHeight: 1.3 }}>{badgeName(id)}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 

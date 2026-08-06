@@ -868,6 +868,27 @@ const hi: Partial<Record<MessageKey, string>> = {
   'assistant.video.transcribeRemote': 'सहेजने के बाद आपके उत्तर डिक्रिप्ट होकर {host} पर भेजे जाते हैं और टेक्स्ट में बदले जाते हैं।',
   'assistant.video.spokenLanguage': 'बोली जाने वाली भाषा',
   'assistant.video.autoDetect': 'अपने आप पहचानें',
+
+  // ── badges (gamification awards) ──
+  'badges.celebrate.title': 'बैज मिला',
+  'badges.celebrate.dismiss': 'बहुत खूब!',
+  'badges.gallery.title': 'बैज',
+  'badges.first-words.name': 'पहले शब्द',
+  'badges.first-words.desc': 'अपनी पहली प्रविष्टि लिखें।',
+  'badges.streak-3.name': 'लगातार तीन दिन',
+  'badges.streak-3.desc': 'लगातार तीन दिन लिखें।',
+  'badges.streak-7.name': 'पूरा एक हफ़्ता',
+  'badges.streak-7.desc': 'लगातार सात दिन लिखें।',
+  'badges.wordsmith.name': 'शब्दों के कारीगर',
+  'badges.wordsmith.desc': 'कुल 1,000 शब्द लिखें।',
+  'badges.deep-dive.name': 'गहराई में',
+  'badges.deep-dive.desc': 'कम से कम 1,000 शब्दों की एक प्रविष्टि लिखें।',
+  'badges.first-interview.name': 'पहला साक्षात्कार',
+  'badges.first-interview.desc': 'अपना पहला निर्देशित साक्षात्कार पूरा करें।',
+  'badges.on-camera.name': 'कैमरे के सामने',
+  'badges.on-camera.desc': 'अपना पहला वीडियो साक्षात्कार रिकॉर्ड करें।',
+  'badges.memory-keeper.name': 'यादों के रखवाले',
+  'badges.memory-keeper.desc': 'किसी प्रविष्टि में फ़ोटो, ऑडियो या वीडियो जोड़ें।',
 };
 
 export default hi;
