@@ -511,7 +511,7 @@ sets `<html dir="rtl">`; layout uses **logical CSS properties** (inline-start/en
 direction-bearing icons opt into mirroring via `<Icon dirFlip>` + the `[dir='rtl'] .dir-flip` rule in
 `tokens.css`. The AI assistant is told to reply in the app language (`ai/prompts.ts`,
 `currentLocale().english`). Coverage/regression check: `pnpm --filter client exec tsx scripts/i18n-dump.ts`
-(writes the flat English reference + prints per-locale full coverage, currently `792/792`). Known refinement: gendered
+(writes the flat English reference + prints per-locale full coverage, currently `798/798`). Known refinement: gendered
 languages get neutral phrasing around the shared `{noun}` media-delete placeholder; Arabic plurals use
 one/other with an `#other` fallback for two/few/many.
 
@@ -620,7 +620,7 @@ TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal?sslmode=
 ./journald list-backups              # list archives in BACKUP_DIR
 
 # Live client↔relay crypto round-trip (relay must be running)
-pnpm --filter client exec tsx apps/client/scripts/integration.ts
+pnpm --filter client exec tsx scripts/integration.ts   # exec runs from apps/client/
 
 # Tauri shells (after §10 step 8) — LOCAL ONLY, never Codespaces (not scaffolded yet)
 ```
@@ -628,8 +628,11 @@ Codespaces (`.devcontainer/`) covers the **server + PWA** end-to-end; Tauri is o
 
 ### Deeper docs
 Plain-English deep-dives live in [`docs/`](docs/): `ARCHITECTURE.md` (diagrams), `SECURITY.md`
-(E2EE model + attack vectors), `API.md` (relay endpoints), `CONTRIBUTING.md`. This §0 stays the
-quick operating guide; `docs/` expands on it; §1–§12 below remain the binding decisions.
+(E2EE model + attack vectors), `ENCRYPTION.md` (primitives + key hierarchy), `API.md` (relay
+endpoints), `DEPLOYMENT.md` (production stack: Caddy, HTTPS, compose), `MAINTENANCE.md` (backups,
+upgrades, health), `FEATURES.md` (what's built today), `ROADMAP.md` (honest status vs. §10),
+`PWA.md` (phone install recipe), `CONTRIBUTING.md`. This §0 stays the quick operating guide;
+`docs/` expands on it; §1–§12 below remain the binding decisions.
 
 Both security audits live in **`SECURITY-AUDITS.md`** at the repo root, newest first, kept verbatim
 as a record (findings are never edited after the fact — what changed is appended in bold): the
