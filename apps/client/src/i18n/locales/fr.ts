@@ -887,6 +887,10 @@ const fr: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'Enregistrez votre premier entretien vidéo.',
   'badges.memory-keeper.name': 'Gardien des souvenirs',
   'badges.memory-keeper.desc': 'Ajoutez une photo, un audio ou une vidéo à une entrée.',
+  'media.transcribe.busyFor': 'Transcription… {seconds}s',
+  'media.transcribe.busyCount': 'Transcription des réponses… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'C’est le serveur fourni avec votre déploiement, mais enregistré comme adresse absolue il compte comme serveur tiers : votre connexion n’est pas jointe et chaque requête est rejetée.',
+  'assistant.transcribe.bundledFix': 'Utiliser {path} à la place',
 };
 
 export default fr;

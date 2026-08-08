@@ -899,6 +899,10 @@ const es: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'Graba tu primera entrevista en vídeo.',
   'badges.memory-keeper.name': 'Guardián de recuerdos',
   'badges.memory-keeper.desc': 'Añade una foto, un audio o un vídeo a una entrada.',
+  'media.transcribe.busyFor': 'Transcribiendo… {seconds}s',
+  'media.transcribe.busyCount': 'Transcribiendo respuestas… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'Este es el servidor incluido en tu despliegue, pero guardado como dirección absoluta cuenta como servidor de terceros: tu inicio de sesión no se adjunta y cada solicitud se rechaza.',
+  'assistant.transcribe.bundledFix': 'Usar {path} en su lugar',
 };
 
 export default es;

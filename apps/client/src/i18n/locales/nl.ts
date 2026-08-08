@@ -885,6 +885,10 @@ const nl: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'Neem je eerste video-interview op.',
   'badges.memory-keeper.name': 'Herinneringsbewaarder',
   'badges.memory-keeper.desc': 'Voeg een foto, audio of video toe aan een notitie.',
+  'media.transcribe.busyFor': 'Transcriberen… {seconds}s',
+  'media.transcribe.busyCount': 'Antwoorden transcriberen… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'Dit is de meegeleverde server van je deployment, maar opgeslagen als absoluut adres telt hij als externe server: je aanmelding wordt niet meegestuurd en elk verzoek wordt geweigerd.',
+  'assistant.transcribe.bundledFix': 'Gebruik in plaats daarvan {path}',
 };
 
 export default nl;

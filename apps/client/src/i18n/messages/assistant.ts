@@ -68,6 +68,11 @@ export const assistant = {
   'assistant.transcribe.keyOptional': 'optional',
   'assistant.transcribe.cspNote':
     'Self-hosted web deployments must also allow a non-loopback server in the Content-Security-Policy (CSP_CONNECT_EXTRA).',
+  // The bundled endpoint pasted as an absolute URL: same destination, but only
+  // the path form may carry the vault session past the relay's gate.
+  'assistant.transcribe.bundledAbsolute':
+    "This is your deployment's own bundled server, but stored as an absolute address it counts as a third-party server — your sign-in isn't attached, and every request is rejected.",
+  'assistant.transcribe.bundledFix': 'Use {path} instead',
   // The server check. It asks the model listing, never sends a recording — a
   // whisper server that has not downloaded the model is reachable but answers
   // every transcription with a 404, which no status code alone explains.

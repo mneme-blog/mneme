@@ -889,6 +889,10 @@ const ar: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'سجّل مقابلتك بالفيديو الأولى.',
   'badges.memory-keeper.name': 'حارس الذكريات',
   'badges.memory-keeper.desc': 'أضف صورة أو تسجيلًا صوتيًا أو فيديو إلى مدخل.',
+  'media.transcribe.busyFor': 'جارٍ التفريغ… {seconds} ث',
+  'media.transcribe.busyCount': 'جارٍ تفريغ الإجابات… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'هذا هو الخادم المرفق بنشرك، لكنه محفوظ كعنوان مطلق فيُعامل كخادم جهة خارجية: لا يُرفق تسجيل دخولك ويُرفض كل طلب.',
+  'assistant.transcribe.bundledFix': 'استخدم {path} بدلًا من ذلك',
 };
 
 export default ar;

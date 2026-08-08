@@ -105,6 +105,10 @@ export const media = {
   // was said; transcripts survive "Delete the source clips".
   'media.transcribe.action': 'Transcribe',
   'media.transcribe.busy': 'Transcribing…',
+  // A running whisper job is one opaque request — the ticking seconds are the
+  // honest "still working" signal; batch runs count clips instead.
+  'media.transcribe.busyFor': 'Transcribing… {seconds}s',
+  'media.transcribe.busyCount': 'Transcribing answers… {done}/{total}',
   'media.transcribe.show': 'Show transcript',
   'media.transcribe.hide': 'Hide transcript',
   // Speech-to-text mishears names and numbers, and the transcript is what

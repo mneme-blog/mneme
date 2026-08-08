@@ -102,6 +102,18 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
   const trResolved = resolveTranscriptionUrl(tr.baseUrl);
   const trConfigured = trResolved !== null;
   const trScope = trResolved ? ollamaScope(trResolved) : 'invalid';
+  // The predictable foot-gun: the bundled endpoint pasted as an ABSOLUTE URL
+  // (the effective-destination line shows one, and it round-trips through the
+  // field). It points at the same place, but only the path form may carry the
+  // vault session past the relay's gate — stored absolute, every request 401s
+  // as "API key rejected" against the user's own server. Detected here and
+  // fixed with one click rather than silently rewritten: the conservative
+  // absolute-is-third-party rule in isBundledTranscriptionUrl stays intact.
+  const bundledPath = defaultTranscriptionSettings().baseUrl;
+  const bundledMistyped =
+    trResolved !== null &&
+    !isBundledTranscriptionUrl(tr.baseUrl) &&
+    trResolved === resolveTranscriptionUrl(bundledPath);
 
   const runTest = async (): Promise<void> => {
     setTest({ state: 'busy' });
@@ -352,10 +364,20 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
                     {t('assistant.transcribe.effective', { host: trResolved })}
                   </p>
                 )}
-                {trConfigured && trScope !== 'loopback' && (
+                {trConfigured && trScope !== 'loopback' && !bundledMistyped && (
                   <p style={{ ...pStyle, fontSize: 11.5, marginTop: 4, color: 'var(--accent-ink)' }}>
                     {t('assistant.transcribe.notLocal')}
                   </p>
+                )}
+                {bundledMistyped && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start', marginTop: 8, padding: '10px 12px', borderRadius: 10, background: 'var(--accent-soft)', border: '1px solid var(--accent-line)' }}>
+                    <p style={{ ...pStyle, fontSize: 12, color: 'var(--accent-ink)' }}>
+                      {t('assistant.transcribe.bundledAbsolute')}
+                    </p>
+                    <Btn kind="primary" size="sm" onClick={() => patchTr({ baseUrl: bundledPath })}>
+                      {t('assistant.transcribe.bundledFix', { path: bundledPath })}
+                    </Btn>
+                  </div>
                 )}
               </div>
               {trConfigured && (

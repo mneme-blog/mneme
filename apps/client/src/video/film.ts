@@ -79,6 +79,44 @@ export function estimateFilmSeconds(clipDurationsMs: number[]): number {
 // vault locks (see stopAllRenders).
 const active = new Map<string, RenderHandle>();
 
+// Progress fan-out for LATE subscribers: the render dialog gets progress as the
+// starter's callback, but the interview card (and a re-opened dialog) need to
+// follow a render they didn't start. Latest value per session, replayed on
+// subscribe; `null` means "no render running here" and is also the end signal.
+const progressWatchers = new Map<string, Set<(p: RenderProgress | null) => void>>();
+const lastProgress = new Map<string, RenderProgress>();
+
+function publishProgress(sessionId: string, p: RenderProgress): void {
+  lastProgress.set(sessionId, p);
+  for (const cb of progressWatchers.get(sessionId) ?? []) cb(p);
+}
+
+function publishRenderEnd(sessionId: string): void {
+  lastProgress.delete(sessionId);
+  for (const cb of progressWatchers.get(sessionId) ?? []) cb(null);
+}
+
+/**
+ * Follow the render of one session from anywhere. The current state is
+ * delivered immediately (progress when one is running — a just-started render
+ * reports phase 'probe' at 0 — else null), then every update until the render
+ * ends, which is delivered as null. Returns the unsubscribe.
+ */
+export function watchRenderProgress(sessionId: string, cb: (p: RenderProgress | null) => void): () => void {
+  let set = progressWatchers.get(sessionId);
+  if (!set) {
+    set = new Set();
+    progressWatchers.set(sessionId, set);
+  }
+  set.add(cb);
+  const running = active.get(sessionId);
+  cb(lastProgress.get(sessionId) ?? (running ? { phase: 'probe', ratio: 0, engine: running.engine } : null));
+  return () => {
+    set.delete(cb);
+    if (set.size === 0) progressWatchers.delete(sessionId);
+  };
+}
+
 export function activeRender(sessionId: string): RenderHandle | null {
   return active.get(sessionId) ?? null;
 }
@@ -102,6 +140,7 @@ function startWorkerRender(job: FilmJob, onProgress: (p: RenderProgress) => void
       if (watchdog) clearTimeout(watchdog);
       worker.terminate();
       active.delete(job.sessionId);
+      publishRenderEnd(job.sessionId);
       fn();
     };
 
@@ -172,6 +211,7 @@ function startWorkerRender(job: FilmJob, onProgress: (p: RenderProgress) => void
         settled = true;
         worker.terminate();
         active.delete(job.sessionId);
+        publishRenderEnd(job.sessionId);
       }, 3000);
     },
   };
@@ -190,20 +230,29 @@ function startWorkerRender(job: FilmJob, onProgress: (p: RenderProgress) => void
 export function renderFilm(job: FilmJob, onProgress: (p: RenderProgress) => void): RenderHandle {
   const running = active.get(job.sessionId);
   if (running) return running;
-  if (canRenderWithWebCodecs()) return startWorkerRender(job, onProgress);
+  // Every progress tick also goes to the fan-out, so watchers that didn't
+  // start the render (the interview card, a re-opened dialog) stay live.
+  const report = (p: RenderProgress): void => {
+    publishProgress(job.sessionId, p);
+    onProgress(p);
+  };
+  if (canRenderWithWebCodecs()) return startWorkerRender(job, report);
 
   // Realtime fallback — loaded only when needed so its cost never lands in the
   // main bundle for the browsers that don't use it.
   let cancelFn = (): void => undefined;
   const promise = import('./fallback').then((mod) => {
-    const handle = mod.renderRealtime(job, onProgress, FILM_FPS, CARD_SECONDS);
+    const handle = mod.renderRealtime(job, report, FILM_FPS, CARD_SECONDS);
     cancelFn = handle.cancel;
     return handle.promise;
   });
   const handle: RenderHandle = {
     sessionId: job.sessionId,
     engine: 'realtime',
-    promise: promise.finally(() => active.delete(job.sessionId)),
+    promise: promise.finally(() => {
+      active.delete(job.sessionId);
+      publishRenderEnd(job.sessionId);
+    }),
     cancel: () => cancelFn(),
   };
   handle.promise.catch(() => undefined);

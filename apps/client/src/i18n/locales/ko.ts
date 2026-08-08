@@ -833,6 +833,10 @@ const ko: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': '첫 영상 인터뷰를 녹화하세요.',
   'badges.memory-keeper.name': '추억 지킴이',
   'badges.memory-keeper.desc': '항목에 사진, 오디오 또는 동영상을 추가하세요.',
+  'media.transcribe.busyFor': '전사 중… {seconds}초',
+  'media.transcribe.busyCount': '답변 전사 중… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': '이것은 배포에 포함된 서버이지만, 절대 주소로 저장하면 타사 서버로 간주됩니다. 로그인이 첨부되지 않아 모든 요청이 거부됩니다.',
+  'assistant.transcribe.bundledFix': '대신 {path} 사용',
 };
 
 export default ko;
