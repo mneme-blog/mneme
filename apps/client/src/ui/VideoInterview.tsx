@@ -42,6 +42,7 @@ import {
   setSpokenLanguage,
   SPOKEN_LANGUAGES,
 } from '../ai/transcribe';
+import { reportTranscribeRun } from '../ai/transcribeRuns';
 import { currentLocale } from '../i18n';
 
 const pStyle: JSX.CSSProperties = { fontFamily: 'var(--ui)', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)', margin: 0 };
@@ -363,19 +364,31 @@ export function VideoInterviewSheet({
     if (autoTranscribe && trCfg) {
       const language = spokenLang || undefined;
       void (async () => {
-        for (let i = 0; i < cards.length; i++) {
-          const clip = cards[i].clip;
-          if (!clip) continue;
-          try {
-            const blob = await mediaBlob(entry.id, clip);
-            if (!blob) continue;
-            const text = await transcribe(trCfg, blob, { mime: clip.mime, language });
-            attachTranscript(entry.id, sessionId, i, text);
-          } catch {
-            // Best-effort: stop on the first failure (server down, vault
-            // locked). The card's manual "Transcribe answers" action remains.
-            break;
+        // Publish counts to the run registry so the interview card in the
+        // now-open entry can show "n/total" while this loop works — the sheet
+        // that started it is already gone.
+        const total = cards.filter((c) => c.clip).length;
+        let done = 0;
+        reportTranscribeRun(sessionId, { done, total });
+        try {
+          for (let i = 0; i < cards.length; i++) {
+            const clip = cards[i].clip;
+            if (!clip) continue;
+            try {
+              const blob = await mediaBlob(entry.id, clip);
+              if (!blob) continue;
+              const text = await transcribe(trCfg, blob, { mime: clip.mime, language });
+              attachTranscript(entry.id, sessionId, i, text);
+              done++;
+              reportTranscribeRun(sessionId, { done, total });
+            } catch {
+              // Best-effort: stop on the first failure (server down, vault
+              // locked). The card's manual "Transcribe answers" action remains.
+              break;
+            }
           }
+        } finally {
+          reportTranscribeRun(sessionId, null);
         }
       })();
     }

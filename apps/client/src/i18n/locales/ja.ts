@@ -888,6 +888,10 @@ const ja: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': '初めてのビデオインタビューを録画しましょう。',
   'badges.memory-keeper.name': '思い出の番人',
   'badges.memory-keeper.desc': 'エントリーに写真・音声・動画を追加しましょう。',
+  'media.transcribe.busyFor': '文字起こし中… {seconds}秒',
+  'media.transcribe.busyCount': '回答を文字起こし中… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'これはデプロイに同梱されたサーバーですが、絶対アドレスとして保存するとサードパーティのサーバーとして扱われます。サインインが添付されず、すべてのリクエストが拒否されます。',
+  'assistant.transcribe.bundledFix': '代わりに {path} を使う',
 };
 
 export default ja;

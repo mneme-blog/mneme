@@ -905,6 +905,10 @@ const it: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'Registra la tua prima intervista video.',
   'badges.memory-keeper.name': 'Custode dei ricordi',
   'badges.memory-keeper.desc': 'Aggiungi una foto, un audio o un video a una voce.',
+  'media.transcribe.busyFor': 'Trascrizione… {seconds}s',
+  'media.transcribe.busyCount': 'Trascrizione delle risposte… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'Questo è il server incluso nel tuo deployment, ma salvato come indirizzo assoluto conta come server di terze parti: il tuo accesso non viene allegato e ogni richiesta viene rifiutata.',
+  'assistant.transcribe.bundledFix': 'Usa invece {path}',
 };
 
 export default it;

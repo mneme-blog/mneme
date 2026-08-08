@@ -319,6 +319,66 @@ function EntryEditor({
     setLightbox(index >= 0 ? { items, index } : { items: [att], index: 0 });
   };
 
+  // Fold out-of-editor write-backs into the LIVE document. A film render or a
+  // detached auto-transcription finishes via attachFilm/attachTranscript, which
+  // write the STORED entry — but this editor was seeded once at mount and never
+  // re-reads bodyJson, so the result used to appear only after closing and
+  // reopening the entry. Whenever the stored body changes, copy exactly the
+  // fields those writers own — film, renderedAt, and per-card transcripts,
+  // addressed by sessionId — into the matching live nodes. Nothing else is
+  // touched, so live typing can't be clobbered; transcripts only fill holes
+  // (a hand-edited one in the live doc wins over a late write-back).
+  useEffect(() => {
+    if (!editor) return;
+    let stored: JSONContent;
+    try {
+      stored = parseBody(entry.bodyJson, entry.bodyText);
+    } catch {
+      return;
+    }
+    const bySession = new Map<string, { film: unknown; renderedAt: unknown; transcripts: (string | undefined)[] }>();
+    const walk = (node: JSONContent): void => {
+      if (node.type === 'videoInterview' && typeof node.attrs?.sessionId === 'string' && node.attrs.sessionId) {
+        const cards = Array.isArray(node.attrs.cards) ? (node.attrs.cards as { transcript?: unknown }[]) : [];
+        bySession.set(node.attrs.sessionId, {
+          film: node.attrs.film ?? null,
+          renderedAt: node.attrs.renderedAt ?? null,
+          transcripts: cards.map((c) => (typeof c?.transcript === 'string' && c.transcript ? c.transcript : undefined)),
+        });
+      }
+      node.content?.forEach(walk);
+    };
+    walk(stored);
+    if (bySession.size === 0) return;
+
+    let tr = editor.state.tr;
+    let changed = false;
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name !== 'videoInterview') return;
+      const s = bySession.get(node.attrs.sessionId as string);
+      if (!s) return;
+      const liveFilmId = (node.attrs.film as { id?: unknown } | null)?.id ?? null;
+      const storedFilmId = (s.film as { id?: unknown } | null)?.id ?? null;
+      const filmChanged = storedFilmId !== null && (liveFilmId !== storedFilmId || node.attrs.renderedAt !== s.renderedAt);
+      const liveCards = Array.isArray(node.attrs.cards) ? (node.attrs.cards as Record<string, unknown>[]) : [];
+      let cardsChanged = false;
+      const mergedCards = liveCards.map((c, i) => {
+        const incoming = s.transcripts[i];
+        if (!incoming || (typeof c.transcript === 'string' && c.transcript)) return c;
+        cardsChanged = true;
+        return { ...c, transcript: incoming };
+      });
+      if (!filmChanged && !cardsChanged) return;
+      tr = tr.setNodeMarkup(pos, undefined, {
+        ...node.attrs,
+        ...(filmChanged ? { film: s.film, renderedAt: s.renderedAt } : {}),
+        ...(cardsChanged ? { cards: mergedCards } : {}),
+      });
+      changed = true;
+    });
+    if (changed) editor.view.dispatch(tr);
+  }, [editor, entry.bodyJson]);
+
   // Store the recording, then embed it in the document at the cursor.
   const attach = async (kind: MediaAttachment['kind'], blob: Blob, durationMs: number): Promise<void> => {
     const att = await addMedia(entry.id, kind, blob, { durationMs });

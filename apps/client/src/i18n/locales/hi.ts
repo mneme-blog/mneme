@@ -889,6 +889,10 @@ const hi: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'अपना पहला वीडियो साक्षात्कार रिकॉर्ड करें।',
   'badges.memory-keeper.name': 'यादों के रखवाले',
   'badges.memory-keeper.desc': 'किसी प्रविष्टि में फ़ोटो, ऑडियो या वीडियो जोड़ें।',
+  'media.transcribe.busyFor': 'ट्रांसक्राइब हो रहा है… {seconds} से.',
+  'media.transcribe.busyCount': 'उत्तर ट्रांसक्राइब हो रहे हैं… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'यह आपके डिप्लॉयमेंट के साथ आया सर्वर है, लेकिन पूर्ण पते के रूप में सहेजे जाने पर यह तृतीय-पक्ष सर्वर माना जाता है: आपका साइन-इन साथ नहीं भेजा जाता और हर अनुरोध अस्वीकार हो जाता है।',
+  'assistant.transcribe.bundledFix': 'इसके बजाय {path} उपयोग करें',
 };
 
 export default hi;

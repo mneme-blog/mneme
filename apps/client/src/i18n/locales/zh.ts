@@ -833,6 +833,10 @@ const zh: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': '录制你的第一次视频访谈。',
   'badges.memory-keeper.name': '记忆守护者',
   'badges.memory-keeper.desc': '在记录中加入照片、音频或视频。',
+  'media.transcribe.busyFor': '转写中… {seconds} 秒',
+  'media.transcribe.busyCount': '正在转写回答… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': '这是你部署自带的服务器，但以绝对地址保存时会被视为第三方服务器：不会附加你的登录凭据，每个请求都会被拒绝。',
+  'assistant.transcribe.bundledFix': '改用 {path}',
 };
 
 export default zh;

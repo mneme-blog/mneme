@@ -102,6 +102,11 @@ try {
   check('path form is the bundled endpoint', isBundledTranscriptionUrl('/whisper'));
   check('absolute URL is never bundled — even on this origin',
     !isBundledTranscriptionUrl('https://mneme.example/whisper'));
+  // The settings-sheet click-fix rests on exactly this pair of facts: the
+  // absolute paste of the bundled endpoint resolves to the same place, yet is
+  // not bundled (no session token → every request 401s). Detect, offer the fix.
+  check('absolute paste of the bundled endpoint is detectable',
+    resolveTranscriptionUrl('https://mneme.example/whisper') === resolveTranscriptionUrl('/whisper'));
   check('LAN address is not bundled', !isBundledTranscriptionUrl('http://192.168.1.9:8000'));
 
   const gated = transcriptionConfig(settings({ transcription: undefined }), token);

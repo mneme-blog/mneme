@@ -179,6 +179,17 @@ export function TranscriptStrip({
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
+  // Wall-clock seconds since the request left — a whisper job is one opaque
+  // HTTP round-trip, so a ticking count is the honest "still working" signal
+  // (a percentage would be invented).
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!busy) return;
+    setElapsed(0);
+    const started = Date.now();
+    const timer = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, [busy]);
   if (!transcript && !onTranscribe) return null;
 
   const run = async (): Promise<void> => {
@@ -282,8 +293,8 @@ export function TranscriptStrip({
             disabled={busy}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--ui)', fontSize: 12, fontWeight: 600, color: 'var(--accent-ink)', background: 'transparent', border: '1px solid var(--line)', borderRadius: 999, padding: '4px 12px', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
           >
-            <Icon name="quote" size={13} color="var(--accent-ink)" />
-            {busy ? t('media.transcribe.busy') : t('media.transcribe.action')}
+            {busy ? <span className="mneme-busy-dot" /> : <Icon name="quote" size={13} color="var(--accent-ink)" />}
+            {busy ? (elapsed > 0 ? t('media.transcribe.busyFor', { seconds: fmtNumber(elapsed) }) : t('media.transcribe.busy')) : t('media.transcribe.action')}
           </button>
           {error && <p style={{ fontFamily: 'var(--ui)', fontSize: 11.5, color: 'var(--accent-ink)', margin: '6px 0 0' }}>{error}</p>}
           {confirming && dest && (

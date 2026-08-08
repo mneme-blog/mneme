@@ -899,6 +899,10 @@ const de: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'Nimm dein erstes Video-Interview auf.',
   'badges.memory-keeper.name': 'Erinnerungshüter',
   'badges.memory-keeper.desc': 'Füge einem Eintrag ein Foto, eine Audio- oder Videoaufnahme hinzu.',
+  'media.transcribe.busyFor': 'Transkribiere… {seconds}s',
+  'media.transcribe.busyCount': 'Transkribiere Antworten… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'Das ist der mitgelieferte Server deines Deployments — als absolute Adresse gespeichert gilt er aber als Fremdserver: deine Anmeldung wird nicht mitgeschickt und jede Anfrage abgelehnt.',
+  'assistant.transcribe.bundledFix': 'Stattdessen {path} verwenden',
 };
 
 export default de;

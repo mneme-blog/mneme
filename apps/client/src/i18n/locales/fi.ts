@@ -894,6 +894,10 @@ const fi: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'Nauhoita ensimmäinen videohaastattelusi.',
   'badges.memory-keeper.name': 'Muistojen vartija',
   'badges.memory-keeper.desc': 'Lisää merkintään valokuva, ääntä tai videota.',
+  'media.transcribe.busyFor': 'Litteroidaan… {seconds}s',
+  'media.transcribe.busyCount': 'Litteroidaan vastauksia… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'Tämä on asennuksesi mukana tuleva palvelin, mutta absoluuttisena osoitteena tallennettuna se lasketaan kolmannen osapuolen palvelimeksi: kirjautumistasi ei liitetä mukaan ja jokainen pyyntö hylätään.',
+  'assistant.transcribe.bundledFix': 'Käytä sen sijaan {path}',
 };
 
 export default fi;

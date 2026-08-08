@@ -366,3 +366,18 @@
   pointer-events: none;
   color: var(--ink-3);
 }
+
+/* Busy pulse for long-running transcription/render work — a visible heartbeat
+   where a percentage would be a lie (one HTTP request has no usable ticks). */
+.mneme-busy-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  flex-shrink: 0;
+  animation: mneme-busy-pulse 1.2s ease-in-out infinite;
+}
+@keyframes mneme-busy-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}

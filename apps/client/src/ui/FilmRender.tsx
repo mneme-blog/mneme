@@ -20,6 +20,7 @@ import {
   canRenderWithWebCodecs,
   estimateFilmSeconds,
   renderFilm,
+  watchRenderProgress,
   type FilmClip,
   type RenderProgress,
 } from '../video/film';
@@ -53,10 +54,15 @@ export function FilmRenderDialog({
   const realtime = !canRenderWithWebCodecs();
   const estimate = estimateFilmSeconds(answered.map((c) => c.clip?.durationMs ?? 0));
 
-  // Follow a render that was already running when the dialog opened.
+  // Follow a render that was already running when the dialog opened — outcome
+  // via the handle's promise, progress via the fan-out (this dialog isn't the
+  // starter, so its own onProgress callback was never attached).
   useEffect(() => {
     if (!running) return;
     let alive = true;
+    const unwatch = watchRenderProgress(data.sessionId, (p) => {
+      if (alive && p) setProgress(p);
+    });
     running.promise
       .then(() => alive && onClose())
       .catch((e) => {
@@ -69,6 +75,7 @@ export function FilmRenderDialog({
       });
     return () => {
       alive = false;
+      unwatch();
     };
   }, [running]);
 
