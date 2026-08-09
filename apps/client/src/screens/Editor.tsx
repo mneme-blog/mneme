@@ -422,6 +422,10 @@ function EntryEditor({
   useEffect(() => {
     onEditorReady(editor);
     onWords(countWords(body.current.text));
+    // Without the cleanup, the parent keeps a DESTROYED TipTap instance when
+    // the last EntryEditor unmounts (entry deleted → empty state) and the
+    // still-rendered toolbar dispatches commands into it.
+    return () => onEditorReady(null);
   }, [editor]);
 
   // Hand off whenever the parent flips the mode. Rich→markdown serializes the

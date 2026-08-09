@@ -248,16 +248,23 @@ function Field({ label, children }: { label: string; children: ComponentChildren
   );
 }
 
+// The vault identity chip: the real owner-id prefix (matches the truncated
+// vault label on the operator dashboard) plus the seed-derived operator hint.
+// Both are non-secret — already cleartext on the relay.
 function AccountChip(): VNode {
+  const { ownerId, approvalHint } = useAppData();
+  const label = [ownerId?.slice(0, 4), approvalHint].filter(Boolean).join(' · ');
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
       <div style={{ width: 40, height: 40, borderRadius: 999, background: 'linear-gradient(145deg, var(--accent), #8E4128)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 600, flexShrink: 0 }}>V</div>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontFamily: 'var(--ui)', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{t('journals.vault')}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Icon name="lock" size={11} color="var(--accent)" />
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>7f3a · velvet harbor</span>
-        </div>
+        {label && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="lock" size={11} color="var(--accent)" />
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>{label}</span>
+          </div>
+        )}
       </div>
     </div>
   );

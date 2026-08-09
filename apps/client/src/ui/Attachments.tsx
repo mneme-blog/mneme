@@ -61,10 +61,17 @@ export function useMediaUrl(att: MediaAttachment, resolve: MediaResolver): { url
     autoTries.current = 0;
   }, [att.id]);
 
+  // `resolve` is deliberately not a dependency: every caller passes an inline
+  // closure, and it only captures stable values (the context callbacks). The
+  // effect keys on the attachment identity instead.
   useEffect(() => {
     let objectUrl: string | null = null;
     let cancelled = false;
     setFailed(false);
+    // Reset before resolving: the previous attachment's object URL was revoked
+    // by this effect's cleanup, so keeping it in state would render a broken
+    // frame until the new blob lands.
+    setUrl(null);
     void resolve(att).then((blob) => {
       if (cancelled) return;
       if (!blob) {

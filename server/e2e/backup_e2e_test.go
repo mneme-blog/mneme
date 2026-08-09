@@ -48,8 +48,22 @@ func TestBackupRestoreRoundTrip(t *testing.T) {
 	device := "dev-bk-" + randHex(t, 6)
 	ownerPub := randBytes(t, 32)
 	devicePub := randBytes(t, 32)
-	if _, err := st.RegisterOwnerDevice(ctx, owner, ownerPub, device, devicePub, store.OwnerStatusApproved, "", randBytes(t, 32)); err != nil {
+	ownerSignPub := randBytes(t, 32)
+	if _, err := st.RegisterOwnerDevice(ctx, owner, ownerPub, device, devicePub, store.OwnerStatusApproved, "", ownerSignPub); err != nil {
 		t.Fatalf("register: %v", err)
+	}
+
+	// A second, REJECTED owner with an approval hint: the security columns
+	// (status, approval_hint, owner_sign_pubkey) must survive the SQL round trip
+	// verbatim — a restore that resets them to column defaults resurrects
+	// rejected vaults as approved and erases the device-binding pin (issue #40).
+	rejected := "owner-bk-" + randHex(t, 6)
+	rejectedSignPub := randBytes(t, 32)
+	if _, err := st.RegisterOwnerDevice(ctx, rejected, randBytes(t, 32), "dev-"+randHex(t, 6), randBytes(t, 32), store.OwnerStatusPending, "amber-otter-07", rejectedSignPub); err != nil {
+		t.Fatalf("register rejected owner: %v", err)
+	}
+	if found, err := st.SetOwnerStatus(ctx, rejected, store.OwnerStatusRejected); err != nil || !found {
+		t.Fatalf("reject owner: found=%v err=%v", found, err)
 	}
 
 	// Two entries (one tombstoned), a media object with two chunks, a reminder.
@@ -82,7 +96,7 @@ func TestBackupRestoreRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	if man.Counts.Owners != 1 || man.Counts.Entries != 2 || man.Counts.Media != 1 || man.Counts.Reminders != 1 {
+	if man.Counts.Owners != 2 || man.Counts.Entries != 2 || man.Counts.Media != 1 || man.Counts.Reminders != 1 {
 		t.Fatalf("unexpected manifest counts: %+v", man.Counts)
 	}
 
@@ -102,13 +116,38 @@ func TestBackupRestoreRoundTrip(t *testing.T) {
 		t.Fatalf("restore: %v", err)
 	}
 
-	// The mutating vault is gone; the original vault is back to its backed-up state.
+	// The mutating vault is gone; the two backed-up vaults are back.
 	vaults, err := st.ListVaultStats(ctx)
 	if err != nil {
 		t.Fatalf("list vaults: %v", err)
 	}
-	if len(vaults) != 1 || vaults[0].OwnerID != owner {
-		t.Fatalf("want only %s after restore, got %+v", owner, vaults)
+	got := map[string]bool{}
+	for _, v := range vaults {
+		got[v.OwnerID] = true
+	}
+	if len(vaults) != 2 || !got[owner] || !got[rejected] {
+		t.Fatalf("want exactly %s and %s after restore, got %+v", owner, rejected, vaults)
+	}
+
+	// The security columns survived the SQL round trip verbatim.
+	restoredOwners := map[string]store.OwnerRow{}
+	if err := st.DumpOwners(ctx, func(o store.OwnerRow) error {
+		restoredOwners[o.OwnerID] = o
+		return nil
+	}); err != nil {
+		t.Fatalf("dump owners after restore: %v", err)
+	}
+	if o := restoredOwners[rejected]; o.Status != store.OwnerStatusRejected || o.ApprovalHint != "amber-otter-07" {
+		t.Fatalf("rejected owner resurrected by restore: status=%q hint=%q", o.Status, o.ApprovalHint)
+	}
+	if !bytes.Equal(restoredOwners[rejected].OwnerSignPub, rejectedSignPub) {
+		t.Fatal("rejected owner's sign pubkey lost across restore")
+	}
+	if o := restoredOwners[owner]; o.Status != store.OwnerStatusApproved || !bytes.Equal(o.OwnerSignPub, ownerSignPub) {
+		t.Fatalf("approved owner's binding pin lost: status=%q", o.Status)
+	}
+	if status, err := st.OwnerStatus(ctx, rejected); err != nil || status != store.OwnerStatusRejected {
+		t.Fatalf("live status lookup after restore: %q err=%v", status, err)
 	}
 
 	entries, err := st.PullEntries(ctx, owner, 0, 100)

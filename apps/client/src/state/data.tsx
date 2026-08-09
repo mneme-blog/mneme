@@ -589,8 +589,14 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
     const s = session.current;
     if (!s) return;
     try {
+      // The relay caps a pull at one page (500 records): keep pulling until it
+      // reports no more, or a fresh device bootstrapping a large vault would
+      // hydrate one page per background tick while claiming to be done.
+      let more = true;
+      while (more) {
       const res = await pullEntries(relay, s.token, s.identity.dataKey, cursor.current);
       cursor.current = res.cursor;
+      more = res.more;
       if (res.entries.length) {
         setEntries((prev) => mergeByLWW(prev, res.entries));
         // Persist the merge (the DB enforces the same LWW guard before overwriting).
@@ -692,6 +698,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         } else {
           aiSync.current = { ...aiSync.current, recordId };
         }
+      }
       }
       setStatusLive('online');
     } catch {

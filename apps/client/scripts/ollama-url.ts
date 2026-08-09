@@ -32,11 +32,22 @@ const CASES: [string, ReturnType<typeof ollamaScope>][] = [
   ['http://172.31.4.4:11434', 'private'],
   ['http://nas.local:11434', 'private'],
   ['http://box.internal:11434', 'private'],
+  // IPv6 literals on the LAN: unique-local (fc00::/7) and link-local (fe80::/10).
+  ['http://[fd12:3456:789a::1]:11434', 'private'],
+  ['http://[fe80::1]:11434', 'private'],
   // Off the network entirely.
   ['http://ollama.example.com:11434', 'remote'],
   ['https://8.8.8.8:11434', 'remote'],
   // 172.32 is NOT in the private range — a classic off-by-one in these checks.
   ['http://172.32.0.1:11434', 'remote'],
+  // DNS names that merely LOOK like private prefixes must stay remote — the
+  // range checks may only ever match literals, or the privacy label lies.
+  ['http://fdroid.example.com:11434', 'remote'],
+  ['https://fcstorage.io', 'remote'],
+  ['http://10.example.net:11434', 'remote'],
+  ['http://192.168.example.org:11434', 'remote'],
+  ['http://127.example.com:11434', 'remote'],
+  ['http://fe80.example.com:11434', 'remote'],
   // Not usable at all.
   ['', 'invalid'],
   ['   ', 'invalid'],

@@ -54,8 +54,14 @@ export function renderRealtime(
   cardSeconds: number,
 ): { promise: Promise<FilmResult>; cancel: () => void } {
   let canceled = false;
+  // While a clip is playing, cancel must also stop the <video> element and
+  // settle the playback promise — the flag alone only stops the draw loop, and
+  // the promise would otherwise sit unresolved until the clip's natural end
+  // (a 90-second answer keeps playing decrypted media for 85 more seconds).
+  let interruptPlayback: (() => void) | null = null;
   const cancel = (): void => {
     canceled = true;
+    interruptPlayback?.();
   };
 
   const promise = (async (): Promise<FilmResult> => {
@@ -160,6 +166,10 @@ export function renderRealtime(
         source.connect(dest);
         try {
           await new Promise<void>((resolve, reject) => {
+            interruptPlayback = () => {
+              el.pause();
+              reject(new RenderCanceled());
+            };
             el.onerror = () => reject(new Error('could not play clip'));
             el.onended = () => resolve();
             const draw = (): void => {
@@ -177,6 +187,7 @@ export function renderRealtime(
             el.play().catch(reject);
           });
         } finally {
+          interruptPlayback = null;
           source.disconnect();
           el.pause();
           el.removeAttribute('src');

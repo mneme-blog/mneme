@@ -240,8 +240,17 @@ export function renderFilm(job: FilmJob, onProgress: (p: RenderProgress) => void
 
   // Realtime fallback — loaded only when needed so its cost never lands in the
   // main bundle for the browsers that don't use it.
-  let cancelFn = (): void => undefined;
+  //
+  // Cancel can arrive while the dynamic import is still resolving (vault lock
+  // calls stopAllRenders and clears `active`). The latch makes that stick:
+  // without it the cancel would hit the placeholder no-op and the render would
+  // start anyway — playing decrypted clips for minutes after the vault locked.
+  let canceled = false;
+  let cancelFn = (): void => {
+    canceled = true;
+  };
   const promise = import('./fallback').then((mod) => {
+    if (canceled) throw new RenderCanceled();
     const handle = mod.renderRealtime(job, report, FILM_FPS, CARD_SECONDS);
     cancelFn = handle.cancel;
     return handle.promise;
