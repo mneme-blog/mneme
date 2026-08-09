@@ -12,6 +12,7 @@ import { useMemo, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
 import { Sheet, Z } from './Sheet';
+import { BuiltinChip, BackToListAccessory, NewRecordButton, managerPadding, stopRow } from './manager';
 import { t } from '../i18n';
 import { useAppData } from '../state/data';
 import type { TemplateRecord } from '../sync/engine';
@@ -25,19 +26,6 @@ import { EditorToolbar } from '../editor/Toolbar';
 import '../editor/editor.css';
 
 const UI_13 = { fontFamily: 'var(--ui)', fontSize: 13 } as const;
-
-// stopPropagation: the sheet container disarms the delete confirmation on any
-// click that bubbles up to it — row actions must not count as "clicked away".
-const handle = (fn: () => void) => (e: Event) => {
-  e.stopPropagation();
-  fn();
-};
-
-function BuiltinChip(): VNode {
-  return (
-    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', border: '1px solid var(--line)', borderRadius: 6, padding: '1px 6px', flexShrink: 0 }}>{t('templates.builtin')}</span>
-  );
-}
 
 function TemplateEditorView({
   template,
@@ -129,7 +117,7 @@ function TemplateActions({
     <button
       title={title}
       aria-label={title}
-      onClick={handle(onClick)}
+      onClick={stopRow(onClick)}
       style={{ width: side, height: side, borderRadius: compact ? 8 : 10, border: '1px solid var(--line)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
     >
       <Icon name={name} size={compact ? 15 : 17} color="var(--ink-2)" />
@@ -138,7 +126,7 @@ function TemplateActions({
   if (armed) {
     return (
       <button
-        onClick={handle(onDelete)}
+        onClick={stopRow(onDelete)}
         style={{ ...UI_13, fontWeight: 600, color: '#fff', background: 'var(--accent)', border: 'none', borderRadius: compact ? 8 : 10, padding: compact ? '6px 11px' : '11px 0', cursor: 'pointer', flexShrink: 0, flex: compact ? undefined : 1 }}
       >
         {t('templates.deletePermanently')}
@@ -148,7 +136,7 @@ function TemplateActions({
   return (
     <>
       <button
-        onClick={handle(onUse)}
+        onClick={stopRow(onUse)}
         style={{ ...UI_13, fontSize: compact ? 13 : 14, fontWeight: 600, color: 'var(--accent-ink)', background: 'var(--accent-soft)', border: '1px solid var(--accent)', borderRadius: compact ? 8 : 10, padding: compact ? '5px 12px' : '10px 0', cursor: 'pointer', flexShrink: 0, flex: compact ? undefined : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
       >
         <Icon name="feather" size={compact ? 13 : 15} color="var(--accent-ink)" /> {useLabel}
@@ -208,14 +196,7 @@ export function TemplatesSheet({
     />
   );
 
-  const newButton = (
-    <button
-      onClick={() => { setArmedDelete(null); setView('new'); }}
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 0', borderRadius: 12, border: '1.5px dashed var(--line)', background: 'transparent', cursor: 'pointer', color: 'var(--ink-3)', fontFamily: 'var(--ui)', fontSize: 13.5, fontWeight: 600 }}
-    >
-      <Icon name="plus" size={16} /> {t('templates.new')}
-    </button>
-  );
+  const newButton = <NewRecordButton label={t('templates.new')} onClick={() => { setArmedDelete(null); setView('new'); }} />;
 
   const empty = (
     <div style={{ ...UI_13, color: 'var(--ink-3)', textAlign: 'center', padding: '22px 0' }}>
@@ -238,14 +219,14 @@ export function TemplatesSheet({
                 return (
                   <button
                     key={tpl.id}
-                    onClick={handle(() => { setArmedDelete(null); setSelectedId(tpl.id); })}
+                    onClick={stopRow(() => { setArmedDelete(null); setSelectedId(tpl.id); })}
                     style={{ textAlign: 'start', cursor: 'pointer', padding: '11px 12px', borderRadius: 10, background: active ? 'var(--accent-soft)' : 'var(--paper)', border: `1px solid ${active ? 'var(--accent)' : 'var(--line)'}`, display: 'flex', flexDirection: 'column', gap: 3 }}
                   >
                     <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                       <span style={{ fontFamily: 'var(--serif)', fontSize: 14.5, fontWeight: 500, color: active ? 'var(--accent-ink)' : 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {tpl.name || t('templates.untitled')}
                       </span>
-                      {tpl.builtin && <BuiltinChip />}
+                      {tpl.builtin && <BuiltinChip labelKey="templates.builtin" />}
                     </span>
                   </button>
                 );
@@ -256,7 +237,7 @@ export function TemplatesSheet({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBlock: 10, paddingInlineStart: 16, paddingInlineEnd: 12, borderBottom: '1px solid var(--line)', background: 'var(--surface-2)' }}>
                   <span style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
                     {sel.name || t('templates.untitled')}
-                    {sel.builtin && <BuiltinChip />}
+                    {sel.builtin && <BuiltinChip labelKey="templates.builtin" />}
                   </span>
                   {actionsFor(sel, true)}
                 </div>
@@ -280,7 +261,7 @@ export function TemplatesSheet({
           return (
             <div key={tpl.id} style={{ border: `1px solid ${open ? 'var(--accent)' : 'var(--line)'}`, borderRadius: 14, background: 'var(--paper)', overflow: 'hidden' }}>
               <button
-                onClick={handle(() => { setArmedDelete(null); setSelectedId(open ? null : tpl.id); })}
+                onClick={stopRow(() => { setArmedDelete(null); setSelectedId(open ? null : tpl.id); })}
                 aria-expanded={open}
                 style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'start', cursor: 'pointer', padding: '13px 14px', background: 'transparent', border: 'none' }}
               >
@@ -289,7 +270,7 @@ export function TemplatesSheet({
                     <span style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {tpl.name || t('templates.untitled')}
                     </span>
-                    {tpl.builtin && <BuiltinChip />}
+                    {tpl.builtin && <BuiltinChip labelKey="templates.builtin" />}
                   </span>
                   {!open && (
                     <span style={{ ...UI_13, fontSize: 12, color: 'var(--ink-3)', marginTop: 2, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -337,15 +318,9 @@ export function TemplatesSheet({
       // The sheet container disarms the delete confirmation on any click that
       // bubbles up to it — row actions stopPropagation so they don't count.
       onCardClick={() => setArmedDelete(null)}
-      cardStyle={{ padding: desk ? 26 : '20px 22px calc(env(safe-area-inset-bottom, 0px) + 30px)', transition: 'width .15s' }}
+      cardStyle={{ padding: managerPadding(desk), transition: 'width .15s' }}
       title={view === 'list' ? t('templates.title') : view === 'new' ? t('templates.new') : t('templates.editTitle')}
-      accessory={
-        view !== 'list' && (
-          <button onClick={() => setView('list')} title={t('templates.backToList')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--ui)', fontSize: 12.5 }}>
-            <Icon name="left" size={15} dirFlip /> {t('templates.all')}
-          </button>
-        )
-      }
+      accessory={view !== 'list' && <BackToListAccessory label={t('templates.all')} title={t('templates.backToList')} onClick={() => setView('list')} />}
     >
       {body}
     </Sheet>
