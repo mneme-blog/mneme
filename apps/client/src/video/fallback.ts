@@ -70,7 +70,11 @@ export function renderRealtime(
     };
     check();
 
-    const first = await probeClip(job.clips[0].blob);
+    // Measure every clip once, up front: clip 0's dimensions set the canvas
+    // geometry, and the durations feed the progress estimate below.
+    const probes = await Promise.all(job.clips.map((c) => probeClip(c.blob).catch(() => null)));
+    const first = probes[0];
+    if (!first) throw new Error('could not read clip');
     const landscape = first.width >= first.height;
     const short = 720;
     const ratio = landscape ? first.width / first.height : first.height / first.width;
@@ -117,11 +121,11 @@ export function renderRealtime(
     };
     document.addEventListener('visibilitychange', onHidden);
 
-    const totalMs =
-      job.clips.length * cardSeconds * 1000 +
-      job.clips.reduce((a, c) => a + (c.blob.size > 0 ? 0 : 0), 0);
     const startedAt = Date.now();
-    let estimatedTotalMs = totalMs;
+    // Cards + measured clip durations, so the progress bar means something
+    // (unreadable durations count as ~30 s rather than zero).
+    const estimatedTotalMs =
+      job.clips.length * cardSeconds * 1000 + probes.reduce((a, p) => a + (p?.durationMs || 30_000), 0);
 
     const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
@@ -133,10 +137,6 @@ export function renderRealtime(
         engine: 'realtime',
       });
     };
-
-    // Measure the clips so the progress bar means something.
-    const probes = await Promise.all(job.clips.map((c) => probeClip(c.blob).catch(() => ({ durationMs: 0 }))));
-    estimatedTotalMs = job.clips.length * cardSeconds * 1000 + probes.reduce((a, p) => a + (p.durationMs || 30_000), 0);
 
     await audioCtx.resume().catch(() => undefined);
     recorder.start(1000);

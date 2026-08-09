@@ -627,7 +627,6 @@ const nl: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'label',
   'shell.search.field.date': 'datum',
   'shell.search.field.content': 'inhoud',
-  'shell.photo': 'foto',
   'shell.removeLabel': '"{name}" verwijderen',
   'shell.daysAgo#one': '{count} dag geleden',
   'shell.daysAgo#other': '{count} dagen geleden',

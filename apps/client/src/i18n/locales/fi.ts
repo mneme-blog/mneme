@@ -636,7 +636,6 @@ const fi: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'tunniste',
   'shell.search.field.date': 'päivämäärä',
   'shell.search.field.content': 'sisältö',
-  'shell.photo': 'valokuva',
   'shell.removeLabel': 'Poista ”{name}”',
   'shell.daysAgo#one': '{count} päivä sitten',
   'shell.daysAgo#other': '{count} päivää sitten',

@@ -262,10 +262,7 @@ export function VideoInterviewSheet({
       const durationMs = Date.now() - startedAt.current;
       const blob = new Blob(parts, { type: rec.mimeType || 'video/webm' });
       takes.current[index] = { blob, durationMs };
-      setReviewUrl((old) => {
-        if (old) URL.revokeObjectURL(old);
-        return URL.createObjectURL(blob);
-      });
+      setReviewUrl(URL.createObjectURL(blob));
       setStage('review');
     };
     recorder.current = rec;
@@ -280,22 +277,18 @@ export function VideoInterviewSheet({
     setStage('recording');
   };
 
-  const clearReview = (): void =>
-    setReviewUrl((old) => {
-      if (old) URL.revokeObjectURL(old);
-      return null;
-    });
+  // The [reviewUrl] effect above is the single owner of revocation — it fires
+  // on every change and on unmount, so setters must not also revoke.
+  const clearReview = (): void => setReviewUrl(null);
 
   const goTo = (i: number): void => {
     clearReview();
     setIndex(i);
     // Step back onto an already-recorded question and it opens in review, so a
     // stray tap can't silently overwrite the take.
-    setStage(takes.current[i] ? 'review' : 'idle');
-    if (takes.current[i]) {
-      const take = takes.current[i];
-      if (take) setReviewUrl(URL.createObjectURL(take.blob));
-    }
+    const take = takes.current[i];
+    setStage(take ? 'review' : 'idle');
+    if (take) setReviewUrl(URL.createObjectURL(take.blob));
   };
 
   const retake = (): void => {

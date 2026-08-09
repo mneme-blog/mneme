@@ -631,7 +631,6 @@ const ar: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'وسم',
   'shell.search.field.date': 'تاريخ',
   'shell.search.field.content': 'محتوى',
-  'shell.photo': 'صورة',
   'shell.removeLabel': 'أزل «{name}»',
   'shell.daysAgo#one': 'قبل يوم واحد',
   'shell.daysAgo#other': 'قبل {count} أيام',

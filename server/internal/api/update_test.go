@@ -132,7 +132,6 @@ func TestUpdateRejectsNonReleaseTags(t *testing.T) {
 		}
 		if _, err := os.Stat(filepath.Join(dir, "request.json")); !os.IsNotExist(err) {
 			t.Fatalf("tag %q was queued", tag)
-			_ = os.Remove(filepath.Join(dir, "request.json"))
 		}
 	}
 }

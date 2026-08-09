@@ -192,11 +192,11 @@ function EntryEditor({
     () => ({
       handlers: {
         resolveTitle: (id: string) => {
-          const target = entriesRef.current.find((x) => x.id === id && !x.deleted);
+          const target = entriesRef.current.find((x) => x.id === id);
           return target ? target.title || t('common.untitled') : null;
         },
         onOpen: (id: string) => {
-          if (entriesRef.current.some((x) => x.id === id && !x.deleted)) onOpenEntryRef.current(id);
+          if (entriesRef.current.some((x) => x.id === id)) onOpenEntryRef.current(id);
         },
       },
       suggest: {
@@ -211,7 +211,7 @@ function EntryEditor({
   const backlinks = useMemo(() => {
     const out: JournalEntry[] = [];
     for (const e of entries) {
-      if (e.deleted || e.id === entry.id || !e.bodyJson) continue;
+      if (e.id === entry.id || !e.bodyJson) continue;
       try {
         if (docEntryLinks(JSON.parse(e.bodyJson) as JSONContent).includes(entry.id)) out.push(e);
       } catch {
@@ -507,7 +507,6 @@ function EntryEditor({
   const labelSuggestions = useMemo(() => {
     const counts = new Map<string, number>();
     for (const e of entries) {
-      if (e.deleted) continue;
       for (const l of e.labels) counts.set(l, (counts.get(l) ?? 0) + 1);
     }
     for (const id of Object.keys(LABELS)) if (!counts.has(id)) counts.set(id, 0);
@@ -843,7 +842,7 @@ export function EditorScreen({
       return;
     }
     const next = entries
-      .filter((x) => !x.deleted && x.journalId === journalId && x.id !== entry?.id)
+      .filter((x) => x.journalId === journalId && x.id !== entry?.id)
       .sort((a, b) => b.updatedAt - a.updatedAt)[0];
     if (next) onSelectEntry(next.id);
   };

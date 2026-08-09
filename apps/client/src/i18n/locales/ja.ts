@@ -631,7 +631,6 @@ const ja: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'ラベル',
   'shell.search.field.date': '日付',
   'shell.search.field.content': '内容',
-  'shell.photo': '写真',
   'shell.removeLabel': '「{name}」を削除',
   'shell.daysAgo#one': '{count} 日前',
   'shell.daysAgo#other': '{count} 日前',

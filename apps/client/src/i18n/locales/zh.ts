@@ -578,7 +578,6 @@ const zh: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': '标签',
   'shell.search.field.date': '日期',
   'shell.search.field.content': '内容',
-  'shell.photo': '照片',
   'shell.removeLabel': '移除“{name}”',
   'shell.daysAgo#one': '{count} 天前',
   'shell.daysAgo#other': '{count} 天前',

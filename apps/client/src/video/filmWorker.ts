@@ -110,7 +110,7 @@ async function probe(): Promise<void> {
     post({ t: 'progress', phase: 'probe', frame: i + 1, totalFrames: clips.length });
   }
   probed = { width, height, durations };
-  post({ t: 'probed', width, height, durations });
+  post({ t: 'probed', width, height });
 }
 
 // ── audio ───────────────────────────────────────────────────

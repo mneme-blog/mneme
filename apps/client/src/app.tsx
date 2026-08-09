@@ -230,7 +230,7 @@ export function App(): VNode {
   // Gamification badges: derived from the decrypted entries; celebrates one
   // newly earned badge at a time (state/badges.ts, quiet catch-up on first run).
   const badges = useBadges();
-  const [flow, setFlowRaw] = useState<Flow>('journals');
+  const [flow, setFlow] = useState<Flow>('journals');
   const [modal, setModal] = useState(false);
   const [rotateOpen, setRotateOpen] = useState(false);
   const [deleteVaultOpen, setDeleteVaultOpen] = useState(false);
@@ -280,7 +280,7 @@ export function App(): VNode {
   // each unlock — same vault or a brand-new one — starts on a clean slate.
   useEffect(() => {
     if (status !== 'locked') return;
-    setFlowRaw('journals');
+    setFlow('journals');
     setModal(false);
     setRotateOpen(false);
     setDeleteVaultOpen(false);
@@ -325,8 +325,6 @@ export function App(): VNode {
       />
     );
   }
-
-  const setFlow = (f: Flow) => setFlowRaw(f);
 
   // Open an existing entry in the editor, remembering which flow to return to.
   const openEntry = (id: string) => {

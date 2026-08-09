@@ -385,15 +385,19 @@ export function toPushAiSettings(dataKey: Uint8Array, rec: AiSettingsRecord): Pu
   };
 }
 
-/** Push the AI-settings singleton; returns true when the relay accepted it. */
+/**
+ * Push the AI-settings singleton. Like the sibling pushers, any per-record
+ * answer settles the record — applied, or rejected because the relay already
+ * holds this clock or newer (the next pull brings the newer copy here). The
+ * caller retires the queued record either way, so there is nothing to return.
+ */
 export async function pushAiSettings(
   relay: RelayClient,
   token: string,
   dataKey: Uint8Array,
   rec: AiSettingsRecord,
-): Promise<boolean> {
-  const resp = await relay.push(token, [toPushAiSettings(dataKey, rec)]);
-  return resp.results.some((r) => r.applied && r.entry_id === rec.recordId);
+): Promise<void> {
+  await relay.push(token, [toPushAiSettings(dataKey, rec)]);
 }
 
 export interface PullResult {

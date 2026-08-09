@@ -80,7 +80,6 @@ export function SearchSheet({ desk, onClose, onOpen }: {
     }
     // Empty query: offer the most recently touched entries as a starting point.
     return [...entries]
-      .filter((e) => !e.deleted)
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, 8)
       .map((e): Hit => ({ entry: e, field: 'content' }));

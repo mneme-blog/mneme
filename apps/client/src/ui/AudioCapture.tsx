@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { t } from '../i18n';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
-import { fmtDuration } from './VideoCapture';
+import { fmtDuration } from './recorder';
 
 // Preferred container/codec order; the browser picks the first it supports
 // (Safari records mp4, everyone else webm/opus). The chosen type rides along

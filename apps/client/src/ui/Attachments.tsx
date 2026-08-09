@@ -13,7 +13,7 @@ import { useAppData } from '../state/data';
 import { t, fmtNumber } from '../i18n';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
-import { fmtDuration } from './VideoCapture';
+import { fmtDuration } from './recorder';
 import { toAiError } from '../ai/types';
 import { transcribe, transcriptionConfig, transcriptionDestination, type TranscribeDestination } from '../ai/transcribe';
 import { ConfirmDialog } from './ConfirmDialog';

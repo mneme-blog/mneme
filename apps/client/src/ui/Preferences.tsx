@@ -287,10 +287,11 @@ export function PreferencesSheet({ desk, theme, onClose, ownerId, status, onLock
     fn();
   };
 
-  // Stats run over live (non-tombstoned) entries; day math is UTC like the
-  // calendar grid, so streaks here and there always agree.
+  // The context's `entries` are already live-only (the provider filters
+  // tombstones); day math is UTC like the calendar grid, so streaks here and
+  // there always agree.
   const stats = useMemo(() => {
-    const live = entries.filter((e) => !e.deleted);
+    const live = entries;
     const now = Date.now();
     const d = new Date(now);
     return {

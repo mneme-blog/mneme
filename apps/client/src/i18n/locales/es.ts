@@ -641,7 +641,6 @@ const es: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'etiqueta',
   'shell.search.field.date': 'fecha',
   'shell.search.field.content': 'contenido',
-  'shell.photo': 'foto',
   'shell.removeLabel': 'Quitar «{name}»',
   'shell.daysAgo#one': 'hace {count} día',
   'shell.daysAgo#other': 'hace {count} días',

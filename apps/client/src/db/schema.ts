@@ -175,4 +175,3 @@ export const MIGRATIONS: string[] = [
   //     INSERT INTO entries_fts(entries_fts) VALUES('rebuild');
 ];
 
-export const SCHEMA_VERSION = MIGRATIONS.length;

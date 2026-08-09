@@ -631,7 +631,6 @@ const hi: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'लेबल',
   'shell.search.field.date': 'दिनांक',
   'shell.search.field.content': 'सामग्री',
-  'shell.photo': 'फ़ोटो',
   'shell.removeLabel': '"{name}" हटाएँ',
   'shell.daysAgo#one': '{count} दिन पहले',
   'shell.daysAgo#other': '{count} दिन पहले',

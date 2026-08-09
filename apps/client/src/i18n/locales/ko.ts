@@ -578,7 +578,6 @@ const ko: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': '라벨',
   'shell.search.field.date': '날짜',
   'shell.search.field.content': '내용',
-  'shell.photo': '사진',
   'shell.removeLabel': '"{name}" 제거',
   'shell.daysAgo#one': '{count}일 전',
   'shell.daysAgo#other': '{count}일 전',

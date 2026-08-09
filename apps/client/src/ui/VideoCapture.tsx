@@ -8,11 +8,6 @@ import { Icon } from './Icon';
 import { Btn } from './primitives';
 import { cameraConstraints, fmtDuration, pickMimeType, recorderOptions } from './recorder';
 
-// The format choice and duration formatting live in ./recorder.ts, shared with
-// the multi-take video-interview session. Re-exported here because several
-// modules already import fmtDuration from this file.
-export { fmtDuration };
-
 type Stage = 'idle' | 'recording' | 'review' | 'error';
 
 export function VideoCapture({

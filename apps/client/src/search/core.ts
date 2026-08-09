@@ -25,7 +25,7 @@ export function normalize(raw: string): string {
 const pad = (n: number): string => String(n).padStart(2, '0');
 
 /** Human + machine spellings of the entry date, lowercased, for substring matching. */
-export function dateHaystack(ts: number): string {
+function dateHaystack(ts: number): string {
   const d = new Date(ts);
   const y = d.getFullYear();
   const m = d.getMonth();
@@ -44,7 +44,7 @@ export function dateHaystack(ts: number): string {
 }
 
 /** Body context around the first occurrence of any token. */
-export function makeSnippet(bodyText: string, tokens: string[]): string | undefined {
+function makeSnippet(bodyText: string, tokens: string[]): string | undefined {
   const lower = bodyText.toLowerCase();
   let at = -1;
   for (const t of tokens) {
