@@ -48,32 +48,7 @@ export function NewJournalSheet({
         </div>
       </div>
 
-      <Field label={t('journals.field.colour')}>
-        <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
-          {JCOLORS.map((c) => (
-            <button
-              key={c}
-              onClick={() => setColor(c)}
-              style={{ width: 30, height: 30, borderRadius: 999, cursor: 'pointer', background: c, border: color === c ? '2.5px solid var(--ink)' : '2.5px solid transparent', outline: `1px solid ${hexA(c, 0.4)}`, outlineOffset: -1 }}
-            />
-          ))}
-        </div>
-      </Field>
-
-      <Field label={t('journals.field.cover')}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {JCOVERS.map((cv) => (
-            <button
-              key={cv}
-              onClick={() => setCover(cv)}
-              style={{ flex: 1, padding: 7, borderRadius: 12, cursor: 'pointer', background: 'var(--paper)', border: `1.5px solid ${cover === cv ? 'var(--accent)' : 'var(--line)'}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
-            >
-              <Cover journal={{ color, cover: cv }} w={28} h={36} r={6} />
-              <span style={{ fontFamily: 'var(--ui)', fontSize: 10.5, color: 'var(--ink-2)' }}>{t(`journals.cover.${cv}` as MessageKey)}</span>
-            </button>
-          ))}
-        </div>
-      </Field>
+      <StyleFields color={color} cover={cover} onColor={setColor} onCover={setCover} />
 
       <Field label={t('journals.field.startFrom')}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -172,32 +147,7 @@ export function EditJournalSheet({
         </div>
       </div>
 
-      <Field label={t('journals.field.colour')}>
-        <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
-          {JCOLORS.map((c) => (
-            <button
-              key={c}
-              onClick={() => setColor(c)}
-              style={{ width: 30, height: 30, borderRadius: 999, cursor: 'pointer', background: c, border: color === c ? '2.5px solid var(--ink)' : '2.5px solid transparent', outline: `1px solid ${hexA(c, 0.4)}`, outlineOffset: -1 }}
-            />
-          ))}
-        </div>
-      </Field>
-
-      <Field label={t('journals.field.cover')}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {JCOVERS.map((cv) => (
-            <button
-              key={cv}
-              onClick={() => setCover(cv)}
-              style={{ flex: 1, padding: 7, borderRadius: 12, cursor: 'pointer', background: 'var(--paper)', border: `1.5px solid ${cover === cv ? 'var(--accent)' : 'var(--line)'}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
-            >
-              <Cover journal={{ color, cover: cv }} w={28} h={36} r={6} />
-              <span style={{ fontFamily: 'var(--ui)', fontSize: 10.5, color: 'var(--ink-2)' }}>{t(`journals.cover.${cv}` as MessageKey)}</span>
-            </button>
-          ))}
-        </div>
-      </Field>
+      <StyleFields color={color} cover={cover} onColor={setColor} onCover={setCover} />
 
       <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
         <Btn kind="ghost" size="md" onClick={onClose} style={{ flex: 1 }}>{t('common.cancel')}</Btn>
@@ -217,6 +167,46 @@ export function EditJournalSheet({
     <Sheet desk={desk} onClose={onClose} width={440} title={t('journals.edit.title')} headerMargin="0 0 18px">
       {body}
     </Sheet>
+  );
+}
+
+// The colour + cover pickers, shared by the create and edit sheets (they were
+// two verbatim copies whose constants had already started to drift).
+function StyleFields({ color, cover, onColor, onCover }: {
+  color: string;
+  cover: CoverPattern;
+  onColor: (c: string) => void;
+  onCover: (c: CoverPattern) => void;
+}): VNode {
+  return (
+    <>
+      <Field label={t('journals.field.colour')}>
+        <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
+          {JCOLORS.map((c) => (
+            <button
+              key={c}
+              onClick={() => onColor(c)}
+              style={{ width: 30, height: 30, borderRadius: 999, cursor: 'pointer', background: c, border: color === c ? '2.5px solid var(--ink)' : '2.5px solid transparent', outline: `1px solid ${hexA(c, 0.4)}`, outlineOffset: -1 }}
+            />
+          ))}
+        </div>
+      </Field>
+
+      <Field label={t('journals.field.cover')}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {JCOVERS.map((cv) => (
+            <button
+              key={cv}
+              onClick={() => onCover(cv)}
+              style={{ flex: 1, padding: 7, borderRadius: 12, cursor: 'pointer', background: 'var(--paper)', border: `1.5px solid ${cover === cv ? 'var(--accent)' : 'var(--line)'}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
+            >
+              <Cover journal={{ color, cover: cv }} w={28} h={36} r={6} />
+              <span style={{ fontFamily: 'var(--ui)', fontSize: 10.5, color: 'var(--ink-2)' }}>{t(`journals.cover.${cv}` as MessageKey)}</span>
+            </button>
+          ))}
+        </div>
+      </Field>
+    </>
   );
 }
 

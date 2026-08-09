@@ -12,7 +12,7 @@
 // how one of them quietly goes stale — and one of them already had: the ternary
 // assumed "not local" meant Anthropic, so an Ollama server on the LAN (which is
 // not local, but is also not Anthropic) was labelled "sent to Anthropic".
-import type { JSX, VNode } from 'preact';
+import type { ComponentChildren, JSX, VNode } from 'preact';
 import type { AiProvider } from '../ai/types';
 import { t } from '../i18n';
 
@@ -40,4 +40,14 @@ function label(provider: AiProvider): string {
 
 export function ProviderBadge({ provider }: { provider: AiProvider }): VNode {
   return <span style={badgeStyle(provider.local)}>{label(provider)}</span>;
+}
+
+/**
+ * The same pill, driven by an explicit local/remote flag and free-form label —
+ * for settings surfaces that badge a DRAFT configuration (the saved provider
+ * doesn't exist yet). AiSettings had re-grown four inline copies of this
+ * markup, which is exactly the staleness this module exists to prevent.
+ */
+export function ScopeBadge({ local, children }: { local: boolean; children: ComponentChildren }): VNode {
+  return <span style={badgeStyle(local)}>{children}</span>;
 }

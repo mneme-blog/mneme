@@ -7,6 +7,7 @@ import type { JSX, VNode } from 'preact';
 import { useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { ScopeBadge } from './ProviderBadge';
 import { Sheet } from './Sheet';
 import { t } from '../i18n';
 import { useAppData } from '../state/data';
@@ -251,8 +252,8 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
           'ollama',
           'Ollama',
           ollamaLocal
-            ? <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--accent-ink)', background: 'var(--accent-soft)', border: '1px solid var(--accent-line)', borderRadius: 6, padding: '2px 7px' }}>{t('assistant.badge.local')}</span>
-            : <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--ink-3)', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 6, padding: '2px 7px' }}>{t('assistant.badge.network')}</span>,
+            ? <ScopeBadge local>{t('assistant.badge.local')}</ScopeBadge>
+            : <ScopeBadge local={false}>{t('assistant.badge.network')}</ScopeBadge>,
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {/* Only while the address really is loopback — this string says
                 "Nothing leaves this device", which the effective-host line
@@ -297,7 +298,7 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
         {card(
           'anthropic',
           'Anthropic',
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--ink-3)', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 6, padding: '2px 7px' }}>{t('assistant.badge.cloud')}</span>,
+          <ScopeBadge local={false}>{t('assistant.badge.cloud')}</ScopeBadge>,
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '11px 13px', borderRadius: 12, background: 'var(--accent-soft)', border: '1px solid var(--accent-line)', fontFamily: 'var(--ui)', fontSize: 12.5, lineHeight: 1.5, color: 'var(--accent-ink)' }}>
               <Icon name="shield" size={16} color="var(--accent)" />
@@ -334,9 +335,9 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
               <span style={{ fontFamily: 'var(--ui)', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{t('assistant.transcribe.title')}</span>
               {trConfigured &&
                 (trScope === 'loopback' ? (
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--accent-ink)', background: 'var(--accent-soft)', border: '1px solid var(--accent-line)', borderRadius: 6, padding: '2px 7px' }}>{t('assistant.badge.local')}</span>
+                  <ScopeBadge local>{t('assistant.badge.local')}</ScopeBadge>
                 ) : (
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--ink-3)', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 6, padding: '2px 7px' }}>{t('assistant.badge.network')}</span>
+                  <ScopeBadge local={false}>{t('assistant.badge.network')}</ScopeBadge>
                 ))}
             </div>
             <p style={pStyle}>{t('assistant.transcribe.hint')}</p>
