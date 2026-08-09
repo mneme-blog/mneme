@@ -9,7 +9,7 @@ import { Icon } from './Icon';
 import { Btn } from './primitives';
 import { Sheet } from './Sheet';
 import { generateMnemonic, mnemonicWords } from '../crypto/mnemonic';
-import { ManagerCredential } from '../screens/Onboarding';
+import { ManagerCredential } from './credentials';
 import type { RotationProgress } from '../sync/rotate';
 import { t, type MessageKey } from '../i18n';
 

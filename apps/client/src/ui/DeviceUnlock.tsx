@@ -8,7 +8,7 @@ import { useState } from 'preact/hooks';
 import { Icon, type IconName } from './Icon';
 import { Btn } from './primitives';
 import { Sheet } from './Sheet';
-import { PassField } from '../screens/Onboarding';
+import { PassField } from './credentials';
 import { webauthnAvailable, PrfUnsupportedError } from '../platform/webauthn';
 import type { DeviceUnlockChoice } from '../state/data';
 import { t, type MessageKey } from '../i18n';
