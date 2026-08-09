@@ -22,7 +22,7 @@ import (
 func (s *Server) handleAdminListBackups(w http.ResponseWriter, r *http.Request) {
 	status, err := s.backup.Status()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "backup listing failed")
+		writeInternalError(w, r, "backup listing failed", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, status)
@@ -107,6 +107,13 @@ func (s *Server) handleAdminRestoreBackup(w http.ResponseWriter, r *http.Request
 	}
 	name := r.PathValue("name")
 	// A full restore can be slow; give it room beyond a default request deadline.
+	// That includes the CONNECTION's deadline: the server-wide WriteTimeout
+	// (5 min) would sever this response mid-restore and report failure to the
+	// operator for an operation that then succeeds server-side. Best-effort —
+	// a wrapper that can't set deadlines just keeps the global one.
+	if err := http.NewResponseController(w).SetWriteDeadline(time.Now().Add(35 * time.Minute)); err != nil {
+		log.Printf("admin: could not extend the restore response deadline: %v", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 	man, err := s.backup.RestoreFrom(ctx, name)

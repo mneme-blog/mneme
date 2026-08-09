@@ -227,8 +227,19 @@ export async function destroyOwnerDb(ownerId: string): Promise<void> {
 
 export class LocalDb {
   #worker: Worker | null = null;
+  #ownerId: string | null = null;
   #seq = 0;
   #pending = new Map<number, { resolve: (r: DbResponse) => void; reject: (e: Error) => void }>();
+
+  // The worker died (script failed to load under a broken CSP/partial deploy,
+  // or crashed mid-session): reject everything in flight instead of leaving
+  // open()/queries hanging forever — the caller's catch path degrades to the
+  // in-memory session, which a promise that never settles would never reach.
+  #fail(message: string): void {
+    const err = new Error(message);
+    for (const p of this.#pending.values()) p.reject(err);
+    this.#pending.clear();
+  }
 
   #send(req: RequestBody): Promise<DbResponse> {
     const w = this.#worker;
@@ -253,7 +264,12 @@ export class LocalDb {
 
   /** Open (and migrate) the per-owner database. Safe to call once per session. */
   async open(ownerId: string): Promise<void> {
-    if (this.#worker) return;
+    if (this.#worker) {
+      // Callers must close() before re-homing; silently keeping the previous
+      // owner's DB open under a new owner id would cross vault boundaries.
+      if (this.#ownerId !== ownerId) throw new Error('LocalDb already open for a different owner — close() first');
+      return;
+    }
     const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
     worker.onmessage = (ev: MessageEvent<DbResponse>) => {
       const p = this.#pending.get(ev.data.id);
@@ -262,7 +278,10 @@ export class LocalDb {
         p.resolve(ev.data);
       }
     };
+    worker.onerror = (e) => this.#fail(e.message || 'local DB worker failed');
+    worker.onmessageerror = () => this.#fail('local DB worker message error');
     this.#worker = worker;
+    this.#ownerId = ownerId;
     // base64url ownerId is filesystem-safe; one OPFS directory isolates each account.
     await this.#send({ kind: 'open', dir: `mneme/${ownerId}`, file: 'journal.db' }).then((r) => {
       if (!r.ok) throw new Error(r.error);
@@ -277,9 +296,8 @@ export class LocalDb {
   close(): void {
     this.#worker?.terminate();
     this.#worker = null;
-    const err = new Error('LocalDb closed');
-    for (const p of this.#pending.values()) p.reject(err);
-    this.#pending.clear();
+    this.#ownerId = null;
+    this.#fail('LocalDb closed');
   }
 
   /** All non-deleted entries, newest first — the timeline seed on unlock. */
@@ -590,15 +608,40 @@ export class LocalDb {
     return rows.map(rowToMedia);
   }
 
+  // Metadata columns only: `data` comes back NULL. Callers that need the bytes
+  // fetch them one row at a time via getMedia() — a vault holding gigabytes of
+  // video must never be materialized into memory wholesale.
+  static readonly #MEDIA_META_COLS = 'id, entry_id, mime, bytes, duration_ms, created_at, NULL, synced';
+
+  /** Every media row WITHOUT its bytes — phrase rotation walks these and streams bytes per id. */
+  async allMediaMeta(): Promise<MediaRecord[]> {
+    const rows = await this.#query(`SELECT ${LocalDb.#MEDIA_META_COLS} FROM media`);
+    return rows.map(rowToMedia);
+  }
+
   /** Media rows still awaiting a relay upload (rebuilds the media outbox after a reload). */
   async unsyncedMedia(): Promise<MediaRecord[]> {
     const rows = await this.#query(`SELECT ${MEDIA_COLS} FROM media WHERE synced = 0`);
     return rows.map(rowToMedia);
   }
 
+  /** Like unsyncedMedia, but without the bytes — the outbox holds metadata and
+   *  the upload loop streams each row's bytes from the DB when its turn comes. */
+  async unsyncedMediaMeta(): Promise<MediaRecord[]> {
+    const rows = await this.#query(`SELECT ${LocalDb.#MEDIA_META_COLS} FROM media WHERE synced = 0`);
+    return rows.map(rowToMedia);
+  }
+
   /** Clear the media outbox flag once the relay has the full object. */
   async markMediaSynced(id: string): Promise<void> {
     await this.#run(`UPDATE media SET synced = 1 WHERE id = ?`, [id]);
+  }
+
+  /** Flip just the outbox flag, leaving the stored bytes untouched — putMedia
+   *  would overwrite `data` with whatever the caller holds, which for a
+   *  metadata-only row is NULL (destroying the local copy). */
+  async setMediaSynced(id: string, synced: boolean): Promise<void> {
+    await this.#run(`UPDATE media SET synced = ? WHERE id = ?`, [synced ? 1 : 0, id]);
   }
 
   /** Drop a recording's bytes for good (the user confirmed deleting the attachment). */

@@ -2,7 +2,7 @@
 
 // Exercises REQUIRE_APPROVAL end-to-end against a real Postgres:
 //
-//	TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal?sslmode=disable \
+//	TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal_test?sslmode=disable \
 //	  go test -tags e2e ./e2e/...
 package e2e
 
@@ -12,7 +12,6 @@ import (
 	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -23,10 +22,7 @@ import (
 )
 
 func TestApprovalFlow(t *testing.T) {
-	dsn := os.Getenv("TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("set TEST_DATABASE_URL to run e2e")
-	}
+	dsn := testDSN(t)
 	ctx := context.Background()
 
 	st, err := store.New(ctx, dsn)
@@ -61,6 +57,13 @@ func TestApprovalFlow(t *testing.T) {
 		Status   string `json:"status"`
 	}
 	c.post("/v1/register", regBody, http.StatusOK, &reg)
+	// Don't leak one owner row per run into the shared test DB (the suite is
+	// only order-tolerant today because the backup test resets first).
+	t.Cleanup(func() {
+		if _, err := st.DeleteOwner(context.Background(), reg.OwnerID); err != nil {
+			t.Logf("cleanup owner: %v", err)
+		}
+	})
 	if reg.Status != store.OwnerStatusPending {
 		t.Fatalf("new owner should be pending, got %q", reg.Status)
 	}

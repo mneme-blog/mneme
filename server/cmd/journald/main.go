@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -128,11 +129,21 @@ func runServer() error {
 
 	apiSrv := api.New(st, bl, cfg)
 
-	// Background workers.
-	go reminders.NewScheduler(st, reminders.LogDispatcher{}, time.Minute).Run(ctx)
-	go purgeLoop(ctx, st)
-	go apiSrv.RunUsageFlusher(ctx, 30*time.Second)
-	go apiSrv.RunBackups(ctx)
+	// Background workers, joined on shutdown: the usage flusher's final flush
+	// and a backup mid-write must finish before the process exits — a naked
+	// goroutine racing process teardown loses whatever it was writing.
+	var workers sync.WaitGroup
+	runWorker := func(fn func()) {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			fn()
+		}()
+	}
+	runWorker(func() { reminders.NewScheduler(st, reminders.LogDispatcher{}, time.Minute).Run(ctx) })
+	runWorker(func() { purgeLoop(ctx, st) })
+	runWorker(func() { apiSrv.RunUsageFlusher(ctx, 30*time.Second) })
+	runWorker(func() { apiSrv.RunBackups(ctx) })
 
 	if cfg.AdminToken != "" {
 		log.Printf("admin dashboard enabled at /admin")
@@ -186,7 +197,11 @@ func runServer() error {
 		log.Printf("shutting down")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		return srv.Shutdown(shutdownCtx)
+		err := srv.Shutdown(shutdownCtx)
+		// The workers see the same ctx cancellation; wait for their final
+		// writes (usage flush, an in-flight backup) before returning.
+		workers.Wait()
+		return err
 	}
 }
 

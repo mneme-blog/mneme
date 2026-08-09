@@ -234,10 +234,42 @@ function sameSet(a: Set<string>, b: Set<string>): boolean {
   return true;
 }
 
+// A sync failure is either connectivity (expected — the relay is down or the
+// device is offline; retried quietly) or a real defect (a serialization bug, a
+// 4xx the relay will return forever). Both drop the status to 'offline' so the
+// reconnect loop keeps running, but a defect must be VISIBLE in the console —
+// swallowing it as "offline" hides bugs indefinitely. Never log record
+// contents here: the error itself carries only exception/relay text, no
+// journal plaintext or keys.
+function isConnectivityError(e: unknown): boolean {
+  // fetch() rejects with a TypeError when the network is unreachable; relay
+  // 5xx/429 are server-side conditions that resolve themselves.
+  if (e instanceof TypeError) return true;
+  return e instanceof RelayError && (e.status >= 500 || e.status === 429);
+}
+
+function logSyncError(op: 'flush' | 'pull', e: unknown): void {
+  if (isConnectivityError(e)) return; // routine; the offline indicator covers it
+  console.error(`[sync] ${op} failed with a non-connectivity error:`, e);
+}
+
+// Local persistence is fire-and-forget for UI latency, but a failed OPFS write
+// (disk pressure is realistic for video vaults) must not be silent: the UI and
+// the outbox would report an entry saved that doesn't exist after reload.
+// Logs only the error — never the record being written.
+function logDbWrite(e: unknown): void {
+  console.error('[db] local write failed:', e);
+}
+
 const SYNC_INTERVAL_MS = 30_000;
-// While disconnected, retry authentication on this cadence so the client recovers
-// on its own once the relay comes back — no need to re-enter the mnemonic.
+// While disconnected, retry authentication so the client recovers on its own
+// once the relay comes back — no need to re-enter the mnemonic. Each attempt
+// hits the relay's rate-limited unauthenticated endpoints (register/challenge/
+// verify), so failures back off exponentially toward the cap: several devices
+// behind one NAT retrying a briefly-down relay must not drain the per-IP
+// bucket and then keep it drained.
 const RECONNECT_INTERVAL_MS = 5_000;
+const RECONNECT_MAX_MS = 60_000;
 // §6 auto-lock: drop the in-memory keys after this much inactivity. Armed only
 // when a sealed seed exists — without one, locking would force re-typing the
 // twelve words, punishing exactly the users who chose the stricter setting.
@@ -428,6 +460,9 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
   // (mirrored in the media_tombstones table so they survive reloads).
   const pendingMediaDeletes = useRef<Set<string>>(new Set());
   const mediaFlushing = useRef(false);
+  // Record-flush reentrancy guard + its coalesced trailing re-run (see flush()).
+  const flushing = useRef(false);
+  const flushQueued = useRef(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // One async check at startup: does a sealed seed exist on this device, and
@@ -490,14 +525,22 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
     let failure: unknown = null;
     try {
       for (const rec of [...pendingMedia.current.values()]) {
-        if (!rec.data) {
-          pendingMedia.current.delete(rec.id); // nothing to upload (shouldn't happen)
+        // Outbox entries may carry only metadata (rebuilt from the DB after a
+        // reload or a phrase rotation) — stream the bytes in when it's this
+        // row's turn, so a queue of large videos never sits in memory at once.
+        let data = rec.data;
+        if (!data && dbReady.current) {
+          data = await db.getMedia(rec.id).then((m) => m?.data ?? null).catch(() => null);
+        }
+        if (!data) {
+          pendingMedia.current.delete(rec.id); // no bytes anywhere — nothing to upload
+          syncPendingCount();
           continue;
         }
         try {
-          await uploadMedia(relay, s.token, s.identity.mediaKey, rec.id, rec.data);
+          await uploadMedia(relay, s.token, s.identity.mediaKey, rec.id, data);
           pendingMedia.current.delete(rec.id);
-          if (dbReady.current) void db.markMediaSynced(rec.id);
+          if (dbReady.current) void db.markMediaSynced(rec.id).catch(logDbWrite);
           syncPendingCount();
         } catch (e) {
           failure = e; // stays queued; the next flush retries
@@ -507,7 +550,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         try {
           await relay.deleteMedia(s.token, id); // idempotent on the relay
           pendingMediaDeletes.current.delete(id);
-          if (dbReady.current) void db.clearMediaTombstone(id);
+          if (dbReady.current) void db.clearMediaTombstone(id).catch(logDbWrite);
           syncPendingCount();
         } catch (e) {
           failure = e;
@@ -522,6 +565,20 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
   }, [relay, db, syncPendingCount, setStatusLive]);
 
   const flush = useCallback(async () => {
+    // Reentrancy guard (the same idea as mediaFlushing): flush is invoked on
+    // every edit, every 30 s tick, and every connect. Overlapping runs would
+    // re-push the same still-queued batch concurrently — correct under the LWW
+    // acks, but a bulk import multiplied network writes by the batch count.
+    // A call arriving mid-run coalesces into one trailing re-run.
+    if (flushing.current) {
+      flushQueued.current = true;
+      return;
+    }
+    flushing.current = true;
+    try {
+    let failed = false;
+    do {
+    flushQueued.current = false;
     const s = session.current;
     if (!s) return;
     if (
@@ -531,8 +588,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
       pendingJournals.current.size === 0 &&
       pendingAi.current === null
     ) {
-      void flushMedia(); // no dirty records, but recordings may still be queued
-      return;
+      break; // no dirty records, but recordings may still be queued below
     }
     const batch = [...pending.current.values()];
     const tplBatch = [...pendingTemplates.current.values()];
@@ -549,19 +605,19 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
       const acked = await pushEntries(relay, s.token, s.identity.dataKey, batch);
       for (const e of batch) if (acked.has(e.id) && pending.current.get(e.id) === e) pending.current.delete(e.id);
       // Clear the dirty flag locally for exactly the versions the relay settled.
-      if (dbReady.current) void db.markSynced(batch.filter((e) => acked.has(e.id)));
+      if (dbReady.current) void db.markSynced(batch.filter((e) => acked.has(e.id))).catch(logDbWrite);
       const ackedTpl = await pushTemplates(relay, s.token, s.identity.dataKey, tplBatch);
       for (const t of tplBatch) if (ackedTpl.has(t.id) && pendingTemplates.current.get(t.id) === t) pendingTemplates.current.delete(t.id);
-      if (dbReady.current) void db.markTemplatesSynced(tplBatch.filter((t) => ackedTpl.has(t.id)));
+      if (dbReady.current) void db.markTemplatesSynced(tplBatch.filter((t) => ackedTpl.has(t.id))).catch(logDbWrite);
       const ackedItv = await pushInterviewTypes(relay, s.token, s.identity.dataKey, itvBatch);
       for (const t of itvBatch) if (ackedItv.has(t.id) && pendingInterviewTypes.current.get(t.id) === t) pendingInterviewTypes.current.delete(t.id);
-      if (dbReady.current) void db.markInterviewTypesSynced(itvBatch.filter((t) => ackedItv.has(t.id)));
+      if (dbReady.current) void db.markInterviewTypesSynced(itvBatch.filter((t) => ackedItv.has(t.id))).catch(logDbWrite);
       // Journals push under their random wire record ids (§3 — the journal id
       // itself stays inside the ciphertext).
       const ackedRec = await pushJournals(relay, s.token, s.identity.dataKey, jrnBatch.map(journalToRecord));
       const ackedJrn = jrnBatch.filter((j) => j.recordId && ackedRec.has(j.recordId));
       for (const j of ackedJrn) if (pendingJournals.current.get(j.id) === j) pendingJournals.current.delete(j.id);
-      if (dbReady.current) void db.markJournalsSynced(ackedJrn);
+      if (dbReady.current) void db.markJournalsSynced(ackedJrn).catch(logDbWrite);
       if (aiBatch) {
         // Either outcome retires the queued record: accepted → it's on the relay;
         // rejected as stale → the relay already holds something newer and the
@@ -577,10 +633,16 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
       }
       syncPendingCount();
       setStatusLive('online');
-    } catch {
+    } catch (e) {
+      logSyncError('flush', e);
       setStatusLive('offline');
+      failed = true; // don't spin on an immediately-failing push
     } finally {
       setSaving(false);
+    }
+    } while (flushQueued.current && !failed);
+    } finally {
+      flushing.current = false;
     }
     void flushMedia();
   }, [relay, db, syncPendingCount, flushMedia, setStatusLive]);
@@ -600,10 +662,10 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
       if (res.entries.length) {
         setEntries((prev) => mergeByLWW(prev, res.entries));
         // Persist the merge (the DB enforces the same LWW guard before overwriting).
-        if (dbReady.current) void db.mergeRemote(res.entries);
+        if (dbReady.current) void db.mergeRemote(res.entries).catch(logDbWrite);
       }
       if (res.templates.length) {
-        if (dbReady.current) void db.mergeRemoteTemplates(res.templates);
+        if (dbReady.current) void db.mergeRemoteTemplates(res.templates).catch(logDbWrite);
         setTemplates((prev) => {
           const merged = mergeByLWW(prev, res.templates);
           // A synced copy of a built-in (someone edited or deleted it on another
@@ -614,12 +676,12 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
             merged.filter((t) => t.pristine && t.builtin && syncedSlugs.has(t.builtin)).map((t) => t.id),
           );
           if (superseded.size === 0) return merged;
-          if (dbReady.current) void db.dropTemplates([...superseded]);
+          if (dbReady.current) void db.dropTemplates([...superseded]).catch(logDbWrite);
           return merged.filter((t) => !superseded.has(t.id));
         });
       }
       if (res.interviewTypes.length) {
-        if (dbReady.current) void db.mergeRemoteInterviewTypes(res.interviewTypes);
+        if (dbReady.current) void db.mergeRemoteInterviewTypes(res.interviewTypes).catch(logDbWrite);
         setInterviewTypes((prev) => {
           const merged = mergeByLWW(prev, res.interviewTypes);
           // Same built-in supersede pass as templates: a synced copy of a built-in
@@ -629,7 +691,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
             merged.filter((t) => t.pristine && t.builtin && syncedSlugs.has(t.builtin)).map((t) => t.id),
           );
           if (superseded.size === 0) return merged;
-          if (dbReady.current) void db.dropInterviewTypes([...superseded]);
+          if (dbReady.current) void db.dropInterviewTypes([...superseded]).catch(logDbWrite);
           return merged.filter((t) => !superseded.has(t.id));
         });
       }
@@ -642,7 +704,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         setJournals((prev) => {
           let next = prev;
           const persist = (row: Journal, dirty: 0 | 1): void => {
-            if (dbReady.current) void db.putJournalRow(row, { dirty, pristine: 0 });
+            if (dbReady.current) void db.putJournalRow(row, { dirty, pristine: 0 }).catch(logDbWrite);
           };
           for (const r of res.journals) {
             const idx = next.findIndex((j) => j.id === r.id);
@@ -701,7 +763,8 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
       }
       }
       setStatusLive('online');
-    } catch {
+    } catch (e) {
+      logSyncError('pull', e);
       setStatusLive('offline');
     }
   }, [relay, db, setStatusLive, syncPendingCount]);
@@ -833,7 +896,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         for (const j of await db.dirtyJournals()) {
           const row = j.recordId ? j : { ...j, recordId: newRecordId() };
           if (!j.recordId) {
-            void db.putJournalRow(row, { dirty: 1, pristine: 0 });
+            void db.putJournalRow(row, { dirty: 1, pristine: 0 }).catch(logDbWrite);
             localJournals = localJournals.map((x) => (x.id === row.id ? row : x));
           }
           pendingJournals.current.set(row.id, row);
@@ -843,7 +906,9 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         for (const e of await db.dirtyEntries()) pending.current.set(e.id, e);
         for (const t of await db.dirtyTemplates()) pendingTemplates.current.set(t.id, t);
         for (const t of await db.dirtyInterviewTypes()) pendingInterviewTypes.current.set(t.id, t);
-        for (const m of await db.unsyncedMedia()) pendingMedia.current.set(m.id, m);
+        // Metadata only — the upload loop streams each row's bytes when its
+        // turn comes, so queued recordings don't sit in memory all session.
+        for (const m of await db.unsyncedMediaMeta()) pendingMedia.current.set(m.id, m);
         for (const id of await db.mediaTombstones()) pendingMediaDeletes.current.add(id);
         syncPendingCount();
       } catch {
@@ -890,8 +955,12 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
           await storeSealedSeed(sealed.record);
           wrap.current = sealed.wrap;
           setSealMethod('passphrase');
-        } catch {
-          // Keystore unavailable — degrade to the nothing-persisted mode.
+        } catch (e) {
+          // Keystore unavailable (private mode) or Argon2id failed (the 128 MiB
+          // allocation on a memory-pressured phone). Degrade to the
+          // nothing-persisted mode rather than blocking sign-in — but say so:
+          // the user asked to stay signed in and is not.
+          console.warn('[seal] passphrase seal failed — continuing without at-rest persistence:', e);
           wrap.current = null;
           setSealMethod('none');
         }
@@ -1035,7 +1104,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         updatedAt: now,
       };
       setEntries((prev) => mergeByLWW(prev, [entry]));
-      if (dbReady.current) void db.putLocal(entry);
+      if (dbReady.current) void db.putLocal(entry).catch(logDbWrite);
       pending.current.set(entry.id, entry);
       syncPendingCount();
       void flush();
@@ -1051,7 +1120,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         const cur = prev.find((e) => e.id === id);
         if (!cur) return prev;
         const next: JournalEntry = { ...cur, ...patch, updatedAt: now };
-        if (dbReady.current) void db.putLocal(next);
+        if (dbReady.current) void db.putLocal(next).catch(logDbWrite);
         pending.current.set(id, next);
         syncPendingCount();
         void flush();
@@ -1079,7 +1148,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
           bodyText: docToText(JSON.parse(bodyJson) as JSONContent),
           updatedAt: now,
         };
-        if (dbReady.current) void db.putLocal(next);
+        if (dbReady.current) void db.putLocal(next).catch(logDbWrite);
         pending.current.set(entryId, next);
         syncPendingCount();
         void flush();
@@ -1106,7 +1175,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
           bodyText: docToText(JSON.parse(bodyJson) as JSONContent),
           updatedAt: now,
         };
-        if (dbReady.current) void db.putLocal(next);
+        if (dbReady.current) void db.putLocal(next).catch(logDbWrite);
         pending.current.set(entryId, next);
         syncPendingCount();
         void flush();
@@ -1121,7 +1190,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
       const now = Date.now();
       const rec: Journal = { ...j, createdAt: now, updatedAt: now, recordId: newRecordId(), pristine: false, deleted: false };
       setJournals((prev) => [...prev, rec]);
-      if (dbReady.current) void db.putJournalRow(rec, { dirty: 1, pristine: 0 });
+      if (dbReady.current) void db.putJournalRow(rec, { dirty: 1, pristine: 0 }).catch(logDbWrite);
       pendingJournals.current.set(rec.id, rec);
       syncPendingCount();
       void flush();
@@ -1144,7 +1213,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         updatedAt: Date.now(),
       };
       setJournals((prev) => prev.map((j) => (j.id === id ? updated : j)));
-      if (dbReady.current) void db.putJournalRow(updated, { dirty: 1, pristine: 0 });
+      if (dbReady.current) void db.putJournalRow(updated, { dirty: 1, pristine: 0 }).catch(logDbWrite);
       pendingJournals.current.set(id, updated);
       syncPendingCount();
       void flush();
@@ -1164,7 +1233,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         updatedAt: now,
       };
       setTemplates((prev) => mergeByLWW(prev, [t]));
-      if (dbReady.current) void db.putLocalTemplate(t);
+      if (dbReady.current) void db.putLocalTemplate(t).catch(logDbWrite);
       pendingTemplates.current.set(t.id, t);
       syncPendingCount();
       void flush();
@@ -1183,7 +1252,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         // (pristine is cleared); the builtin slug rides along so other devices
         // retire their own seed of it.
         const next: TemplateRecord = { ...cur, ...patch, pristine: false, updatedAt: now };
-        if (dbReady.current) void db.putLocalTemplate(next);
+        if (dbReady.current) void db.putLocalTemplate(next).catch(logDbWrite);
         pendingTemplates.current.set(id, next);
         syncPendingCount();
         void flush();
@@ -1202,7 +1271,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         // Tombstone rather than drop: the deletion must out-sync other devices'
         // copies — and, via the builtin slug, their pristine seeds too.
         const next: TemplateRecord = { ...cur, deleted: true, pristine: false, updatedAt: now };
-        if (dbReady.current) void db.putLocalTemplate(next);
+        if (dbReady.current) void db.putLocalTemplate(next).catch(logDbWrite);
         pendingTemplates.current.set(id, next);
         syncPendingCount();
         void flush();
@@ -1224,7 +1293,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         updatedAt: now,
       };
       setInterviewTypes((prev) => mergeByLWW(prev, [t]));
-      if (dbReady.current) void db.putLocalInterviewType(t);
+      if (dbReady.current) void db.putLocalInterviewType(t).catch(logDbWrite);
       pendingInterviewTypes.current.set(t.id, t);
       syncPendingCount();
       void flush();
@@ -1242,7 +1311,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         // The first edit of a built-in seed turns it into a real synced record
         // (pristine cleared); the builtin slug rides along so other devices retire it.
         const next: InterviewType = { ...cur, ...patch, pristine: false, updatedAt: now };
-        if (dbReady.current) void db.putLocalInterviewType(next);
+        if (dbReady.current) void db.putLocalInterviewType(next).catch(logDbWrite);
         pendingInterviewTypes.current.set(id, next);
         syncPendingCount();
         void flush();
@@ -1261,7 +1330,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         // Tombstone (built-ins included) so the deletion out-syncs other devices'
         // copies — and, via the builtin slug, their pristine seeds too.
         const next: InterviewType = { ...cur, deleted: true, pristine: false, updatedAt: now };
-        if (dbReady.current) void db.putLocalInterviewType(next);
+        if (dbReady.current) void db.putLocalInterviewType(next).catch(logDbWrite);
         pendingInterviewTypes.current.set(id, next);
         syncPendingCount();
         void flush();
@@ -1332,7 +1401,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         data,
         synced: false,
       };
-      if (dbReady.current) void db.putMedia(rec);
+      if (dbReady.current) void db.putMedia(rec).catch(logDbWrite);
       pendingMedia.current.set(rec.id, rec);
       syncPendingCount();
       void flush();
@@ -1350,8 +1419,8 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
       pendingMedia.current.delete(mediaId);
       pendingMediaDeletes.current.add(mediaId);
       if (dbReady.current) {
-        void db.deleteMedia(mediaId).catch(() => undefined);
-        void db.addMediaTombstone(mediaId).catch(() => undefined);
+        void db.deleteMedia(mediaId).catch(logDbWrite);
+        void db.addMediaTombstone(mediaId).catch(logDbWrite);
       }
       syncPendingCount();
       void flushMedia(); // reach the relay now if we're online
@@ -1373,7 +1442,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         if (!cur || cur.deleted) return prev;
         victim = cur;
         const next: JournalEntry = { ...cur, deleted: true, updatedAt: now };
-        if (dbReady.current) void db.putLocal(next);
+        if (dbReady.current) void db.putLocal(next).catch(logDbWrite);
         pending.current.set(id, next);
         return mergeByLWW(prev, [next]);
       });
@@ -1406,7 +1475,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         if (victims.length === 0) return prev;
         const tombstones = victims.map((e): JournalEntry => ({ ...e, deleted: true, updatedAt: now }));
         for (const e of tombstones) {
-          if (dbReady.current) void db.putLocal(e);
+          if (dbReady.current) void db.putLocal(e).catch(logDbWrite);
           pending.current.set(e.id, e);
         }
         for (const v of victims) {
@@ -1432,7 +1501,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
           recordId: cur.recordId ?? newRecordId(),
           updatedAt: now,
         };
-        if (dbReady.current) void db.putJournalRow(tombstone, { dirty: 1, pristine: 0 });
+        if (dbReady.current) void db.putJournalRow(tombstone, { dirty: 1, pristine: 0 }).catch(logDbWrite);
         pendingJournals.current.set(id, tombstone);
         return prev.map((j) => (j.id === id ? tombstone : j));
       });
@@ -1466,7 +1535,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
             createdAt: att.createdAt,
             data,
             synced: true,
-          });
+          }).catch(logDbWrite);
         }
         return bytesToBlob(data, att.mime);
       } catch {
@@ -1512,10 +1581,15 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
       setStatus('connecting');
       try {
         const oldOwnerId = s.ownerId;
+        // Metadata only — the bytes stream through localMediaBytes below, one
+        // recording at a time. Materializing every blob up front OOMed a
+        // mobile tab on a vault with a few GB of interview footage.
         const localMedia = dbReady.current
-          ? await db.allMedia().catch(() => [...pendingMedia.current.values()])
+          ? await db.allMediaMeta().catch(() => [...pendingMedia.current.values()])
           : [...pendingMedia.current.values()];
-        const mediaById = new Map(localMedia.map((m) => [m.id, m]));
+        // In-memory queue as the fallback source: fresh recordings whose DB
+        // write hasn't landed (or the no-OPFS degraded mode) still rotate.
+        const queuedById = new Map(pendingMedia.current);
 
         const result = await rotateAccount({
           relay,
@@ -1526,7 +1600,13 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
           localDirtyInterviewTypes: [...pendingInterviewTypes.current.values()],
           localDirtyJournals: [...pendingJournals.current.values()].map(journalToRecord),
           localDirtyAiSettings: pendingAi.current ?? undefined,
-          localMediaBytes: (id) => Promise.resolve(mediaById.get(id)?.data ?? null),
+          localMediaBytes: (id) =>
+            dbReady.current
+              ? db
+                  .getMedia(id)
+                  .then((m) => m?.data ?? queuedById.get(id)?.data ?? null)
+                  .catch(() => queuedById.get(id)?.data ?? null)
+              : Promise.resolve(queuedById.get(id)?.data ?? null),
           onProgress,
         });
 
@@ -1578,17 +1658,38 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
             for (const j of allJrn.filter((j) => !j.pristine)) {
               await db.putJournalRow(j, { dirty: 0, pristine: 0 });
             }
+            // Carry the recordings across one row at a time: the old per-owner
+            // directory still exists until destroyOwnerDb below, so a second
+            // (temporary) handle streams each blob old→new without ever holding
+            // more than one recording's bytes in memory.
+            const old = new LocalDb();
+            try {
+              await old.open(oldOwnerId);
+              for (const m of localMedia) {
+                const bytes = await old
+                  .getMedia(m.id)
+                  .then((row) => row?.data ?? queuedById.get(m.id)?.data ?? null)
+                  .catch(() => queuedById.get(m.id)?.data ?? null);
+                const synced = result.uploadedMedia.has(m.id);
+                await db.putMedia({ ...m, data: bytes, synced }).catch(() => undefined);
+                // Recordings the relay couldn't take (e.g. no object store)
+                // re-enter the outbox (metadata only — flushMedia streams the
+                // bytes back out of the new DB) and upload when possible.
+                if (!synced && bytes) pendingMedia.current.set(m.id, { ...m, data: null, synced: false });
+              }
+            } finally {
+              old.close();
+            }
           } catch {
             dbReady.current = false;
           }
           void destroyOwnerDb(oldOwnerId);
         }
-        for (const m of localMedia) {
-          const rec: MediaRecord = { ...m, synced: result.uploadedMedia.has(m.id) };
-          if (dbReady.current) void db.putMedia(rec);
-          // Recordings the relay couldn't take (e.g. no object store) re-enter
-          // the outbox and upload to the new account when it becomes possible.
-          if (!rec.synced && rec.data) pendingMedia.current.set(rec.id, rec);
+        if (!dbReady.current) {
+          // In-memory mode (no OPFS): the queued records still hold their bytes.
+          for (const m of localMedia) {
+            if (!result.uploadedMedia.has(m.id) && m.data) pendingMedia.current.set(m.id, { ...m, synced: false });
+          }
         }
 
         // Keep the at-rest seal in step with the vault: same factor (same wrap
@@ -1684,16 +1785,24 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         void flush();
         void pull();
       }, SYNC_INTERVAL_MS);
-    } else if (status === 'offline') {
-      timer.current = setInterval(() => {
-        void connect(false);
-      }, RECONNECT_INTERVAL_MS);
-    } else {
-      return;
+      return () => {
+        if (timer.current) clearInterval(timer.current);
+      };
     }
-    return () => {
-      if (timer.current) clearInterval(timer.current);
-    };
+    if (status === 'offline') {
+      // setTimeout chain rather than an interval: the delay grows after every
+      // failed attempt (a success flips status to 'online', which tears this
+      // effect down and resets the backoff for the next outage).
+      let delay = RECONNECT_INTERVAL_MS;
+      let t = setTimeout(function attempt() {
+        void connect(false).finally(() => {
+          delay = Math.min(delay * 2, RECONNECT_MAX_MS);
+          t = setTimeout(attempt, delay);
+        });
+      }, delay);
+      return () => clearTimeout(t);
+    }
+    return;
   }, [status, flush, pull, connect]);
 
   // Live notebook counts + last-edited labels, derived from the actual entries

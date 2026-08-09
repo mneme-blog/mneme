@@ -7,7 +7,7 @@
 // attachFilm (which reads the entry's current body). This dialog is just a view
 // onto that, and closing it does not cancel anything.
 import type { VNode } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
 import { t, tp, fmtNumber } from '../i18n';
@@ -79,6 +79,15 @@ export function FilmRenderDialog({
     };
   }, [running]);
 
+  // The imperative path below outlives the dialog by design (the render result
+  // must land via addMedia/attachFilm even if the user navigated away) — but
+  // its setState calls must not fire after unmount, mirroring the effect's
+  // `alive` guard above.
+  const mounted = useRef(true);
+  useEffect(() => () => {
+    mounted.current = false;
+  }, []);
+
   const start = async (): Promise<void> => {
     setStage('resolving');
     // Resolve every clip first: one recorded on another device downloads and
@@ -92,15 +101,19 @@ export function FilmRenderDialog({
       if (blob) clips.push({ question: card.q, blob, number: i + 1 });
       else absent++;
     }
-    setMissing(absent);
+    if (mounted.current) setMissing(absent);
     if (clips.length === 0) {
-      setError(t('media.film.noClips'));
-      setStage('error');
+      if (mounted.current) {
+        setError(t('media.film.noClips'));
+        setStage('error');
+      }
       return;
     }
 
-    setStage('rendering');
-    const handle = renderFilm({ sessionId: data.sessionId, clips, total: data.cards.length }, setProgress);
+    if (mounted.current) setStage('rendering');
+    const handle = renderFilm({ sessionId: data.sessionId, clips, total: data.cards.length }, (p) => {
+      if (mounted.current) setProgress(p);
+    });
     try {
       const result = await handle.promise;
       const att: MediaAttachment | null = await addMedia(entryId, 'video', result.blob, {
@@ -110,8 +123,9 @@ export function FilmRenderDialog({
         name: data.typeName || 'film',
       });
       if (att) attachFilm(entryId, data.sessionId, att);
-      onClose();
+      if (mounted.current) onClose();
     } catch (e) {
+      if (!mounted.current) return;
       if (e instanceof RenderCanceled) {
         onClose();
         return;

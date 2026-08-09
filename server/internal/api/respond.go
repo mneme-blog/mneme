@@ -18,6 +18,16 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
+// writeInternalError answers a 500 with a generic message and logs the real
+// error server-side. The split matters both ways: an operator debugging a 500
+// needs the underlying error in the log, and the caller must not see
+// internals. Only the method, path, and error reach the log — never request
+// bodies (which are opaque ciphertext anyway, but the rule is the rule).
+func writeInternalError(w http.ResponseWriter, r *http.Request, msg string, err error) {
+	log.Printf("%s %s: %s: %v", r.Method, r.URL.Path, msg, err)
+	writeError(w, http.StatusInternalServerError, msg)
+}
+
 // decodeJSON reads a JSON body, rejecting unknown fields and oversized payloads.
 //
 // The decoder error is logged, never returned. encoding/json errors name the

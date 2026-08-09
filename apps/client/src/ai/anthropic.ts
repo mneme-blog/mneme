@@ -85,6 +85,10 @@ export class AnthropicProvider implements AiProvider {
       }
     } catch (e) {
       throw toAiError(e);
+    } finally {
+      // Thrown mid-stream errors must release the reader — an unreleased one
+      // keeps the connection open until GC.
+      void reader.cancel().catch(() => undefined);
     }
     return text;
   }

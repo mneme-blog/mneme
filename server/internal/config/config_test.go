@@ -37,3 +37,59 @@ func TestLoadHonoursEmptyCORSOrigins(t *testing.T) {
 		t.Fatalf("Load with CORS_ORIGINS=\"\" gave %q, want an empty allowlist", got)
 	}
 }
+
+// Invalid env values must fall back to the default (with a warning) rather
+// than being half-accepted: a fat-fingered quota silently becoming "unlimited"
+// and a negative SESSION_TTL minting already-expired sessions both shipped
+// before these guards existed.
+func TestEnvParsersRejectGarbage(t *testing.T) {
+	t.Run("duration", func(t *testing.T) {
+		t.Setenv("MNEME_TEST_DUR", "24hours")
+		if got := envDuration("MNEME_TEST_DUR", 42); got != 42 {
+			t.Fatalf("garbage duration = %v, want default", got)
+		}
+		t.Setenv("MNEME_TEST_DUR", "-5m")
+		if got := envDuration("MNEME_TEST_DUR", 42); got != 42 {
+			t.Fatalf("negative duration = %v, want default", got)
+		}
+		t.Setenv("MNEME_TEST_DUR", "30m")
+		if got := envDuration("MNEME_TEST_DUR", 42); got.Minutes() != 30 {
+			t.Fatalf("valid duration = %v", got)
+		}
+	})
+
+	t.Run("int", func(t *testing.T) {
+		t.Setenv("MNEME_TEST_INT", "seven")
+		if got := envInt("MNEME_TEST_INT", 7); got != 7 {
+			t.Fatalf("garbage int = %d, want default", got)
+		}
+		t.Setenv("MNEME_TEST_INT", "-3")
+		if got := envInt("MNEME_TEST_INT", 7); got != 7 {
+			t.Fatalf("negative int = %d, want default", got)
+		}
+	})
+
+	t.Run("int64", func(t *testing.T) {
+		t.Setenv("MNEME_TEST_INT64", "10GB")
+		if got := envInt64("MNEME_TEST_INT64", 99); got != 99 {
+			t.Fatalf("garbage int64 = %d, want default — 10GB must not mean unlimited", got)
+		}
+	})
+
+	t.Run("bool", func(t *testing.T) {
+		// The old switch treated ANY unrecognized value as true — the
+		// asymmetric direction ("flase" enabling a switch).
+		t.Setenv("MNEME_TEST_BOOL", "flase")
+		if got := envBool("MNEME_TEST_BOOL", false); got != false {
+			t.Fatal("typo'd bool must fall back to the default, not true")
+		}
+		t.Setenv("MNEME_TEST_BOOL", "yes")
+		if !envBool("MNEME_TEST_BOOL", false) {
+			t.Fatal("'yes' should be true")
+		}
+		t.Setenv("MNEME_TEST_BOOL", "off")
+		if envBool("MNEME_TEST_BOOL", true) {
+			t.Fatal("'off' should be false")
+		}
+	})
+}

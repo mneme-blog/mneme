@@ -462,7 +462,7 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
 
           <div style={{ display: 'flex', gap: 10 }}>
             <Btn kind="ghost" size="md" onClick={onClose} style={{ flex: 1 }}>{t('common.cancel')}</Btn>
-            <Btn kind="primary" size="md" onClick={() => void save(form.enabled || aiSettings ? form : null)} style={{ flex: 2, opacity: saving ? 0.6 : 1 }}>
+            <Btn kind="primary" size="md" onClick={() => { if (!saving) void save(form.enabled || aiSettings ? form : null); }} style={{ flex: 2, opacity: saving ? 0.6 : 1, pointerEvents: saving ? 'none' : undefined }}>
               {saving ? t('assistant.saving') : t('common.save')}
             </Btn>
           </div>

@@ -5,7 +5,7 @@
 // is covered — the unit test in internal/backup fakes the store.
 //
 //	docker compose up -d postgres
-//	TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal?sslmode=disable \
+//	TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal_test?sslmode=disable \
 //	  go test -tags e2e ./e2e/...
 package e2e
 
@@ -13,7 +13,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"os"
 	"testing"
 	"time"
 
@@ -23,10 +22,7 @@ import (
 )
 
 func TestBackupRestoreRoundTrip(t *testing.T) {
-	dsn := os.Getenv("TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("set TEST_DATABASE_URL to run e2e")
-	}
+	dsn := testDSN(t)
 	ctx := context.Background()
 
 	st, err := store.New(ctx, dsn)

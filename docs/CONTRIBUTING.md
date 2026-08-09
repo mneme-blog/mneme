@@ -46,7 +46,7 @@ go test ./...                      # unit tests, no DB needed
 
 # Server end-to-end (needs Postgres up)
 docker compose up -d postgres
-TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal?sslmode=disable \
+TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal_test?sslmode=disable \
   go test -tags e2e ./e2e/...
 
 # Full client↔relay round-trips (relay must be running)

@@ -611,7 +611,7 @@ pnpm --filter client build           # typecheck + production build
 # Go server (in ./server)
 go build -o journald ./cmd/journald
 gofmt -l . && go vet ./... && go test ./...
-TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal?sslmode=disable \
+TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal_test?sslmode=disable \
   go test -tags e2e ./e2e/...        # full handshake + backup round-trip against a live Postgres
 
 # Operator backup / disaster recovery (same env as the server: DATABASE_URL, S3_*, BACKUP_*)
