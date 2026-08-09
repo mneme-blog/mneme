@@ -757,9 +757,9 @@ function EntryMenu({
                 setOpen(false);
                 setConfirming(true);
               }}
-              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'start', padding: '9px 11px', borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--ui)', fontSize: 13.5, fontWeight: 600, color: '#E4573D' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'start', padding: '9px 11px', borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--ui)', fontSize: 13.5, fontWeight: 600, color: 'var(--danger)' }}
             >
-              <Icon name="trash" size={15} color="#E4573D" /> {t('editor.deleteEntry')}
+              <Icon name="trash" size={15} color="var(--danger)" /> {t('editor.deleteEntry')}
             </button>
           </div>
         </>
@@ -891,7 +891,7 @@ export function EditorScreen({
                 return [
                   sep && (
                     <div key={`m-${key}`} style={{ padding: '16px 0 7px', paddingInlineStart: 4, paddingInlineEnd: 13 }}>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: '#786f62', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>
                         {fmtDate(d, { month: 'long', year: 'numeric' })}
                       </span>
                     </div>

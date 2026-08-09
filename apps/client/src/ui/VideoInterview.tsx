@@ -519,7 +519,7 @@ export function VideoInterviewSheet({
                     </span>
                   </span>
                   <span style={{ width: 34, height: 20, borderRadius: 99, flexShrink: 0, background: autoTranscribe ? 'var(--accent)' : 'var(--line)', position: 'relative', transition: 'background .15s' }}>
-                    <span style={{ position: 'absolute', top: 2, left: autoTranscribe ? 16 : 2, width: 16, height: 16, borderRadius: 99, background: 'var(--surface)', transition: 'left .15s' }} />
+                    <span style={{ position: 'absolute', top: 2, insetInlineStart: autoTranscribe ? 16 : 2, width: 16, height: 16, borderRadius: 99, background: 'var(--surface)', transition: 'inset-inline-start .15s' }} />
                   </span>
                 </button>
                 {/* Asked, not inferred: whisper treats the language as a
@@ -582,7 +582,7 @@ export function VideoInterviewSheet({
                 {stage === 'recording' && (
                   <>
                     <span style={{ position: 'absolute', top: 10, insetInlineStart: 10, display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(20,14,8,.7)', borderRadius: 999, padding: '4px 11px' }}>
-                      <span class={ending ? 'mneme-pulse' : undefined} style={{ width: 9, height: 9, borderRadius: 9, background: '#E4573D' }} />
+                      <span class={ending ? 'mneme-pulse' : undefined} style={{ width: 9, height: 9, borderRadius: 9, background: 'var(--danger)' }} />
                       <span style={{ fontFamily: 'var(--mono)', fontSize: 12.5, color: ending ? '#FFA893' : '#fff', fontVariantNumeric: 'tabular-nums' }}>
                         {fmtCountdown(remainingMs)}
                       </span>
@@ -590,7 +590,7 @@ export function VideoInterviewSheet({
                     {/* Drains left-to-right (start-to-end in RTL) so the clock
                         reads unmistakably as time left, not time spent. */}
                     <span style={{ position: 'absolute', insetInline: 0, bottom: 0, height: 3, background: 'rgba(255,255,255,.18)' }}>
-                      <span style={{ display: 'block', height: '100%', width: `${(remainingMs / limitMs) * 100}%`, background: ending ? '#E4573D' : '#fff', transition: 'width .25s linear' }} />
+                      <span style={{ display: 'block', height: '100%', width: `${(remainingMs / limitMs) * 100}%`, background: ending ? 'var(--danger)' : '#fff', transition: 'width .25s linear' }} />
                     </span>
                   </>
                 )}

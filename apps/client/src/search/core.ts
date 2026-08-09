@@ -5,7 +5,11 @@
 // title, body content, label names, and the entry date (written out in several
 // common formats, so "jun 9", "2026-06-09" or "9.6.2026" all hit).
 import type { JournalEntry } from '../sync/engine';
+import { monthName } from '../i18n';
 
+// English stays in the haystack unconditionally (ISO-adjacent habits die
+// hard); the ACTIVE locale's month names are appended below so a German user
+// typing "9. Juni" finds the entry a fully-translated UI told them exists.
 const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
 const MAX_RESULTS = 50;
 const SNIPPET_RADIUS = 60;
@@ -31,7 +35,7 @@ function dateHaystack(ts: number): string {
   const m = d.getMonth();
   const day = d.getDate();
   const mon = MONTHS[m];
-  return [
+  const spellings = new Set([
     `${mon} ${day} ${y}`, // june 9 2026 (covers "jun 9" via the prefix)
     `${day} ${mon} ${y}`, // 9 june 2026
     `${mon.slice(0, 3)} ${day} ${y}`, // jun 9 2026
@@ -40,7 +44,16 @@ function dateHaystack(ts: number): string {
     `${pad(day)}.${pad(m + 1)}.${y}`, // 09.06.2026
     `${day}.${m + 1}.${y}`, // 9.6.2026
     `${pad(m + 1)}/${pad(day)}/${y}`, // 06/09/2026
-  ].join(' · ');
+  ]);
+  // The active locale's month names (a Set: under English these duplicate the
+  // rows above and collapse away).
+  for (const name of [monthName(m), monthName(m, 'short')]) {
+    const lower = name.toLowerCase();
+    spellings.add(`${lower} ${day} ${y}`);
+    spellings.add(`${day} ${lower} ${y}`);
+    spellings.add(`${day}. ${lower} ${y}`); // 9. juni 2026 (de-style ordinal)
+  }
+  return [...spellings].join(' · ');
 }
 
 /** Body context around the first occurrence of any token. */

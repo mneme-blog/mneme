@@ -145,8 +145,8 @@ export function VideoCapture({
               <video ref={liveRef} autoPlay muted playsInline style={{ display: 'block', width: '100%', maxHeight: '52vh', transform: 'scaleX(-1)' }} />
             )}
             {stage === 'recording' && (
-              <span style={{ position: 'absolute', top: 10, left: 10, display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(20,14,8,.7)', borderRadius: 999, padding: '4px 11px' }}>
-                <span style={{ width: 9, height: 9, borderRadius: 9, background: '#E4573D' }} />
+              <span style={{ position: 'absolute', top: 10, insetInlineStart: 10, display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(20,14,8,.7)', borderRadius: 999, padding: '4px 11px' }}>
+                <span style={{ width: 9, height: 9, borderRadius: 9, background: 'var(--danger)' }} />
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 12.5, color: '#fff' }}>{fmtDuration(elapsed)}</span>
               </span>
             )}

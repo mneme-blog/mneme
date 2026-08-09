@@ -143,18 +143,18 @@ export function SearchSheet({ desk, onClose, onOpen }: {
               </span>
             </div>
             {h.snippet ? (
-              <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-2)', margin: '4px 0 0 16px', lineHeight: 1.45, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+              <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-2)', margin: '4px 0 0', marginInlineStart: 16, lineHeight: 1.45, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                 <Highlight text={h.snippet} tokens={tokens} />
               </p>
             ) : (
               h.entry.bodyText && (
-                <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-2)', margin: '4px 0 0 16px', lineHeight: 1.45, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-2)', margin: '4px 0 0', marginInlineStart: 16, lineHeight: 1.45, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {h.entry.bodyText}
                 </p>
               )
             )}
             {h.field === 'label' && h.entry.labels.length > 0 && (
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '6px 0 0 16px' }}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '6px 0 0', marginInlineStart: 16 }}>
                 {h.entry.labels.map((l) => <LabelChip key={l} id={l} size="sm" />)}
               </div>
             )}

@@ -78,6 +78,7 @@ export const media = {
 
   // Stitching a video interview's answer clips into one film. The render runs
   // on this device (WebCodecs, or a realtime fallback) — nothing is uploaded.
+  'media.noun.film': 'film',
   'media.film.render': 'Render film',
   'media.film.rerender': 'Re-render film',
   'media.film.stale': 'An answer changed since this film was made.',

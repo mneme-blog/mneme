@@ -261,8 +261,11 @@ export function App(): VNode {
   // Where the mobile editor's back button returns to (the flow it was entered from).
   const [editorReturn, setEditorReturn] = useState<Flow>('journals');
 
-  // ⌘/Ctrl+K opens search from anywhere (once unlocked).
+  // ⌘/Ctrl+K opens search from anywhere — once unlocked. Not registered while
+  // locked: a press on the lock screen would set searchOpen and pop the palette
+  // over the app the moment the vault unlocks.
   useEffect(() => {
+    if (status === 'locked') return;
     const onKey = (ev: KeyboardEvent): void => {
       if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'k') {
         ev.preventDefault();
@@ -271,7 +274,7 @@ export function App(): VNode {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [status]);
 
   // App never unmounts across a lock — the locked branch is an early return, so
   // every open sheet/flow would otherwise survive into the next unlock (e.g.

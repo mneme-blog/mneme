@@ -120,7 +120,7 @@ export function FilmRenderDialog({
         durationMs: result.durationMs,
         width: result.width,
         height: result.height,
-        name: data.typeName || 'film',
+        name: data.typeName || t('media.noun.film'),
       });
       if (att) attachFilm(entryId, data.sessionId, att);
       if (mounted.current) onClose();

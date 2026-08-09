@@ -190,7 +190,7 @@ function RelayServerRow(): VNode {
     return (
       <Row
         icon="link"
-        label="Relay server"
+        label={t('prefs.relay')}
         value={host}
         onClick={() => {
           setDraft(relayUrl);
@@ -210,7 +210,7 @@ function RelayServerRow(): VNode {
     // host would resolve relative to the app origin and fail as a silent 404.
     const normalized = normalizeRelayUrl(draft);
     if (!normalized) {
-      setError('Enter a full URL including the scheme, e.g. https://relay.example.com');
+      setError(t('prefs.relay.invalid'));
       return;
     }
     setRelayUrl(normalized);
@@ -219,7 +219,7 @@ function RelayServerRow(): VNode {
 
   return (
     <div style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid var(--accent-line)', background: 'var(--paper)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <span style={{ fontFamily: 'var(--ui)', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--ink-3)' }}>Relay server URL</span>
+      <span style={{ fontFamily: 'var(--ui)', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--ink-3)' }}>{t('prefs.relay.urlLabel')}</span>
       <input
         value={draft}
         onInput={(e) => {
@@ -240,11 +240,11 @@ function RelayServerRow(): VNode {
         <span style={{ fontFamily: 'var(--ui)', fontSize: 11.5, color: 'var(--accent-ink)', lineHeight: 1.45 }}>{error}</span>
       )}
       <span style={{ fontFamily: 'var(--ui)', fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.45 }}>
-        Points the app at a different server. A signed-in vault re-authenticates against it. Leave empty to use the default.
+        {t('prefs.relay.help')}
       </span>
       <div style={{ display: 'flex', gap: 8 }}>
-        <Btn size="sm" onClick={save} style={{ flex: 1 }}>Save</Btn>
-        <Btn size="sm" kind="ghost" onClick={close} style={{ flex: 1 }}>Cancel</Btn>
+        <Btn size="sm" onClick={save} style={{ flex: 1 }}>{t('common.save')}</Btn>
+        <Btn size="sm" kind="ghost" onClick={close} style={{ flex: 1 }}>{t('common.cancel')}</Btn>
       </div>
     </div>
   );

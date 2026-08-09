@@ -244,7 +244,7 @@ export function AudioCapture({
               <>
                 <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: 56 }} />
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: 9, background: '#E4573D' }} />
+                  <span style={{ width: 9, height: 9, borderRadius: 9, background: 'var(--danger)' }} />
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 15, color: 'var(--ink)' }}>{fmtDuration(elapsed)}</span>
                 </span>
               </>

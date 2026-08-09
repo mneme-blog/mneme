@@ -74,7 +74,7 @@ function EntryRow({ e, onOpen, compact, resolve }: { e: CalEntry; onOpen: (id: s
 
 function Heatmap({ counts }: { counts: number[] }): VNode {
   const cells = counts.map((n) => Math.min(n, 3));
-  const col = ['var(--line)', 'var(--accent-soft)', hexA('#B0563A', 0.45), 'var(--accent)'];
+  const col = ['var(--line)', 'var(--accent-soft)', 'color-mix(in srgb, var(--accent) 45%, transparent)', 'var(--accent)'];
   return (
     <div>
       <div style={{ display: 'grid', gridTemplateRows: 'repeat(7, 1fr)', gridAutoFlow: 'column', gridAutoColumns: '1fr', gap: 3 }}>
@@ -495,7 +495,7 @@ function MiniMonth({ year, month, data, big, isCurrent, onOpenMonth }: {
               title={c ? tp('calendar.dayCount', c, { date: dateLabel }) : dateLabel}
               style={{
                 ...(big ? {} : { aspectRatio: '1' }), borderRadius: 3, cursor: 'pointer', border: 'none', padding: 0, minHeight: big ? 6 : undefined,
-                background: c ? hexA('#B0563A', intensity) : 'var(--surface-2)',
+                background: c ? `color-mix(in srgb, var(--accent) ${Math.round(intensity * 100)}%, transparent)` : 'var(--surface-2)',
               }}
             />
           );

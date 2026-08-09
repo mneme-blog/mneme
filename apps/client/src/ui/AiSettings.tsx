@@ -254,7 +254,7 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
               <div style={{ ...pStyle, fontSize: 12 }}>{t('assistant.settings.enableHint')}</div>
             </div>
             <span style={{ width: 38, height: 22, borderRadius: 99, flexShrink: 0, background: form.enabled ? 'var(--accent)' : 'var(--line)', position: 'relative', transition: 'background .15s' }}>
-              <span style={{ position: 'absolute', top: 2, left: form.enabled ? 18 : 2, width: 18, height: 18, borderRadius: 99, background: 'var(--surface)', transition: 'left .15s' }} />
+              <span style={{ position: 'absolute', top: 2, insetInlineStart: form.enabled ? 18 : 2, width: 18, height: 18, borderRadius: 99, background: 'var(--surface)', transition: 'inset-inline-start .15s' }} />
             </span>
           </button>
 
@@ -327,7 +327,7 @@ export function AiSettingsSheet({ desk, onClose }: { desk: boolean; onClose: () 
                 />
               </div>
               <div>
-                <span style={labelStyle}>Model</span>
+                <span style={labelStyle}>{t('assistant.settings.model')}</span>
                 <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.anthropic.model} onChange={(e) => patch({ anthropic: { ...form.anthropic, model: (e.target as HTMLSelectElement).value } })}>
                   {[...new Set([...ANTHROPIC_MODELS, form.anthropic.model])].map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>

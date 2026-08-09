@@ -83,7 +83,7 @@ export function JournalEntriesScreen({ journal, onBack, onOpenEntry, onNew, onEd
               return [
                 sep && (
                   <div key={`m-${key}`} style={{ padding: '16px 2px 4px' }}>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: '#786f62', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>
                       {fmtDate(d, { month: 'long', year: 'numeric' })}
                     </span>
                   </div>
