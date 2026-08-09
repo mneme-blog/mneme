@@ -3,22 +3,18 @@
 // answered by the configured provider, streaming. The transcript lives in
 // component state only: closing the sheet (or locking) drops it; nothing about
 // the conversation is ever persisted or synced.
-import type { JSX, VNode } from 'preact';
+import type { VNode } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { Icon } from './Icon';
 import { Btn } from './primitives';
-import { SheetBackdrop, SheetGrabber } from './Sheet';
+import { AssistantPanel, ChatBubbles, appendToken, dropEmptyTail, chatPStyle as pStyle } from './chat';
 import { useVisualViewport } from '../hooks/useVisualViewport';
 import { t, tp } from '../i18n';
-import { ProviderBadge } from './ProviderBadge';
 import { useAppData } from '../state/data';
 import { makeProvider } from '../ai/provider';
 import { buildJournalContext, CLOUD_BUDGET_CHARS, LOCAL_BUDGET_CHARS } from '../ai/context';
 import { chatSystemPrompt } from '../ai/prompts';
 import { toAiError, type AiMessage } from '../ai/types';
 import { chatErrorMessage } from '../ai/errors';
-
-const pStyle: JSX.CSSProperties = { fontFamily: 'var(--ui)', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)', margin: 0 };
 
 export function AskJournalSheet({ desk, onClose }: { desk: boolean; onClose: () => void }): VNode | null {
   const { entries, aiSettings } = useAppData();
@@ -67,20 +63,13 @@ export function AskJournalSheet({ desk, onClose }: { desk: boolean; onClose: () 
         system: chatSystemPrompt(ctx.text, ctx.fenceToken),
         messages: history,
         signal: ac.signal,
-        onToken: (tok) =>
-          setTranscript((prev) => {
-            const next = [...prev];
-            const last = next[next.length - 1];
-            next[next.length - 1] = { ...last, content: last.content + tok };
-            return next;
-          }),
+        onToken: (tok) => setTranscript((prev) => appendToken(prev, tok)),
       });
     } catch (e) {
       const err = toAiError(e);
       if (err.hint !== 'aborted') {
         setError(chatErrorMessage(err, provider.local, 'assistant.error.refusedAnswer'));
-        // Drop an empty assistant bubble; keep partial text if any arrived.
-        setTranscript((prev) => (prev[prev.length - 1]?.content === '' ? prev.slice(0, -1) : prev));
+        setTranscript(dropEmptyTail);
       }
     } finally {
       setBusy(false);
@@ -88,26 +77,8 @@ export function AskJournalSheet({ desk, onClose }: { desk: boolean; onClose: () 
     }
   };
 
-  // Desktop: an inline, non-modal side panel — rendered as a flex sibling of
-  // the main content (app.tsx), so the rest of the app stays fully usable
-  // while the conversation stays open. Mobile: a modal bottom sheet.
-  const panel = (
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: desk ? 'min(440px, 40vw)' : '100%', flexShrink: 0, height: desk ? '100%' : '88%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', background: 'var(--surface)', borderRadius: desk ? 0 : '24px 24px 0 0', border: desk ? 'none' : '1px solid var(--line)', borderInlineStart: '1px solid var(--line)', boxShadow: desk ? 'none' : '0 20px 60px rgba(30,20,12,.3)', overflow: 'hidden' }}
-      >
-        <div style={{ padding: desk ? '18px 22px 12px' : '14px 20px 10px', borderBottom: '1px solid var(--line)' }}>
-          {!desk && <SheetGrabber style={{ margin: '0 auto 12px' }} />}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <Icon name="feather" size={17} color="var(--accent)" />
-            <h3 style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 500, color: 'var(--ink)', margin: 0, flex: 1 }}>{t('assistant.ask.title')}</h3>
-            <ProviderBadge provider={provider} />
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--ink-3)' }} aria-label={t('common.close')}>
-              <Icon name="x" size={16} />
-            </button>
-          </div>
-        </div>
-
+  return (
+    <AssistantPanel desk={desk} icon="feather" title={t('assistant.ask.title')} provider={provider} onClose={onClose} vp={vp}>
         <div ref={logRef} style={{ flex: 1, overflowY: 'auto', padding: desk ? '16px 22px' : '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {transcript.length === 0 && (
             <div style={{ margin: 'auto', textAlign: 'center', maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -119,22 +90,7 @@ export function AskJournalSheet({ desk, onClose }: { desk: boolean; onClose: () 
               </p>
             </div>
           )}
-          {transcript.map((m, i) => (
-            <div
-              key={i}
-              style={{
-                alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-                maxWidth: '85%', padding: '10px 14px', borderRadius: 14,
-                background: m.role === 'user' ? 'var(--accent-soft)' : 'var(--paper)',
-                border: `1px solid ${m.role === 'user' ? 'var(--accent-line)' : 'var(--line)'}`,
-                fontFamily: m.role === 'user' ? 'var(--ui)' : 'var(--serif)',
-                fontSize: m.role === 'user' ? 13.5 : 15,
-                lineHeight: 1.6, color: 'var(--ink)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
-              }}
-            >
-              {m.content || (busy && i === transcript.length - 1 ? '…' : '')}
-            </div>
-          ))}
+          <ChatBubbles turns={transcript} busy={busy} />
           {error && <p style={{ ...pStyle, color: 'var(--accent-ink)' }}>{error}</p>}
         </div>
 
@@ -159,19 +115,6 @@ export function AskJournalSheet({ desk, onClose }: { desk: boolean; onClose: () 
             )}
           </form>
         </div>
-      </div>
-  );
-
-  if (desk) return panel;
-  return (
-    <SheetBackdrop
-      onClose={onClose}
-      align="bottom"
-      // Sized to the visual viewport so the panel's input pins above the
-      // keyboard and the transcript scrolls within (see useVisualViewport).
-      style={{ top: vp.offsetTop, height: vp.height, bottom: 'auto' }}
-    >
-      {panel}
-    </SheetBackdrop>
+    </AssistantPanel>
   );
 }
