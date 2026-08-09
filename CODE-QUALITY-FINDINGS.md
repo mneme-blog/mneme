@@ -1,5 +1,18 @@
 # Code-quality findings — 2026-08-09 review
 
+> **Status (2026-08-09, same branch):** All packages A–F are implemented, in the commit sequence
+> `832b356` (A) → `1bdb8e5` (B) → `2f28f35` (C) → `2aab0ab` (D) → `7e2a541` (E) → F in ten commits
+> ending at `ac75657`. Three consciously partial items, each documented at the site:
+> **F2** — the separable logic was extracted (`state/helpers.ts`, memoized context value, flush
+> reentrancy, status race) but the full 5-file provider split was deferred: the remaining core is
+> interdependent sync machinery with no provider-level harness, and splitting it blind risks the
+> exact regressions this exercise exists to prevent. **F5** — VideoCapture/AudioCapture share
+> `ui/useMediaRecorder.ts`; VideoInterview's multi-take recorder stays separate by design
+> (one stream across takes, per CLAUDE.md). **F10** — took the named "80% option" (C1+C2:
+> typecheck over scripts + CI-enforced `check` runner, now 19 scripts) instead of a vitest
+> migration. New regression scripts added along the way: `record-codec` (wire-codec field
+> mapping, written *before* the F1 refactor as its safety net), `state-helpers`, `phrase-quiz`.
+
 Full-tree code-quality review ahead of an external audit. Five parallel review passes covered
 `apps/client/src/{state,sync,db,crypto}`, the UI layer (`ui/`, `screens/`, `editor/`, `hooks/`,
 `styles/`), the feature modules (`ai/`, `video/`, `import/`, `location/`, `i18n/`, `search/`,
