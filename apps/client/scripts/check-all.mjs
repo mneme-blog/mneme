@@ -12,6 +12,7 @@ const SCRIPTS = [
   // security-relevant regressions first — fail fast on what matters most
   'record-codec', // wire-codec field mapping (silent LWW field loss)
   'record-binding', // AAD record binding (audit M2)
+  'state-helpers', // provider merge/convergence rules
   'seedlock-methods', // at-rest seals (Argon2id / PRF)
   'link-safety', // href allowlist (audit M1, #42)
   'ollama-url', // privacy-badge URL classification (audit L4, #49)

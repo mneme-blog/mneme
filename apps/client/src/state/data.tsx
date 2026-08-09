@@ -9,6 +9,21 @@ import { createContext } from 'preact';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 import { RelayClient, RelayError, resolveRelayUrl, buildDefaultRelayUrl, setStoredRelayUrl } from '../sync/relay';
+import {
+  logSyncError,
+  supersedeBuiltinSeeds,
+  logDbWrite,
+  sameSet,
+  seedEntries,
+  seedJournalRows,
+  journalFromRecord,
+  journalToRecord,
+  adoptRecordId,
+  mergeByLWW,
+  bytesToBlob,
+  defaultEntryTitle,
+  relativeDay,
+} from './helpers';
 import { authenticate, PendingApprovalError, type Session } from '../sync/identity';
 import { deriveIdentity, type Identity } from '../crypto/keys';
 import { mnemonicToSeed } from '../crypto/mnemonic';
@@ -17,20 +32,20 @@ import { enrollPrfCredential, evalPrf } from '../platform/webauthn';
 import { loadSealedSeed, storeSealedSeed, clearSealedSeed, loadAiSettingsRecord, storeAiSettingsRecord, clearAiSettingsRecord } from '../platform/keystore';
 import { sealAiSettings, openAiSettings, type AiSyncMeta } from '../ai/settings';
 import type { AiSettings } from '../ai/types';
-import { pushEntries, pushTemplates, pushInterviewTypes, pushJournals, pushAiSettings, pullEntries, type JournalEntry, type MediaAttachment, type TemplateRecord, type InterviewType, type JournalRecord, type AiSettingsRecord } from '../sync/engine';
+import { pushEntries, pushTemplates, pushInterviewTypes, pushJournals, pushAiSettings, pullEntries, type JournalEntry, type MediaAttachment, type TemplateRecord, type InterviewType, type AiSettingsRecord } from '../sync/engine';
 import { uploadMedia, downloadMedia } from '../sync/media';
 import { rotateAccount, type RotationProgress } from '../sync/rotate';
 import { newEntryId, newMediaId, newTemplateId, newRecordId } from '../sync/ids';
-import { ENTRIES, JOURNALS, type Journal, type CoverPattern } from '../data/sample';
+import type { Journal, CoverPattern } from '../data/sample';
 import { seedBuiltinTemplates, localizeBuiltinTemplate } from '../data/templates';
 import { seedBuiltinInterviews, localizeBuiltinInterview } from '../data/interviews';
 import type { JSONContent } from '@tiptap/core';
-import { blocksToDoc, textToDoc, docToText, docMediaIds } from '../editor/doc';
+import { docToText, docMediaIds } from '../editor/doc';
 import { setFilmAttr, setTranscriptAttr } from '../editor/videointerviewData';
 import { stopAllRenders } from '../video/film';
 import { LocalDb, destroyOwnerDb, type MediaRecord } from '../db';
 import { makeThumbnail } from '../ui/thumbnail';
-import { t, tp, fmtDate, useI18n } from '../i18n';
+import { useI18n } from '../i18n';
 
 export type SyncStatus = 'locked' | 'connecting' | 'online' | 'offline';
 
@@ -226,41 +241,6 @@ export function useAppData(): AppData {
   return v;
 }
 
-// Cheap equality so the per-journal pending set only triggers a re-render when
-// its membership actually changes (syncPendingCount fires on every outbox poke).
-function sameSet(a: Set<string>, b: Set<string>): boolean {
-  if (a.size !== b.size) return false;
-  for (const v of a) if (!b.has(v)) return false;
-  return true;
-}
-
-// A sync failure is either connectivity (expected — the relay is down or the
-// device is offline; retried quietly) or a real defect (a serialization bug, a
-// 4xx the relay will return forever). Both drop the status to 'offline' so the
-// reconnect loop keeps running, but a defect must be VISIBLE in the console —
-// swallowing it as "offline" hides bugs indefinitely. Never log record
-// contents here: the error itself carries only exception/relay text, no
-// journal plaintext or keys.
-function isConnectivityError(e: unknown): boolean {
-  // fetch() rejects with a TypeError when the network is unreachable; relay
-  // 5xx/429 are server-side conditions that resolve themselves.
-  if (e instanceof TypeError) return true;
-  return e instanceof RelayError && (e.status >= 500 || e.status === 429);
-}
-
-function logSyncError(op: 'flush' | 'pull', e: unknown): void {
-  if (isConnectivityError(e)) return; // routine; the offline indicator covers it
-  console.error(`[sync] ${op} failed with a non-connectivity error:`, e);
-}
-
-// Local persistence is fire-and-forget for UI latency, but a failed OPFS write
-// (disk pressure is realistic for video vaults) must not be silent: the UI and
-// the outbox would report an entry saved that doesn't exist after reload.
-// Logs only the error — never the record being written.
-function logDbWrite(e: unknown): void {
-  console.error('[db] local write failed:', e);
-}
-
 const SYNC_INTERVAL_MS = 30_000;
 // While disconnected, retry authentication so the client recovers on its own
 // once the relay comes back — no need to re-enter the mnemonic. Each attempt
@@ -275,124 +255,15 @@ const RECONNECT_MAX_MS = 60_000;
 // twelve words, punishing exactly the users who chose the stricter setting.
 const AUTO_LOCK_MS = 15 * 60_000;
 
-// Seed the timeline with the Tutorial walkthrough entries on a fresh vault.
-// These stay local (not pushed); only user-created entries sync to the relay.
-function seedEntries(): JournalEntry[] {
-  return ENTRIES.map((e) => {
-    const [h, m] = e.time.split(':').map(Number);
-    const at = Date.UTC(2026, 5, e.day, h || 0, m || 0);
-    // Tutorial entries carry rich block bodies (real TipTap content, so the
-    // editor opens with the features they describe); anything without blocks
-    // starts from its one-line preview text.
-    const doc = e.blocks ? blocksToDoc(e.blocks) : textToDoc(e.preview);
-    return {
-      id: e.id,
-      journalId: e.journal,
-      title: e.title,
-      bodyText: e.blocks ? docToText(doc) : e.preview,
-      bodyJson: JSON.stringify(doc),
-      labels: e.labels,
-      createdAt: at,
-      updatedAt: at,
-    };
-  });
-}
-
-// Sample notebooks as seed rows — pristine and local-only until the first edit
-// makes one a real synced record (mirrors the template/interview-type seeds).
-function seedJournalRows(now: number): Journal[] {
-  return JOURNALS.map((j) => ({ ...j, createdAt: now, updatedAt: now, pristine: true }));
-}
-
-const COVER_PATTERNS: readonly string[] = ['lines', 'dots', 'grid', 'plain', 'photo'];
-
-// A pulled journal record, shaped for the UI list. Cover strings from the wire
-// are validated back into the CoverPattern union (fail-safe to 'plain').
-function journalFromRecord(r: JournalRecord): Journal {
-  return {
-    id: r.id,
-    name: r.name,
-    subtitle: r.subtitle,
-    color: r.color,
-    cover: (COVER_PATTERNS.includes(r.cover) ? r.cover : 'plain') as CoverPattern,
-    count: 0,
-    last: '',
-    recordId: r.recordId,
-    createdAt: r.createdAt,
-    updatedAt: r.updatedAt,
-    deleted: r.deleted,
-  };
-}
-
-// The wire shape of a local journal (what the outbox pushes). Callers guarantee
-// recordId is minted; count/last never leave the device.
-function journalToRecord(j: Journal): JournalRecord {
-  const created = j.createdAt ?? j.updatedAt ?? 0;
-  return {
-    id: j.id,
-    recordId: j.recordId,
-    name: j.name,
-    subtitle: j.subtitle,
-    color: j.color,
-    cover: j.cover,
-    createdAt: created,
-    updatedAt: j.updatedAt ?? created,
-    deleted: j.deleted,
-  };
-}
-
-// Concurrent first-syncs of the same journal mint different record ids on each
-// device. Receivers adopt the smallest id they have seen so every device
-// converges onto one record; the losers go stale on the relay and lose LWW.
-function adoptRecordId(local: string | undefined, pulled: string | undefined): string | undefined {
-  if (!local) return pulled;
-  if (!pulled) return local;
-  return pulled < local ? pulled : local;
-}
-
-function mergeByLWW<T extends { id: string; updatedAt: number }>(prev: T[], incoming: T[]): T[] {
-  const byId = new Map(prev.map((e) => [e.id, e]));
-  for (const e of incoming) {
-    const cur = byId.get(e.id);
-    if (!cur || e.updatedAt > cur.updatedAt) byId.set(e.id, e);
-  }
-  return [...byId.values()].sort((a, b) => b.updatedAt - a.updatedAt);
-}
-
-// Blob wants a plain ArrayBuffer; bytes from the DB/crypto layers are typed over
-// ArrayBufferLike, so copy into a fresh buffer (also detaches any subarray view).
-function bytesToBlob(data: Uint8Array, type: string): Blob {
-  const copy = new Uint8Array(data.length);
-  copy.set(data);
-  return new Blob([copy.buffer], { type });
-}
-
-// Local-midnight of a timestamp, so "days ago" counts calendar days, not 24h spans.
-function startOfLocalDay(ts: number): number {
-  const d = new Date(ts);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-// New entries are headlined with their local creation time ("2026-06-12 14:03:55")
-// instead of starting untitled.
-function defaultEntryTitle(ts: number): string {
-  const d = new Date(ts);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-}
-
-// A short relative label for a notebook's most-recent edit ("Today", "3 days ago",
-// "12 Jun"). `last` was a hardcoded sample string; this derives it from real data.
-export function relativeDay(ts: number, now: number): string {
-  const days = Math.round((startOfLocalDay(now) - startOfLocalDay(ts)) / 86_400_000);
-  if (days <= 0) return t('common.today');
-  if (days === 1) return t('common.yesterday');
-  if (days < 7) return tp('shell.daysAgo', days);
-  if (days < 14) return t('shell.lastWeek');
-  return fmtDate(ts, { day: 'numeric', month: 'short' });
-}
-
+// NOTE on setState updaters: several write paths (updateEntry, attachFilm,
+// attachTranscript, updateTemplate/InterviewType and the pull merge) perform
+// their DB write + outbox insert INSIDE the functional updater. That is
+// deliberate — the updater is the only place that sees the freshest state when
+// edits land in quick succession — but it leans on Preact executing updaters
+// eagerly at dispatch. Under React semantics (updaters run at render, possibly
+// twice under StrictMode) those side effects would double-fire. If this
+// provider is ever ported to React, the collections must move to an external
+// store first (useSyncExternalStore) — do not just copy the pattern over.
 export function AppDataProvider({ children }: { children: ComponentChildren }): VNode {
   // The relay URL is a runtime setting (self-hosters, and Tauri has no origin to
   // infer it from). Changing it re-creates the client via this dep.
@@ -425,6 +296,11 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
   const [templates, setTemplates] = useState<TemplateRecord[]>([]);
   const [interviewTypes, setInterviewTypes] = useState<InterviewType[]>([]);
   const [aiSettings, setAiSettings] = useState<AiSettings | null>(null);
+
+  // Render-fresh snapshots for callbacks that act on the CURRENT lists outside
+  // a setState updater (the delete paths). Assigned every render below.
+  const entriesSnapshot = useRef<JournalEntry[]>([]);
+  const journalsSnapshot = useRef<Journal[]>([]);
 
   const session = useRef<Session | null>(null);
   // Kept after sign-in so the background loop can re-authenticate without the mnemonic.
@@ -564,7 +440,10 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
     }
   }, [relay, db, syncPendingCount, setStatusLive]);
 
-  const flush = useCallback(async () => {
+  // Returns false when a push failed (the caller decides what the combined
+  // flush+pull outcome means for the status indicator; a lone pull success
+  // must not paint "online" over a flush that is failing every time).
+  const flush = useCallback(async (): Promise<boolean> => {
     // Reentrancy guard (the same idea as mediaFlushing): flush is invoked on
     // every edit, every 30 s tick, and every connect. Overlapping runs would
     // re-push the same still-queued batch concurrently — correct under the LWW
@@ -572,15 +451,15 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
     // A call arriving mid-run coalesces into one trailing re-run.
     if (flushing.current) {
       flushQueued.current = true;
-      return;
+      return true; // another run owns the outcome
     }
     flushing.current = true;
-    try {
     let failed = false;
+    try {
     do {
     flushQueued.current = false;
     const s = session.current;
-    if (!s) return;
+    if (!s) return false;
     if (
       pending.current.size === 0 &&
       pendingTemplates.current.size === 0 &&
@@ -645,11 +524,13 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
       flushing.current = false;
     }
     void flushMedia();
+    return !failed;
   }, [relay, db, syncPendingCount, flushMedia, setStatusLive]);
 
-  const pull = useCallback(async () => {
+  // Returns false when the pull failed (see flush for why callers combine).
+  const pull = useCallback(async (): Promise<boolean> => {
     const s = session.current;
-    if (!s) return;
+    if (!s) return false;
     try {
       // The relay caps a pull at one page (500 records): keep pulling until it
       // reports no more, or a fresh device bootstrapping a large vault would
@@ -667,32 +548,17 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
       if (res.templates.length) {
         if (dbReady.current) void db.mergeRemoteTemplates(res.templates).catch(logDbWrite);
         setTemplates((prev) => {
-          const merged = mergeByLWW(prev, res.templates);
-          // A synced copy of a built-in (someone edited or deleted it on another
-          // device) retires this device's untouched seed of the same built-in —
-          // the two carry different random ids, so LWW alone can't pair them.
-          const syncedSlugs = new Set(res.templates.filter((t) => t.builtin).map((t) => t.builtin));
-          const superseded = new Set(
-            merged.filter((t) => t.pristine && t.builtin && syncedSlugs.has(t.builtin)).map((t) => t.id),
-          );
-          if (superseded.size === 0) return merged;
-          if (dbReady.current) void db.dropTemplates([...superseded]).catch(logDbWrite);
-          return merged.filter((t) => !superseded.has(t.id));
+          const { list, dropped } = supersedeBuiltinSeeds(mergeByLWW(prev, res.templates), res.templates);
+          if (dropped.length && dbReady.current) void db.dropTemplates(dropped).catch(logDbWrite);
+          return list;
         });
       }
       if (res.interviewTypes.length) {
         if (dbReady.current) void db.mergeRemoteInterviewTypes(res.interviewTypes).catch(logDbWrite);
         setInterviewTypes((prev) => {
-          const merged = mergeByLWW(prev, res.interviewTypes);
-          // Same built-in supersede pass as templates: a synced copy of a built-in
-          // retires this device's untouched seed of the same slug (different ids).
-          const syncedSlugs = new Set(res.interviewTypes.filter((t) => t.builtin).map((t) => t.builtin));
-          const superseded = new Set(
-            merged.filter((t) => t.pristine && t.builtin && syncedSlugs.has(t.builtin)).map((t) => t.id),
-          );
-          if (superseded.size === 0) return merged;
-          if (dbReady.current) void db.dropInterviewTypes([...superseded]).catch(logDbWrite);
-          return merged.filter((t) => !superseded.has(t.id));
+          const { list, dropped } = supersedeBuiltinSeeds(mergeByLWW(prev, res.interviewTypes), res.interviewTypes);
+          if (dropped.length && dbReady.current) void db.dropInterviewTypes(dropped).catch(logDbWrite);
+          return list;
         });
       }
       if (res.journals.length) {
@@ -763,9 +629,11 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
       }
       }
       setStatusLive('online');
+      return true;
     } catch (e) {
       logSyncError('pull', e);
       setStatusLive('offline');
+      return false;
     }
   }, [relay, db, setStatusLive, syncPendingCount]);
 
@@ -781,9 +649,13 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         session.current = await authenticate(relay, id);
         setPendingApproval(false);
         cursor.current = 0;
-        await flush();
-        await pull();
-        setStatusLive('online');
+        // The combined outcome decides the indicator: authentication alone is
+        // not "online" if the first flush is failing on every record (e.g. an
+        // over-quota vault) — that painted a green light that flipped to
+        // offline at the next tick, forever.
+        const flushed = await flush();
+        const pulled = await pull();
+        setStatusLive(flushed && pulled ? 'online' : 'offline');
       } catch (e) {
         if (e instanceof PendingApprovalError) {
           // The relay knows this device but the operator hasn't approved the vault.
@@ -1242,43 +1114,42 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
     [db, flush, syncPendingCount],
   );
 
-  const updateTemplate: AppData['updateTemplate'] = useCallback(
-    (id, patch) => {
+  // Shared mutator for the two seeded record kinds: an edit clears `pristine`
+  // (the first edit of a built-in seed turns it into a real synced record; the
+  // builtin slug rides along so other devices retire their own seed of it),
+  // and a delete is a tombstone rather than a drop — the deletion must
+  // out-sync other devices' copies, and, via the slug, their pristine seeds.
+  const mutateSeeded = useCallback(
+    <T extends { id: string; updatedAt: number; pristine?: boolean; deleted?: boolean }>(
+      setList: (fn: (prev: T[]) => T[]) => void,
+      pendingRef: { current: Map<string, T> },
+      putLocal: (t: T) => Promise<void>,
+      id: string,
+      change: Partial<T>,
+    ): void => {
       const now = Date.now();
-      setTemplates((prev) => {
+      setList((prev) => {
         const cur = prev.find((t) => t.id === id);
         if (!cur) return prev;
-        // The first edit of a built-in seed turns it into a real synced record
-        // (pristine is cleared); the builtin slug rides along so other devices
-        // retire their own seed of it.
-        const next: TemplateRecord = { ...cur, ...patch, pristine: false, updatedAt: now };
-        if (dbReady.current) void db.putLocalTemplate(next).catch(logDbWrite);
-        pendingTemplates.current.set(id, next);
+        const next = { ...cur, ...change, pristine: false, updatedAt: now };
+        if (dbReady.current) void putLocal(next).catch(logDbWrite);
+        pendingRef.current.set(id, next);
         syncPendingCount();
         void flush();
         return mergeByLWW(prev, [next]);
       });
     },
-    [db, flush, syncPendingCount],
+    [flush, syncPendingCount],
+  );
+
+  const updateTemplate: AppData['updateTemplate'] = useCallback(
+    (id, patch) => mutateSeeded(setTemplates, pendingTemplates, (t) => db.putLocalTemplate(t), id, patch),
+    [db, mutateSeeded],
   );
 
   const deleteTemplate: AppData['deleteTemplate'] = useCallback(
-    (id) => {
-      const now = Date.now();
-      setTemplates((prev) => {
-        const cur = prev.find((t) => t.id === id);
-        if (!cur) return prev;
-        // Tombstone rather than drop: the deletion must out-sync other devices'
-        // copies — and, via the builtin slug, their pristine seeds too.
-        const next: TemplateRecord = { ...cur, deleted: true, pristine: false, updatedAt: now };
-        if (dbReady.current) void db.putLocalTemplate(next).catch(logDbWrite);
-        pendingTemplates.current.set(id, next);
-        syncPendingCount();
-        void flush();
-        return mergeByLWW(prev, [next]);
-      });
-    },
-    [db, flush, syncPendingCount],
+    (id) => mutateSeeded(setTemplates, pendingTemplates, (t) => db.putLocalTemplate(t), id, { deleted: true }),
+    [db, mutateSeeded],
   );
 
   const createInterviewType: AppData['createInterviewType'] = useCallback(
@@ -1303,41 +1174,13 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
   );
 
   const updateInterviewType: AppData['updateInterviewType'] = useCallback(
-    (id, patch) => {
-      const now = Date.now();
-      setInterviewTypes((prev) => {
-        const cur = prev.find((t) => t.id === id);
-        if (!cur) return prev;
-        // The first edit of a built-in seed turns it into a real synced record
-        // (pristine cleared); the builtin slug rides along so other devices retire it.
-        const next: InterviewType = { ...cur, ...patch, pristine: false, updatedAt: now };
-        if (dbReady.current) void db.putLocalInterviewType(next).catch(logDbWrite);
-        pendingInterviewTypes.current.set(id, next);
-        syncPendingCount();
-        void flush();
-        return mergeByLWW(prev, [next]);
-      });
-    },
-    [db, flush, syncPendingCount],
+    (id, patch) => mutateSeeded(setInterviewTypes, pendingInterviewTypes, (t) => db.putLocalInterviewType(t), id, patch),
+    [db, mutateSeeded],
   );
 
   const deleteInterviewType: AppData['deleteInterviewType'] = useCallback(
-    (id) => {
-      const now = Date.now();
-      setInterviewTypes((prev) => {
-        const cur = prev.find((t) => t.id === id);
-        if (!cur) return prev;
-        // Tombstone (built-ins included) so the deletion out-syncs other devices'
-        // copies — and, via the builtin slug, their pristine seeds too.
-        const next: InterviewType = { ...cur, deleted: true, pristine: false, updatedAt: now };
-        if (dbReady.current) void db.putLocalInterviewType(next).catch(logDbWrite);
-        pendingInterviewTypes.current.set(id, next);
-        syncPendingCount();
-        void flush();
-        return mergeByLWW(prev, [next]);
-      });
-    },
-    [db, flush, syncPendingCount],
+    (id) => mutateSeeded(setInterviewTypes, pendingInterviewTypes, (t) => db.putLocalInterviewType(t), id, { deleted: true }),
+    [db, mutateSeeded],
   );
 
   // Persist new AI settings sealed under the vault-derived key, and queue them
@@ -1436,17 +1279,16 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
   const deleteEntry: AppData['deleteEntry'] = useCallback(
     (id) => {
       const now = Date.now();
-      let victim: JournalEntry | undefined;
-      setEntries((prev) => {
-        const cur = prev.find((e) => e.id === id);
-        if (!cur || cur.deleted) return prev;
-        victim = cur;
-        const next: JournalEntry = { ...cur, deleted: true, updatedAt: now };
-        if (dbReady.current) void db.putLocal(next).catch(logDbWrite);
-        pending.current.set(id, next);
-        return mergeByLWW(prev, [next]);
-      });
-      if (!victim) return;
+      // A delete is a discrete user action, never part of a rapid edit chain —
+      // the render-fresh snapshot is current here, so the tombstone and its
+      // media sweep are computed OUTSIDE the updater (no side effects inside,
+      // no values smuggled out).
+      const victim = entriesSnapshot.current.find((e) => e.id === id);
+      if (!victim || victim.deleted) return;
+      const next: JournalEntry = { ...victim, deleted: true, updatedAt: now };
+      if (dbReady.current) void db.putLocal(next).catch(logDbWrite);
+      pending.current.set(id, next);
+      setEntries((prev) => mergeByLWW(prev, [next]));
       const mediaIds = new Set((victim.attachments ?? []).map((a) => a.id));
       if (victim.bodyJson) {
         try {
@@ -1469,31 +1311,29 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
   const deleteJournal: AppData['deleteJournal'] = useCallback(
     (id) => {
       const now = Date.now();
+      // Same shape as deleteEntry: a discrete user action working off the
+      // render-fresh snapshots, all side effects outside the updaters.
+      const victims = entriesSnapshot.current.filter((e) => e.journalId === id && !e.deleted);
+      const tombstones = victims.map((e): JournalEntry => ({ ...e, deleted: true, updatedAt: now }));
       const mediaIds = new Set<string>();
-      setEntries((prev) => {
-        const victims = prev.filter((e) => e.journalId === id && !e.deleted);
-        if (victims.length === 0) return prev;
-        const tombstones = victims.map((e): JournalEntry => ({ ...e, deleted: true, updatedAt: now }));
-        for (const e of tombstones) {
-          if (dbReady.current) void db.putLocal(e).catch(logDbWrite);
-          pending.current.set(e.id, e);
-        }
-        for (const v of victims) {
-          for (const a of v.attachments ?? []) mediaIds.add(a.id);
-          if (v.bodyJson) {
-            try {
-              for (const m of docMediaIds(JSON.parse(v.bodyJson) as JSONContent)) mediaIds.add(m);
-            } catch {
-              /* unparseable body — nothing to collect */
-            }
+      for (const e of tombstones) {
+        if (dbReady.current) void db.putLocal(e).catch(logDbWrite);
+        pending.current.set(e.id, e);
+      }
+      for (const v of victims) {
+        for (const a of v.attachments ?? []) mediaIds.add(a.id);
+        if (v.bodyJson) {
+          try {
+            for (const m of docMediaIds(JSON.parse(v.bodyJson) as JSONContent)) mediaIds.add(m);
+          } catch {
+            /* unparseable body — nothing to collect */
           }
         }
-        return mergeByLWW(prev, tombstones);
-      });
+      }
+      if (tombstones.length) setEntries((prev) => mergeByLWW(prev, tombstones));
       for (const m of mediaIds) removeMedia(m);
-      setJournals((prev) => {
-        const cur = prev.find((j) => j.id === id);
-        if (!cur || cur.deleted) return prev;
+      const cur = journalsSnapshot.current.find((j) => j.id === id);
+      if (cur && !cur.deleted) {
         const tombstone: Journal = {
           ...cur,
           deleted: true,
@@ -1503,8 +1343,8 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
         };
         if (dbReady.current) void db.putJournalRow(tombstone, { dirty: 1, pristine: 0 }).catch(logDbWrite);
         pendingJournals.current.set(id, tombstone);
-        return prev.map((j) => (j.id === id ? tombstone : j));
-      });
+        setJournals((prev) => prev.map((j) => (j.id === id ? tombstone : j)));
+      }
       syncPendingCount();
       void flush();
     },
@@ -1782,8 +1622,11 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
   useEffect(() => {
     if (status === 'online') {
       timer.current = setInterval(() => {
-        void flush();
-        void pull();
+        void (async () => {
+          const flushed = await flush();
+          const pulled = await pull();
+          setStatusLive(flushed && pulled ? 'online' : 'offline');
+        })();
       }, SYNC_INTERVAL_MS);
       return () => {
         if (timer.current) clearInterval(timer.current);
@@ -1846,9 +1689,20 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
     [interviewTypes, locale],
   );
 
+  // Keep the delete-path snapshots render-fresh.
+  entriesSnapshot.current = entries;
+  journalsSnapshot.current = journals;
+
   // Read through to the live ref every time (see the interface comment).
   const transcribeToken = useCallback(() => session.current?.token ?? null, []);
 
-  const value: AppData = { status, hasVault, transcribeToken, vaultMethod, ownerId, pendingApproval, approvalHint, retryApproval, pendingCount, pendingJournalIds, syncTotal, saving, bootstrapping, entries: liveEntries, journals: journalsWithCounts, templates: localizedTemplates, interviewTypes: localizedInterviewTypes, aiSettings, saveAiSettings, signIn, unlock, unlockWithKey, setDeviceUnlock, lock, createEntry, updateEntry, attachFilm, attachTranscript, deleteEntry, newJournal, updateJournal, deleteJournal, createTemplate, updateTemplate, deleteTemplate, createInterviewType, updateInterviewType, deleteInterviewType, addMedia, removeMedia, mediaBlob, mediaThumb, rotatePhrase, deleteVault, relayUrl, setRelayUrl };
+  // Memoized: without this, every sync tick (setPendingCount fires on each
+  // outbox poke, setSaving twice per flush) built a fresh value object and
+  // re-rendered every useAppData consumer in the app. The callbacks are all
+  // useCallback-stable, so the memo keys on the data that actually changes.
+  const value: AppData = useMemo(
+    () => ({ status, hasVault, transcribeToken, vaultMethod, ownerId, pendingApproval, approvalHint, retryApproval, pendingCount, pendingJournalIds, syncTotal, saving, bootstrapping, entries: liveEntries, journals: journalsWithCounts, templates: localizedTemplates, interviewTypes: localizedInterviewTypes, aiSettings, saveAiSettings, signIn, unlock, unlockWithKey, setDeviceUnlock, lock, createEntry, updateEntry, attachFilm, attachTranscript, deleteEntry, newJournal, updateJournal, deleteJournal, createTemplate, updateTemplate, deleteTemplate, createInterviewType, updateInterviewType, deleteInterviewType, addMedia, removeMedia, mediaBlob, mediaThumb, rotatePhrase, deleteVault, relayUrl, setRelayUrl }),
+    [status, hasVault, transcribeToken, vaultMethod, ownerId, pendingApproval, approvalHint, retryApproval, pendingCount, pendingJournalIds, syncTotal, saving, bootstrapping, liveEntries, journalsWithCounts, localizedTemplates, localizedInterviewTypes, aiSettings, saveAiSettings, signIn, unlock, unlockWithKey, setDeviceUnlock, lock, createEntry, updateEntry, attachFilm, attachTranscript, deleteEntry, newJournal, updateJournal, deleteJournal, createTemplate, updateTemplate, deleteTemplate, createInterviewType, updateInterviewType, deleteInterviewType, addMedia, removeMedia, mediaBlob, mediaThumb, rotatePhrase, deleteVault, relayUrl, setRelayUrl],
+  );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
