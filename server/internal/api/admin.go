@@ -202,8 +202,7 @@ func (s *Server) handleAdminDeleteVault(w http.ResponseWriter, r *http.Request) 
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	if req.Confirm != "delete" {
-		writeError(w, http.StatusBadRequest, `confirmation required: {"confirm":"delete"}`)
+	if !confirmed(w, req.Confirm, "delete") {
 		return
 	}
 	ownerID := r.PathValue("id")

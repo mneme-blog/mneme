@@ -4,8 +4,8 @@
 // Selection happens over the decrypted in-memory entries; nothing here talks
 // to the network.
 import type { JournalEntry } from '../sync/engine';
+import { entryHeading, entryText } from './flatten';
 import { search } from '../search/core';
-import { parseBody, docToText } from '../editor/doc';
 import { fenced, newFenceToken } from './fence';
 
 /** The fence kind used for journal excerpts (see ai/fence.ts). */
@@ -31,30 +31,12 @@ export interface JournalContext {
   fenceToken: string;
 }
 
-function isoDate(ts: number): string {
-  const d = new Date(ts);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
-
 function entryBlock(e: JournalEntry, token: string): string {
-  let text: string;
-  try {
-    text = docToText(parseBody(e.bodyJson, e.bodyText)).trim();
-  } catch {
-    text = e.bodyText;
-  }
-  if (text.length > ENTRY_CAP_CHARS) {
-    text = `${text.slice(0, ENTRY_CAP_CHARS)}\n[… entry truncated]`;
-  }
+  const text = entryText(e, ENTRY_CAP_CHARS, '[… entry truncated]');
   const labels = e.labels.length ? `\nLabels: ${e.labels.join(', ')}` : '';
   // Title and labels are user content too, so they go inside the fence with the
   // body rather than sitting outside it as trusted-looking prompt structure.
-  return fenced(
-    token,
-    JOURNAL_FENCE_KIND,
-    `### ${e.title || 'Untitled'}\nDate: ${isoDate(e.createdAt)}${labels}\n\n${text}`,
-  );
+  return fenced(token, JOURNAL_FENCE_KIND, `${entryHeading(e)}${labels}\n\n${text}`);
 }
 
 /**

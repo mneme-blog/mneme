@@ -3,12 +3,11 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
-	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -154,28 +153,32 @@ func (u *updateChecker) info(ctx context.Context) versionInfo {
 	return res
 }
 
-func (u *updateChecker) fetch(ctx context.Context) versionInfo {
-	info := versionInfo{Current: u.current, Schema: u.schema}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.apiURL, nil)
+// githubGetJSON performs one bounded GET against the GitHub API surface and
+// decodes the JSON response into dst. The three fetches (release feed, main
+// head, schema manifest) differed only in URL and in how loudly they fail.
+func (u *updateChecker) githubGetJSON(ctx context.Context, url string, dst any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		info.Error = "release check: " + err.Error()
-		return info
+		return err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "mneme-relay")
-
 	resp, err := u.client.Do(req)
 	if err != nil {
-		info.Error = "release check failed: " + err.Error()
-		return info
+		return err
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
-		info.Error = "release check: unexpected status " + resp.Status
-		return info
+		return errors.New("unexpected status " + resp.Status)
 	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(dst); err != nil {
+		return errors.New("bad response: " + err.Error())
+	}
+	return nil
+}
+
+func (u *updateChecker) fetch(ctx context.Context) versionInfo {
+	info := versionInfo{Current: u.current, Schema: u.schema}
 
 	var rel struct {
 		TagName     string `json:"tag_name"`
@@ -188,8 +191,9 @@ func (u *updateChecker) fetch(ctx context.Context) versionInfo {
 			URL  string `json:"browser_download_url"`
 		} `json:"assets"`
 	}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&rel); err != nil {
-		info.Error = "release check: bad response: " + err.Error()
+	// This is the load-bearing fetch: its failure surfaces in the dashboard.
+	if err := u.githubGetJSON(ctx, u.apiURL, &rel); err != nil {
+		info.Error = "release check: " + err.Error()
 		return info
 	}
 
@@ -230,20 +234,6 @@ func (u *updateChecker) fetch(ctx context.Context) versionInfo {
 
 // fetchMainHead reads the head commit of main: sha, commit page URL, commit date.
 func (u *updateChecker) fetchMainHead(ctx context.Context) (sha, htmlURL, date string) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.mainAPIURL, nil)
-	if err != nil {
-		return "", "", ""
-	}
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "mneme-relay")
-	resp, err := u.client.Do(req)
-	if err != nil {
-		return "", "", ""
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return "", "", ""
-	}
 	var c struct {
 		SHA     string `json:"sha"`
 		HTMLURL string `json:"html_url"`
@@ -253,7 +243,8 @@ func (u *updateChecker) fetchMainHead(ctx context.Context) (sha, htmlURL, date s
 			} `json:"committer"`
 		} `json:"commit"`
 	}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&c); err != nil {
+	// Deliberately silent on failure — a missing main head just hides the row.
+	if err := u.githubGetJSON(ctx, u.mainAPIURL, &c); err != nil {
 		return "", "", ""
 	}
 	c.SHA = strings.ToLower(strings.TrimSpace(c.SHA))
@@ -261,35 +252,6 @@ func (u *updateChecker) fetchMainHead(ctx context.Context) (sha, htmlURL, date s
 		return "", "", ""
 	}
 	return c.SHA, c.HTMLURL, c.Commit.Committer.Date
-}
-
-func isHex(s string) bool {
-	for _, r := range s {
-		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
-			return false
-		}
-	}
-	return true
-}
-
-// buildCommitRe extracts the commit a build was made from: either a CI main
-// build ("main-<sha>", the image tag) or a source build stamped by git describe
-// ("v0.2.1-3-g<sha>", optionally "-dirty").
-var buildCommitRe = regexp.MustCompile(`(?:^main-|-g)([0-9a-f]{7,40})(?:-dirty)?$`)
-
-// buildMatchesCommit reports whether the running build is the given commit.
-// Shas are compared as prefixes (short vs. full); a build whose commit cannot
-// be extracted (a bare release tag, "dev") never matches.
-func buildMatchesCommit(current, sha string) bool {
-	m := buildCommitRe.FindStringSubmatch(current)
-	if m == nil {
-		return false
-	}
-	a, b := m[1], sha
-	if len(a) > len(b) {
-		a, b = b, a
-	}
-	return strings.HasPrefix(b, a)
 }
 
 // releaseAssetHost reports whether a URL from the release feed may be followed.
@@ -317,24 +279,13 @@ func releaseAssetHost(raw string) bool {
 // is deliberately silent: the manifest only sharpens a warning, and a missing one
 // already degrades to "unknown", which warns harder rather than less.
 func (u *updateChecker) fetchSchemaManifest(ctx context.Context, url string) (schema, minSafe int) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return 0, 0
-	}
-	req.Header.Set("User-Agent", "mneme-relay")
-	resp, err := u.client.Do(req)
-	if err != nil {
-		return 0, 0
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return 0, 0
-	}
 	var m struct {
 		Schema        int `json:"schema"`
 		MinSafeSchema int `json:"min_safe_schema"`
 	}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&m); err != nil {
+	// Deliberately silent — a missing manifest degrades to "unknown", which
+	// warns harder rather than less.
+	if err := u.githubGetJSON(ctx, url, &m); err != nil {
 		return 0, 0
 	}
 	return m.Schema, m.MinSafeSchema
@@ -356,79 +307,6 @@ func rollbackCost(currentSchema, targetSchema, targetMinSafe int) string {
 		return "fast"
 	}
 	return "deep"
-}
-
-// describeRe splits a `git describe --tags` build stamp into the tag it was cut
-// from and the number of commits made since: "v0.2.1-6-g31eddf5" → ("v0.2.1", 6).
-var describeRe = regexp.MustCompile(`^(v?\d+\.\d+\.\d+)-(\d+)-g[0-9a-f]{7,40}(?:-dirty)?$`)
-
-// aheadOfRelease reports whether the running build is newer than the latest
-// release. Two shapes count: a build stamped past the tag (git describe leaves
-// the commits-since count in the version string), and a build of a tag that is
-// itself higher than the newest published release. Anything whose position
-// cannot be established — a main-<sha> image, "dev", an unparseable release
-// feed — is not "ahead"; it is simply unknown, and the caller keeps its
-// neutral wording.
-func aheadOfRelease(current, latest string) bool {
-	if _, ok := parseSemver(latest); !ok {
-		return false
-	}
-	base, ahead := current, 0
-	if m := describeRe.FindStringSubmatch(strings.TrimSpace(current)); m != nil {
-		base = m[1]
-		ahead, _ = strconv.Atoi(m[2])
-	}
-	if _, ok := parseSemver(base); !ok {
-		return false
-	}
-	switch {
-	case semverLess(latest, base):
-		return true // built from a tag newer than the newest release
-	case semverLess(base, latest):
-		return false // behind the release — a genuine update
-	default:
-		return ahead > 0 // same tag; ahead only if commits were made past it
-	}
-}
-
-// semverLess reports whether a is an older release than b. Both must be valid
-// vMAJOR.MINOR.PATCH tags; anything unparseable (e.g. a "dev" build) yields
-// false, so development builds are never nagged.
-func semverLess(a, b string) bool {
-	av, aok := parseSemver(a)
-	bv, bok := parseSemver(b)
-	if !aok || !bok {
-		return false
-	}
-	for i := 0; i < 3; i++ {
-		if av[i] != bv[i] {
-			return av[i] < bv[i]
-		}
-	}
-	return false
-}
-
-// parseSemver reads a vMAJOR.MINOR.PATCH tag, ignoring any prerelease ("-...")
-// or metadata ("+...") suffix. Returns ok=false on anything else.
-func parseSemver(s string) ([3]int, bool) {
-	s = strings.TrimSpace(s)
-	s = strings.TrimPrefix(s, "v")
-	if i := strings.IndexAny(s, "-+"); i >= 0 {
-		s = s[:i]
-	}
-	parts := strings.Split(s, ".")
-	if len(parts) != 3 {
-		return [3]int{}, false
-	}
-	var out [3]int
-	for i, p := range parts {
-		n, err := strconv.Atoi(p)
-		if err != nil || n < 0 {
-			return [3]int{}, false
-		}
-		out[i] = n
-	}
-	return out, true
 }
 
 // truncateNotes bounds the release body shown in the banner (rune-safe).

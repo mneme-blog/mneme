@@ -101,8 +101,7 @@ func (s *Server) handleAdminRestoreBackup(w http.ResponseWriter, r *http.Request
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	if req.Confirm != "restore" {
-		writeError(w, http.StatusBadRequest, `confirmation required: {"confirm":"restore"}`)
+	if !confirmed(w, req.Confirm, "restore") {
 		return
 	}
 	name := r.PathValue("name")

@@ -46,3 +46,15 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
 	}
 	return true
 }
+
+// confirmed answers the 400 for a wrong or missing typed confirmation. Every
+// destructive admin action enforces its word server-side — a stray request
+// holding a valid token must not be able to destroy anything — and this keeps
+// the message format identical across them.
+func confirmed(w http.ResponseWriter, got, want string) bool {
+	if got != want {
+		writeError(w, http.StatusBadRequest, `confirmation required: {"confirm":"`+want+`"}`)
+		return false
+	}
+	return true
+}

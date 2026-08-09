@@ -17,6 +17,7 @@ import { renderTitleCard } from './cards';
 import type { FilmJob, FilmResult, RenderProgress } from './film';
 import { RenderCanceled } from './film';
 import { pickMimeType } from '../ui/recorder';
+import { canonicalSize } from './timeline';
 
 /** Read one clip's natural size and duration without decoding it fully. */
 function probeClip(blob: Blob): Promise<{ width: number; height: number; durationMs: number }> {
@@ -44,8 +45,6 @@ function probeClip(blob: Blob): Promise<{ width: number; height: number; duratio
     el.src = url;
   });
 }
-
-const even = (n: number): number => Math.max(2, Math.floor(n / 2) * 2);
 
 export function renderRealtime(
   job: FilmJob,
@@ -75,12 +74,7 @@ export function renderRealtime(
     const probes = await Promise.all(job.clips.map((c) => probeClip(c.blob).catch(() => null)));
     const first = probes[0];
     if (!first) throw new Error('could not read clip');
-    const landscape = first.width >= first.height;
-    const short = 720;
-    const ratio = landscape ? first.width / first.height : first.height / first.width;
-    const long = Math.min(1280, Math.max(640, Math.round(short * ratio)));
-    const width = even(landscape ? long : short);
-    const height = even(landscape ? short : long);
+    const { width, height } = canonicalSize(first.width, first.height);
 
     const canvas = document.createElement('canvas');
     canvas.width = width;

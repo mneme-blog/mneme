@@ -9,6 +9,7 @@
 // prompt tells the model to point at. currentLocale()/t() are import-safe
 // outside Vite (the tsx repro scripts) — they fall back to English there.
 import { currentLocale, t } from '../i18n';
+import { isoDate } from './flatten';
 import { fenced, fenceRules, newFenceToken } from './fence';
 
 // Journal text is untrusted input to the model: an entry can hold anything the
@@ -22,9 +23,7 @@ const ENTRY_FENCE = 'entry';
 export type AiEditorAction = 'continue' | 'summarize' | 'title';
 
 function today(): string {
-  const d = new Date();
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  return isoDate(Date.now());
 }
 
 /** `fenceToken` comes from the JournalContext whose text is being embedded. */

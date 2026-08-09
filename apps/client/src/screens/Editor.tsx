@@ -26,6 +26,7 @@ import { VideoCapture } from '../ui/VideoCapture';
 import { AudioCapture } from '../ui/AudioCapture';
 import { AttachmentList } from '../ui/Attachments';
 import { EntryThumbs, entryImages } from '../ui/EntryThumbs';
+import { listDate, monthKey } from '../ui/entryDates';
 import { Lightbox } from '../ui/Lightbox';
 import { TemplatesSheet } from '../ui/Templates';
 import { EntryDateTime } from '../ui/EntryDateTime';
@@ -35,18 +36,6 @@ import type { VideoInterviewData } from '../editor/videointerviewData';
 import { t, tp, fmtDate } from '../i18n';
 import '../editor/editor.css';
 
-// Compact list date: append the year only when the entry isn't from the current
-// year, so recent entries stay clean while older ones aren't ambiguous.
-function listDate(d: Date): string {
-  return d.getFullYear() === new Date().getFullYear()
-    ? fmtDate(d, { month: 'short', day: 'numeric' })
-    : fmtDate(d, { month: 'short', day: 'numeric', year: 'numeric' });
-}
-// The month/year a list separator groups by — entries are bucketed by their
-// (displayed) entry date.
-function monthKey(d: Date): string {
-  return `${d.getFullYear()}-${d.getMonth()}`;
-}
 const SAVE_DEBOUNCE_MS = 600;
 
 function countWords(text: string): number {
