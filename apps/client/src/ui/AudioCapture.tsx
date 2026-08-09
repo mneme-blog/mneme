@@ -3,11 +3,12 @@
 // except via onCapture; encryption and upload happen in the data layer
 // (state/data.tsx addMedia).
 import type { VNode } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useRef } from 'preact/hooks';
 import { t } from '../i18n';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
 import { Sheet, Z } from './Sheet';
+import { useMediaRecorder } from './useMediaRecorder';
 import { fmtDuration } from './recorder';
 
 // Preferred container/codec order; the browser picks the first it supports
@@ -25,8 +26,6 @@ function pickMimeType(): string | undefined {
   return MIME_CANDIDATES.find((m) => MediaRecorder.isTypeSupported(m));
 }
 
-type Stage = 'idle' | 'recording' | 'review' | 'error';
-
 // Scrolling bar waveform: one bar of mic level every BAR_INTERVAL_MS, newest on
 // the right. Confirms at a glance that sound is actually being picked up.
 const BAR_INTERVAL_MS = 50;
@@ -42,17 +41,6 @@ export function AudioCapture({
   onClose: () => void;
   onCapture: (blob: Blob, durationMs: number) => void;
 }): VNode {
-  const [stage, setStage] = useState<Stage>('idle');
-  const [error, setError] = useState('');
-  const [elapsed, setElapsed] = useState(0);
-  const [reviewUrl, setReviewUrl] = useState<string | null>(null);
-
-  const stream = useRef<MediaStream | null>(null);
-  const recorder = useRef<MediaRecorder | null>(null);
-  const startedAt = useRef(0);
-  const result = useRef<{ blob: Blob; durationMs: number } | null>(null);
-  const tick = useRef<ReturnType<typeof setInterval> | null>(null);
-
   // Live waveform plumbing: an AnalyserNode taps the mic stream (analysis only,
   // never routed to speakers) and a rAF loop paints level bars onto the canvas.
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -133,86 +121,21 @@ export function AudioCapture({
     raf.current = requestAnimationFrame(draw);
   };
 
-  // Acquire the microphone on mount; release everything on unmount.
-  useEffect(() => {
-    let cancelled = false;
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((s) => {
-        if (cancelled) {
-          s.getTracks().forEach((track) => track.stop());
-          return;
-        }
-        stream.current = s;
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setError(t('media.record.micUnavailable'));
-          setStage('error');
-        }
-      });
-    return () => {
-      cancelled = true;
-      if (tick.current) clearInterval(tick.current);
-      stopWave();
-      if (recorder.current && recorder.current.state !== 'inactive') recorder.current.stop();
-      stream.current?.getTracks().forEach((track) => track.stop());
-    };
-  }, []);
-
-  // Review object URLs are revoked when replaced or on unmount.
-  useEffect(() => () => { if (reviewUrl) URL.revokeObjectURL(reviewUrl); }, [reviewUrl]);
-
-  const startRecording = (): void => {
-    const s = stream.current;
-    if (!s) return;
-    const mimeType = pickMimeType();
-    let rec: MediaRecorder;
-    try {
-      rec = new MediaRecorder(s, mimeType ? { mimeType } : undefined);
-    } catch {
-      setError(t('media.record.unsupported'));
-      setStage('error');
-      return;
-    }
-    const parts: BlobPart[] = [];
-    rec.ondataavailable = (ev) => { if (ev.data.size > 0) parts.push(ev.data); };
-    rec.onstop = () => {
-      const durationMs = Date.now() - startedAt.current;
-      const blob = new Blob(parts, { type: rec.mimeType || 'audio/webm' });
-      result.current = { blob, durationMs };
-      setReviewUrl((old) => {
-        if (old) URL.revokeObjectURL(old);
-        return URL.createObjectURL(blob);
-      });
-      setStage('review');
-    };
-    recorder.current = rec;
-    startedAt.current = Date.now();
-    setElapsed(0);
-    rec.start(1000); // gather data every second so a crash loses little
-    tick.current = setInterval(() => setElapsed(Date.now() - startedAt.current), 250);
-    startWave(s);
-    setStage('recording');
-  };
-
-  const stopRecording = (): void => {
-    if (tick.current) clearInterval(tick.current);
-    stopWave();
-    recorder.current?.stop();
-  };
-
-  const retake = (): void => {
-    result.current = null;
-    setReviewUrl((old) => {
-      if (old) URL.revokeObjectURL(old);
-      return null;
-    });
-    setStage('idle');
-  };
+  const rec = useMediaRecorder({
+    acquire: () => navigator.mediaDevices.getUserMedia({ audio: true }),
+    makeRecorder: (s) => {
+      const mimeType = pickMimeType();
+      return new MediaRecorder(s, mimeType ? { mimeType } : undefined);
+    },
+    fallbackMime: 'audio/webm',
+    unavailableMessage: t('media.record.micUnavailable'),
+    onStart: startWave,
+    onStop: stopWave,
+  });
+  const { stage, error, elapsed, reviewUrl } = rec;
 
   const use = (): void => {
-    if (result.current) onCapture(result.current.blob, result.current.durationMs);
+    if (rec.result.current) onCapture(rec.result.current.blob, rec.result.current.durationMs);
     onClose();
   };
 
@@ -258,11 +181,11 @@ export function AudioCapture({
       )}
 
       <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 16 }}>
-        {stage === 'idle' && <Btn onClick={startRecording} icon="mic">{t('media.record.start')}</Btn>}
-        {stage === 'recording' && <Btn kind="danger" onClick={stopRecording}>{t('media.record.stop')}</Btn>}
+        {stage === 'idle' && <Btn onClick={rec.startRecording} icon="mic">{t('media.record.start')}</Btn>}
+        {stage === 'recording' && <Btn kind="danger" onClick={rec.stopRecording}>{t('media.record.stop')}</Btn>}
         {stage === 'review' && (
           <>
-            <Btn kind="ghost" onClick={retake}>{t('media.record.retake')}</Btn>
+            <Btn kind="ghost" onClick={rec.retake}>{t('media.record.retake')}</Btn>
             <Btn onClick={use} icon="check">{t('media.record.useAudio')}</Btn>
           </>
         )}
