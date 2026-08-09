@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { t } from '../i18n';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { Sheet, Z } from './Sheet';
 import { fmtDuration } from './recorder';
 
 // Preferred container/codec order; the browser picks the first it supports
@@ -216,61 +217,57 @@ export function AudioCapture({
   };
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(30,22,16,.45)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: desk ? 'center' : 'flex-end', justifyContent: 'center' }}
+    <Sheet
+      desk={desk}
+      onClose={onClose}
+      zIndex={Z.overlay}
+      dim="strong"
+      width={420}
+      cardStyle={{ padding: desk ? 22 : '18px 18px 28px' }}
+      title={stage === 'review' ? t('media.record.reviewTitle') : t('media.record.audioTitle')}
+      headerMargin="0 0 14px"
+      accessory={
+        <button onClick={onClose} title={t('common.close')} style={{ width: 32, height: 32, borderRadius: 10, border: '1px solid var(--line)', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <Icon name="x" size={16} color="var(--ink-2)" />
+        </button>
+      }
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: desk ? 420 : '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: desk ? 20 : '24px 24px 0 0', border: '1px solid var(--line)', padding: desk ? 22 : '18px 18px 28px', boxShadow: '0 20px 60px rgba(30,20,12,.3)' }}
-      >
-        {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 14px' }} />}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>
-            {stage === 'review' ? t('media.record.reviewTitle') : t('media.record.audioTitle')}
-          </h3>
-          <button onClick={onClose} title={t('common.close')} style={{ width: 32, height: 32, borderRadius: 10, border: '1px solid var(--line)', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <Icon name="x" size={16} color="var(--ink-2)" />
-          </button>
-        </div>
-
-        {stage === 'error' ? (
-          <div style={{ padding: '34px 10px', textAlign: 'center', color: 'var(--ink-2)', fontFamily: 'var(--ui)', fontSize: 14 }}>{error}</div>
-        ) : stage === 'review' && reviewUrl ? (
-          <audio src={reviewUrl} controls style={{ display: 'block', width: '100%' }} />
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '26px 16px', borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
-            {stage === 'recording' ? (
-              <>
-                <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: 56 }} />
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: 9, background: 'var(--danger)' }} />
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 15, color: 'var(--ink)' }}>{fmtDuration(elapsed)}</span>
-                </span>
-              </>
-            ) : (
-              <>
-                <span style={{ width: 54, height: 54, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', border: '1px solid var(--line)' }}>
-                  <Icon name="mic" size={24} color="var(--ink-2)" />
-                </span>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 15, color: 'var(--ink-3)' }}>{t('media.record.ready')}</span>
-              </>
-            )}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 16 }}>
-          {stage === 'idle' && <Btn onClick={startRecording} icon="mic">{t('media.record.start')}</Btn>}
-          {stage === 'recording' && <Btn kind="danger" onClick={stopRecording}>{t('media.record.stop')}</Btn>}
-          {stage === 'review' && (
+      {stage === 'error' ? (
+        <div style={{ padding: '34px 10px', textAlign: 'center', color: 'var(--ink-2)', fontFamily: 'var(--ui)', fontSize: 14 }}>{error}</div>
+      ) : stage === 'review' && reviewUrl ? (
+        <audio src={reviewUrl} controls style={{ display: 'block', width: '100%' }} />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '26px 16px', borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
+          {stage === 'recording' ? (
             <>
-              <Btn kind="ghost" onClick={retake}>{t('media.record.retake')}</Btn>
-              <Btn onClick={use} icon="check">{t('media.record.useAudio')}</Btn>
+              <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: 56 }} />
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ width: 9, height: 9, borderRadius: 9, background: 'var(--danger)' }} />
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 15, color: 'var(--ink)' }}>{fmtDuration(elapsed)}</span>
+              </span>
+            </>
+          ) : (
+            <>
+              <span style={{ width: 54, height: 54, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', border: '1px solid var(--line)' }}>
+                <Icon name="mic" size={24} color="var(--ink-2)" />
+              </span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 15, color: 'var(--ink-3)' }}>{t('media.record.ready')}</span>
             </>
           )}
-          {stage === 'error' && <Btn kind="ghost" onClick={onClose}>{t('common.close')}</Btn>}
         </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 16 }}>
+        {stage === 'idle' && <Btn onClick={startRecording} icon="mic">{t('media.record.start')}</Btn>}
+        {stage === 'recording' && <Btn kind="danger" onClick={stopRecording}>{t('media.record.stop')}</Btn>}
+        {stage === 'review' && (
+          <>
+            <Btn kind="ghost" onClick={retake}>{t('media.record.retake')}</Btn>
+            <Btn onClick={use} icon="check">{t('media.record.useAudio')}</Btn>
+          </>
+        )}
+        {stage === 'error' && <Btn kind="ghost" onClick={onClose}>{t('common.close')}</Btn>}
       </div>
-    </div>
+    </Sheet>
   );
 }

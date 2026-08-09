@@ -1,6 +1,7 @@
 import type { VNode, ComponentChildren, JSX } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { Icon, type IconName } from '../ui/Icon';
+import { Z } from '../ui/Sheet';
 import { Btn, LabelChip, ConnChip } from '../ui/primitives';
 import { hexA } from '../ui/color';
 import { type Journal } from '../data/sample';
@@ -608,8 +609,8 @@ function YearJump({ year, big, onPick }: { year: number; big?: boolean; onPick: 
       </button>
       {open && (
         <>
-          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-          <div style={{ position: 'absolute', top: '100%', insetInlineStart: 0, marginTop: 6, zIndex: 41, width: 260, padding: 12, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--line)', boxShadow: '0 10px 30px rgba(0,0,0,.14)' }}>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: Z.popover }} />
+          <div style={{ position: 'absolute', top: '100%', insetInlineStart: 0, marginTop: 6, zIndex: Z.popover + 1, width: 260, padding: 12, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--line)', boxShadow: '0 10px 30px rgba(0,0,0,.14)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <button onClick={() => setPage((p) => p - 12)} aria-label={t('calendar.previous')} style={navBtnSm}><Icon name="left" size={15} color="var(--ink-2)" dirFlip /></button>
               <span style={{ fontFamily: 'var(--ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-2)' }}>{page}–{page + 11}</span>

@@ -3,6 +3,7 @@ import { useState } from 'preact/hooks';
 import { t, tp, fmtNumber, type MessageKey } from '../i18n';
 import { Icon } from '../ui/Icon';
 import { Btn, Cover, SyncBadge, SyncNotice, Spinner } from '../ui/primitives';
+import { Sheet } from '../ui/Sheet';
 import { hexA } from '../ui/color';
 import type { CoverPattern, Journal } from '../data/sample';
 import type { TemplateRecord } from '../sync/engine';
@@ -117,19 +118,9 @@ export function NewJournalSheet({
   );
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: desk ? 'center' : 'flex-end', justifyContent: 'center' }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: desk ? 440 : '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: desk ? 20 : '24px 24px 0 0', border: '1px solid var(--line)', padding: desk ? 26 : '20px 22px 30px', boxShadow: '0 20px 60px rgba(30,20,12,.3)' }}
-      >
-        {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 16px' }} />}
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: '0 0 18px' }}>{t('journals.new')}</h3>
-        {body}
-      </div>
-    </div>
+    <Sheet desk={desk} onClose={onClose} width={440} title={t('journals.new')} headerMargin="0 0 18px">
+      {body}
+    </Sheet>
   );
 }
 
@@ -223,19 +214,9 @@ export function EditJournalSheet({
   );
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: desk ? 'center' : 'flex-end', justifyContent: 'center' }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: desk ? 440 : '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: desk ? 20 : '24px 24px 0 0', border: '1px solid var(--line)', padding: desk ? 26 : '20px 22px 30px', boxShadow: '0 20px 60px rgba(30,20,12,.3)' }}
-      >
-        {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 16px' }} />}
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: '0 0 18px' }}>{t('journals.edit.title')}</h3>
-        {body}
-      </div>
-    </div>
+    <Sheet desk={desk} onClose={onClose} width={440} title={t('journals.edit.title')} headerMargin="0 0 18px">
+      {body}
+    </Sheet>
   );
 }
 

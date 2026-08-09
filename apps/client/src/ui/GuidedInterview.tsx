@@ -15,6 +15,7 @@ import type { JSX, VNode } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { SheetBackdrop, SheetGrabber } from './Sheet';
 import { useVisualViewport } from '../hooks/useVisualViewport';
 import { t } from '../i18n';
 import { ProviderBadge } from './ProviderBadge';
@@ -256,7 +257,7 @@ export function GuidedInterviewSheet({
 
   const header = (title: string): VNode => (
     <div style={{ padding: desk ? '18px 22px 12px' : '14px 20px 10px', borderBottom: '1px solid var(--line)' }}>
-      {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 12px' }} />}
+      {!desk && <SheetGrabber style={{ margin: '0 auto 12px' }} />}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
         <Icon name="mic" size={17} color="var(--accent)" />
         <h3 style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 500, color: 'var(--ink)', margin: 0, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h3>
@@ -441,14 +442,15 @@ export function GuidedInterviewSheet({
 
   if (desk) return panel;
   return (
-    <div
-      onClick={onClose}
-      // Fixed + sized to the visual viewport: the overlay spans only the area
-      // above the keyboard, so the flex-end panel pins its input right on top of
-      // the keyboard and the transcript scrolls within — a messenger-like layout.
-      style={{ position: 'fixed', left: 0, right: 0, top: vp.offsetTop, height: vp.height, zIndex: 60, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+    <SheetBackdrop
+      onClose={onClose}
+      align="bottom"
+      // Sized to the visual viewport: the overlay spans only the area above the
+      // keyboard, so the flex-end panel pins its input right on top of the
+      // keyboard and the transcript scrolls within — a messenger-like layout.
+      style={{ top: vp.offsetTop, height: vp.height, bottom: 'auto' }}
     >
       {panel}
-    </div>
+    </SheetBackdrop>
   );
 }

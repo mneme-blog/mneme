@@ -7,6 +7,7 @@ import type { VNode } from 'preact';
 import { useMemo, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { LabelChip } from './primitives';
+import { Z } from './Sheet';
 import { labelInfo } from '../data/sample';
 import { hexA } from './color';
 import { t } from '../i18n';
@@ -118,7 +119,7 @@ export function LabelField({
           {optionCount > 0 && (
             <div
               style={{
-                position: 'absolute', zIndex: 60, top: 'calc(100% + 6px)', insetInlineStart: 0,
+                position: 'absolute', zIndex: Z.sheet, top: 'calc(100% + 6px)', insetInlineStart: 0,
                 width: MENU_W, maxHeight: MENU_MAX_H, overflowY: 'auto', padding: 5,
                 background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14,
                 boxShadow: '0 10px 30px rgba(40,28,18,.18)',

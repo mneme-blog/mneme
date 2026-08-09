@@ -7,6 +7,7 @@ import type { JSX, VNode } from 'preact';
 import { useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { Sheet } from './Sheet';
 import { generateMnemonic, mnemonicWords } from '../crypto/mnemonic';
 import { ManagerCredential } from '../screens/Onboarding';
 import type { RotationProgress } from '../sync/rotate';
@@ -177,20 +178,8 @@ export function RotatePhraseSheet({ desk, onClose, rotate }: {
   })();
 
   return (
-    <div
-      onClick={busy ? undefined : onClose}
-      style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: desk ? 'center' : 'flex-end', justifyContent: 'center' }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: desk ? 460 : '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: desk ? 20 : '24px 24px 0 0', border: '1px solid var(--line)', padding: desk ? 26 : '20px 22px 30px', boxShadow: '0 20px 60px rgba(30,20,12,.3)', maxHeight: '90%', overflowY: 'auto' }}
-      >
-        {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 16px' }} />}
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <Icon name="shield" size={18} color="var(--accent)" /> {t('vault.rotate.title')}
-        </h3>
-        {body}
-      </div>
-    </div>
+    <Sheet desk={desk} onClose={busy ? undefined : onClose} scroll title={t('vault.rotate.title')} icon="shield">
+      {body}
+    </Sheet>
   );
 }

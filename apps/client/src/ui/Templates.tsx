@@ -11,6 +11,7 @@ import type { VNode } from 'preact';
 import { useMemo, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { Sheet, Z } from './Sheet';
 import { t } from '../i18n';
 import { useAppData } from '../state/data';
 import type { TemplateRecord } from '../sync/engine';
@@ -328,29 +329,25 @@ export function TemplatesSheet({
     );
 
   return (
-    <div
-      onClick={onClose}
-      // fixed (not absolute): the sheet also mounts deep inside the editor as
-      // the "/" Template picker, where no positioned ancestor spans the screen.
-      style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: desk ? 'center' : 'flex-end', justifyContent: 'center' }}
+    <Sheet
+      desk={desk}
+      onClose={onClose}
+      zIndex={Z.overlay}
+      width={view === 'list' ? 720 : 520}
+      // The sheet container disarms the delete confirmation on any click that
+      // bubbles up to it — row actions stopPropagation so they don't count.
+      onCardClick={() => setArmedDelete(null)}
+      cardStyle={{ padding: desk ? 26 : '20px 22px calc(env(safe-area-inset-bottom, 0px) + 30px)', transition: 'width .15s' }}
+      title={view === 'list' ? t('templates.title') : view === 'new' ? t('templates.new') : t('templates.editTitle')}
+      accessory={
+        view !== 'list' && (
+          <button onClick={() => setView('list')} title={t('templates.backToList')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--ui)', fontSize: 12.5 }}>
+            <Icon name="left" size={15} dirFlip /> {t('templates.all')}
+          </button>
+        )
+      }
     >
-      <div
-        onClick={(e) => { e.stopPropagation(); setArmedDelete(null); }}
-        style={{ width: desk && view === 'list' ? 720 : desk ? 520 : '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: desk ? 20 : '24px 24px 0 0', border: '1px solid var(--line)', padding: desk ? 26 : '20px 22px calc(env(safe-area-inset-bottom, 0px) + 30px)', boxShadow: '0 20px 60px rgba(30,20,12,.3)', transition: 'width .15s' }}
-      >
-        {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 16px' }} />}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 0 16px' }}>
-          <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>
-            {view === 'list' ? t('templates.title') : view === 'new' ? t('templates.new') : t('templates.editTitle')}
-          </h3>
-          {view !== 'list' && (
-            <button onClick={() => setView('list')} title={t('templates.backToList')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--ui)', fontSize: 12.5 }}>
-              <Icon name="left" size={15} dirFlip /> {t('templates.all')}
-            </button>
-          )}
-        </div>
-        {body}
-      </div>
-    </div>
+      {body}
+    </Sheet>
   );
 }

@@ -4,6 +4,7 @@
 import type { VNode } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from '../ui/Icon';
+import { Z } from '../ui/Sheet';
 import type { SlashHandle, SlashMenuState } from './slash';
 
 const MENU_W = 252;
@@ -74,7 +75,7 @@ export function SlashMenu({ handle }: { handle: SlashHandle }): VNode | null {
     <div
       ref={listRef}
       style={{
-        position: 'fixed', zIndex: 80, width: MENU_W, left,
+        position: 'fixed', zIndex: Z.dialog, width: MENU_W, left,
         ...(fitsBelow
           ? { top: rect.bottom + GAP }
           : { top: Math.max(8, rect.top - GAP), transform: 'translateY(-100%)' }),

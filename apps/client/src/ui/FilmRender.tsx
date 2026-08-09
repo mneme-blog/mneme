@@ -10,6 +10,7 @@ import type { VNode } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { Sheet, Z } from './Sheet';
 import { t, tp, fmtNumber } from '../i18n';
 import { useAppData } from '../state/data';
 import type { MediaAttachment } from '../sync/engine';
@@ -138,81 +139,72 @@ export function FilmRenderDialog({
   const pct = Math.round((progress?.ratio ?? 0) * 100);
 
   return (
-    <div
-      role="dialog"
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(30,22,16,.45)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: 430, maxWidth: '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: 20, border: '1px solid var(--line)', padding: 22, boxShadow: '0 20px 60px rgba(30,20,12,.3)' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <span style={{ width: 36, height: 36, borderRadius: 999, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--accent-soft)' }}>
-            <Icon name="film" size={17} color="var(--accent-ink)" />
-          </span>
-          <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>
-            {t('media.film.dialogTitle')}
-          </h3>
-        </div>
-
-        {stage === 'confirm' && (
-          <>
-            <p style={{ fontFamily: 'var(--ui)', fontSize: 13.5, lineHeight: 1.55, color: 'var(--ink-2)', margin: '0 0 10px' }}>
-              {supported ? t('media.film.dialogBody') : t('media.film.unsupported')}
-            </p>
-            {supported && (
-              <>
-                <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-3)', margin: '0 0 4px' }}>
-                  {t('media.film.estimate', { duration: fmtDuration(estimate * 1000) })}
-                </p>
-                <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-3)', margin: '0 0 14px' }}>
-                  {t('media.film.addedSize')}
-                </p>
-                {realtime && (
-                  <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, lineHeight: 1.5, color: 'var(--ink-2)', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 10, padding: '9px 11px', margin: '0 0 14px' }}>
-                    {t('media.film.slowWarning')}
-                  </p>
-                )}
-              </>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <Btn kind="ghost" onClick={onClose}>{t('common.cancel')}</Btn>
-              {supported && <Btn onClick={() => void start()} icon="film">{t('media.film.start')}</Btn>}
-            </div>
-          </>
-        )}
-
-        {(stage === 'resolving' || stage === 'rendering') && (
-          <>
-            <p style={{ fontFamily: 'var(--ui)', fontSize: 13.5, color: 'var(--ink-2)', margin: '0 0 12px' }}>
-              {t('media.film.rendering', { pct: fmtNumber(pct) })}
-            </p>
-            <div style={{ height: 6, borderRadius: 999, background: 'var(--surface-2)', overflow: 'hidden', marginBottom: 14 }}>
-              <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent)', transition: 'width .3s ease' }} />
-            </div>
-            {missing > 0 && (
-              <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-3)', margin: '0 0 12px' }}>
-                {tp('media.film.missingClips', missing)}
-              </p>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <Btn kind="ghost" onClick={() => activeRender(data.sessionId)?.cancel()}>{t('common.cancel')}</Btn>
-            </div>
-          </>
-        )}
-
-        {stage === 'error' && (
-          <>
-            <p style={{ fontFamily: 'var(--ui)', fontSize: 13.5, lineHeight: 1.55, color: 'var(--ink-2)', margin: '0 0 16px' }}>
-              {t('media.film.failed')} {error && <span style={{ color: 'var(--ink-3)' }}>({error})</span>}
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <Btn kind="ghost" onClick={onClose}>{t('common.close')}</Btn>
-            </div>
-          </>
-        )}
+    <Sheet center role="dialog" onClose={onClose} zIndex={Z.dialog} dim="strong" width={430}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        <span style={{ width: 36, height: 36, borderRadius: 999, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--accent-soft)' }}>
+          <Icon name="film" size={17} color="var(--accent-ink)" />
+        </span>
+        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>
+          {t('media.film.dialogTitle')}
+        </h3>
       </div>
-    </div>
+
+      {stage === 'confirm' && (
+        <>
+          <p style={{ fontFamily: 'var(--ui)', fontSize: 13.5, lineHeight: 1.55, color: 'var(--ink-2)', margin: '0 0 10px' }}>
+            {supported ? t('media.film.dialogBody') : t('media.film.unsupported')}
+          </p>
+          {supported && (
+            <>
+              <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-3)', margin: '0 0 4px' }}>
+                {t('media.film.estimate', { duration: fmtDuration(estimate * 1000) })}
+              </p>
+              <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-3)', margin: '0 0 14px' }}>
+                {t('media.film.addedSize')}
+              </p>
+              {realtime && (
+                <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, lineHeight: 1.5, color: 'var(--ink-2)', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 10, padding: '9px 11px', margin: '0 0 14px' }}>
+                  {t('media.film.slowWarning')}
+                </p>
+              )}
+            </>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <Btn kind="ghost" onClick={onClose}>{t('common.cancel')}</Btn>
+            {supported && <Btn onClick={() => void start()} icon="film">{t('media.film.start')}</Btn>}
+          </div>
+        </>
+      )}
+
+      {(stage === 'resolving' || stage === 'rendering') && (
+        <>
+          <p style={{ fontFamily: 'var(--ui)', fontSize: 13.5, color: 'var(--ink-2)', margin: '0 0 12px' }}>
+            {t('media.film.rendering', { pct: fmtNumber(pct) })}
+          </p>
+          <div style={{ height: 6, borderRadius: 999, background: 'var(--surface-2)', overflow: 'hidden', marginBottom: 14 }}>
+            <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent)', transition: 'width .3s ease' }} />
+          </div>
+          {missing > 0 && (
+            <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-3)', margin: '0 0 12px' }}>
+              {tp('media.film.missingClips', missing)}
+            </p>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <Btn kind="ghost" onClick={() => activeRender(data.sessionId)?.cancel()}>{t('common.cancel')}</Btn>
+          </div>
+        </>
+      )}
+
+      {stage === 'error' && (
+        <>
+          <p style={{ fontFamily: 'var(--ui)', fontSize: 13.5, lineHeight: 1.55, color: 'var(--ink-2)', margin: '0 0 16px' }}>
+            {t('media.film.failed')} {error && <span style={{ color: 'var(--ink-3)' }}>({error})</span>}
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <Btn kind="ghost" onClick={onClose}>{t('common.close')}</Btn>
+          </div>
+        </>
+      )}
+    </Sheet>
   );
 }

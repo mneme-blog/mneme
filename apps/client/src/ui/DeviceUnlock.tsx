@@ -7,6 +7,7 @@ import type { JSX, VNode } from 'preact';
 import { useState } from 'preact/hooks';
 import { Icon, type IconName } from './Icon';
 import { Btn } from './primitives';
+import { Sheet } from './Sheet';
 import { PassField } from '../screens/Onboarding';
 import { webauthnAvailable, PrfUnsupportedError } from '../platform/webauthn';
 import type { DeviceUnlockChoice } from '../state/data';
@@ -108,68 +109,56 @@ export function DeviceUnlockSheet({ desk, onClose, method, apply }: {
   );
 
   return (
-    <div
-      onClick={busy ? undefined : onClose}
-      style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: desk ? 'center' : 'flex-end', justifyContent: 'center' }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: desk ? 460 : '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: desk ? 20 : '24px 24px 0 0', border: '1px solid var(--line)', padding: desk ? 26 : '20px 22px 30px', boxShadow: '0 20px 60px rgba(30,20,12,.3)', maxHeight: '90%', overflowY: 'auto' }}
-      >
-        {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 16px' }} />}
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <Icon name="key" size={18} color="var(--accent)" /> {t('vault.unlock.title')}
-        </h3>
-        <p style={pStyle}>{t('vault.unlock.body')}</p>
+    <Sheet desk={desk} onClose={busy ? undefined : onClose} scroll title={t('vault.unlock.title')} icon="key" headerMargin="0 0 12px">
+      <p style={pStyle}>{t('vault.unlock.body')}</p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-          {webauthnAvailable() && (
-            <Option
-              icon="key"
-              kind="securityKey"
-              note={t('vault.unlock.note.securityKey')}
-              active={picked === null && current === 'securityKey'}
-              onClick={() => run({ method: 'securityKey' })}
-            />
-          )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+        {webauthnAvailable() && (
           <Option
-            icon="lock"
-            kind="passphrase"
-            note={t('vault.unlock.note.passphrase')}
-            active={picked === 'passphrase' || (picked === null && current === 'passphrase')}
-            onClick={() => setPicked('passphrase')}
+            icon="key"
+            kind="securityKey"
+            note={t('vault.unlock.note.securityKey')}
+            active={picked === null && current === 'securityKey'}
+            onClick={() => run({ method: 'securityKey' })}
           />
-          {picked === 'passphrase' && (
-            <form
-              onSubmit={(e) => { e.preventDefault(); if (passValid) run({ method: 'passphrase', passphrase: pass1 }); }}
-              style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '2px 2px 0' }}
-            >
-              <PassField value={pass1} placeholder={t('vault.unlock.passPlaceholder', { min: minLen })} onInput={setPass1} disabled={busy} noManager={noManager} autoFocus />
-              <PassField value={pass2} placeholder={t('vault.unlock.repeatPlaceholder')} onInput={setPass2} disabled={busy} noManager={noManager} />
-              {mismatch && <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--accent-ink)', margin: '0 2px' }}>{t('vault.unlock.mismatch')}</p>}
-              <Btn kind={passValid ? 'primary' : 'ghost'} size="md" full type="submit" style={{ opacity: passValid && !busy ? 1 : 0.55, pointerEvents: passValid && !busy ? 'auto' : 'none' }}>
-                {busy ? t('vault.unlock.encrypting') : t('vault.unlock.setPass')}
-              </Btn>
-            </form>
-          )}
-          <Option
-            icon="shield"
-            kind="off"
-            note={t('vault.unlock.note.off')}
-            active={picked === null && current === 'off'}
-            onClick={() => run({ method: 'off' })}
-          />
-        </div>
-
-        {error && <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--accent-ink)', margin: '12px 2px 0' }}>{error}</p>}
-        {done && (
-          <p style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontFamily: 'var(--ui)', fontSize: 12.5, lineHeight: 1.5, color: 'var(--ink-2)', margin: '12px 2px 0' }}>
-            <Icon name="check" size={15} color="var(--accent)" style={{ marginTop: 1 }} /> {done}
-          </p>
         )}
-
-        <Btn kind="ghost" size="md" full onClick={onClose} style={{ marginTop: 16 }}>{t('common.close')}</Btn>
+        <Option
+          icon="lock"
+          kind="passphrase"
+          note={t('vault.unlock.note.passphrase')}
+          active={picked === 'passphrase' || (picked === null && current === 'passphrase')}
+          onClick={() => setPicked('passphrase')}
+        />
+        {picked === 'passphrase' && (
+          <form
+            onSubmit={(e) => { e.preventDefault(); if (passValid) run({ method: 'passphrase', passphrase: pass1 }); }}
+            style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '2px 2px 0' }}
+          >
+            <PassField value={pass1} placeholder={t('vault.unlock.passPlaceholder', { min: minLen })} onInput={setPass1} disabled={busy} noManager={noManager} autoFocus />
+            <PassField value={pass2} placeholder={t('vault.unlock.repeatPlaceholder')} onInput={setPass2} disabled={busy} noManager={noManager} />
+            {mismatch && <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--accent-ink)', margin: '0 2px' }}>{t('vault.unlock.mismatch')}</p>}
+            <Btn kind={passValid ? 'primary' : 'ghost'} size="md" full type="submit" style={{ opacity: passValid && !busy ? 1 : 0.55, pointerEvents: passValid && !busy ? 'auto' : 'none' }}>
+              {busy ? t('vault.unlock.encrypting') : t('vault.unlock.setPass')}
+            </Btn>
+          </form>
+        )}
+        <Option
+          icon="shield"
+          kind="off"
+          note={t('vault.unlock.note.off')}
+          active={picked === null && current === 'off'}
+          onClick={() => run({ method: 'off' })}
+        />
       </div>
-    </div>
+
+      {error && <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--accent-ink)', margin: '12px 2px 0' }}>{error}</p>}
+      {done && (
+        <p style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontFamily: 'var(--ui)', fontSize: 12.5, lineHeight: 1.5, color: 'var(--ink-2)', margin: '12px 2px 0' }}>
+          <Icon name="check" size={15} color="var(--accent)" style={{ marginTop: 1 }} /> {done}
+        </p>
+      )}
+
+      <Btn kind="ghost" size="md" full onClick={onClose} style={{ marginTop: 16 }}>{t('common.close')}</Btn>
+    </Sheet>
   );
 }

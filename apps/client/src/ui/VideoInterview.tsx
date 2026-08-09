@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
 import { ConfirmDialog } from './ConfirmDialog';
+import { SheetGrabber, Z } from './Sheet';
 import { ProviderBadge } from './ProviderBadge';
 import { useVisualViewport } from '../hooks/useVisualViewport';
 import { answerLimitSeconds, cameraConstraints, fmtCountdown, pickMimeType, recorderOptions } from './recorder';
@@ -406,11 +407,11 @@ export function VideoInterviewSheet({
   const ending = remainingMs <= 10_000;
   const shell: JSX.CSSProperties = desk
     ? { width: 'min(460px, 42vw)', flexShrink: 0, borderInlineStart: '1px solid var(--line)', background: 'var(--surface)', display: 'flex', flexDirection: 'column', height: '100%' }
-    : { position: 'fixed', insetInline: 0, bottom: 0, zIndex: 70, height: Math.round(vp.height * 0.9), background: 'var(--surface)', borderRadius: '24px 24px 0 0', border: '1px solid var(--line)', display: 'flex', flexDirection: 'column', boxShadow: '0 -12px 40px rgba(30,20,12,.22)' };
+    : { position: 'fixed', insetInline: 0, bottom: 0, zIndex: Z.overlay, height: Math.round(vp.height * 0.9), background: 'var(--surface)', borderRadius: '24px 24px 0 0', border: '1px solid var(--line)', display: 'flex', flexDirection: 'column', boxShadow: '0 -12px 40px rgba(30,20,12,.22)' };
 
   return (
     <div ref={panelRef} style={shell}>
-      {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '10px auto 4px' }} />}
+      {!desk && <SheetGrabber style={{ margin: '10px auto 4px' }} />}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--line)' }}>
         <Icon name="film" size={17} color="var(--accent-ink)" />

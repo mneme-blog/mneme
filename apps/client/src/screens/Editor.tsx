@@ -16,6 +16,7 @@ import { parseBody, docToText, docMediaIds, docEntryLinks } from '../editor/doc'
 import { docToMarkdown, markdownToDoc } from '../editor/markdown';
 import { buildEntryLinkItems } from '../editor/wikilink';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { Z } from '../ui/Sheet';
 import { buildSlashCommands, createSlashHandle } from '../editor/slash';
 import { SlashMenu } from '../editor/SlashMenu';
 import { createMathHandle, MathDialog } from '../editor/math';
@@ -715,8 +716,8 @@ function EntryMenu({
       </button>
       {open && entry && (
         <>
-          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 65 }} />
-          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', insetInlineEnd: 0, zIndex: 66, minWidth: 196, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 10px 30px rgba(30,20,12,.18)', padding: 5 }}>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: Z.menu }} />
+          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', insetInlineEnd: 0, zIndex: Z.menu + 1, minWidth: 196, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 10px 30px rgba(30,20,12,.18)', padding: 5 }}>
             {onToggleMode && (
               <>
                 <button

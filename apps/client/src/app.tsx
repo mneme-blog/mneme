@@ -29,6 +29,7 @@ import { InterviewTypesSheet } from './ui/InterviewTypes';
 import { VideoInterviewSheet } from './ui/VideoInterview';
 import { ComposeChooser } from './ui/ComposeChooser';
 import { BadgeCelebration } from './ui/BadgeCelebration';
+import { Z } from './ui/Sheet';
 import { useBadges } from './hooks/useBadges';
 import type { InterviewType } from './sync/engine';
 import { t } from './i18n';
@@ -207,7 +208,7 @@ function MobileNav({ flow, setFlow, onCompose, onSettings, onSearch }: {
     </button>
   );
   return (
-    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 40, paddingBottom: 22, paddingTop: 8, display: 'flex', alignItems: 'center', background: 'var(--surface-glass)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderTop: '1px solid var(--line)' }}>
+    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: Z.nav, paddingBottom: 22, paddingTop: 8, display: 'flex', alignItems: 'center', background: 'var(--surface-glass)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderTop: '1px solid var(--line)' }}>
       {/* Sync progress rides the top edge of the bar — self-hides when fully synced. */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 0 }}><SyncProgressBar flush /></div>
       {item(flow === 'journals', 'books', t('shell.nav.journals'), () => setFlow('journals'))}

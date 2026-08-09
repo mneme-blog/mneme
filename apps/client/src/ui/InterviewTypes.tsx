@@ -7,6 +7,7 @@ import type { JSX, VNode } from 'preact';
 import { useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { Sheet, Z } from './Sheet';
 import { t } from '../i18n';
 import { useAppData } from '../state/data';
 import type { InterviewType } from '../sync/engine';
@@ -123,27 +124,24 @@ export function InterviewTypesSheet({ desk, onClose }: { desk: boolean; onClose:
   );
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: desk ? 'center' : 'flex-end', justifyContent: 'center' }}
+    <Sheet
+      desk={desk}
+      onClose={onClose}
+      zIndex={Z.overlay}
+      width={560}
+      // Any click that bubbles to the sheet disarms a pending delete.
+      onCardClick={() => setArmedDelete(null)}
+      cardStyle={{ padding: desk ? 26 : '20px 22px calc(env(safe-area-inset-bottom, 0px) + 30px)' }}
+      title={view === 'list' ? t('assistant.types.title') : view === 'new' ? t('assistant.types.new') : t('assistant.types.edit')}
+      accessory={
+        view !== 'list' && (
+          <button onClick={() => setView('list')} title={t('assistant.types.backToList')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--ui)', fontSize: 12.5 }}>
+            <Icon name="left" size={15} dirFlip /> {t('assistant.types.allTypes')}
+          </button>
+        )
+      }
     >
-      <div
-        onClick={(e) => { e.stopPropagation(); setArmedDelete(null); }}
-        style={{ width: desk ? 560 : '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: desk ? 20 : '24px 24px 0 0', border: '1px solid var(--line)', padding: desk ? 26 : '20px 22px calc(env(safe-area-inset-bottom, 0px) + 30px)', boxShadow: '0 20px 60px rgba(30,20,12,.3)' }}
-      >
-        {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 16px' }} />}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 0 16px' }}>
-          <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>
-            {view === 'list' ? t('assistant.types.title') : view === 'new' ? t('assistant.types.new') : t('assistant.types.edit')}
-          </h3>
-          {view !== 'list' && (
-            <button onClick={() => setView('list')} title={t('assistant.types.backToList')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--ui)', fontSize: 12.5 }}>
-              <Icon name="left" size={15} dirFlip /> {t('assistant.types.allTypes')}
-            </button>
-          )}
-        </div>
-        {view === 'list' ? listBody : <EditorView key={view === 'new' ? 'new' : view.id} type={view === 'new' ? null : view} onDone={() => setView('list')} />}
-      </div>
-    </div>
+      {view === 'list' ? listBody : <EditorView key={view === 'new' ? 'new' : view.id} type={view === 'new' ? null : view} onDone={() => setView('list')} />}
+    </Sheet>
   );
 }

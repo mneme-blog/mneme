@@ -9,6 +9,7 @@ import type { VNode } from 'preact';
 import { useMemo, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { LabelChip } from './primitives';
+import { SheetBackdrop, Z } from './Sheet';
 import { useAppData } from '../state/data';
 import { search, normalize, type Hit } from '../search/core';
 import { t, monthName, fmtDate, type MessageKey } from '../i18n';
@@ -190,7 +191,7 @@ export function SearchSheet({ desk, onClose, onOpen }: {
 
   if (desk) {
     return (
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, zIndex: 70, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
+      <SheetBackdrop onClose={onClose} zIndex={Z.overlay} align="top">
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
@@ -203,13 +204,13 @@ export function SearchSheet({ desk, onClose, onOpen }: {
           {inputRow}
           {rows}
         </div>
-      </div>
+      </SheetBackdrop>
     );
   }
 
   // Mobile: a full-height sheet so the keyboard and results share the screen.
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 70, background: 'var(--paper)', display: 'flex', flexDirection: 'column', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+    <div style={{ position: 'absolute', inset: 0, zIndex: Z.overlay, background: 'var(--paper)', display: 'flex', flexDirection: 'column', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       {inputRow}
       {rows}
     </div>

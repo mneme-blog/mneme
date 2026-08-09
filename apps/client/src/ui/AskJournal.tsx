@@ -7,6 +7,7 @@ import type { JSX, VNode } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { SheetBackdrop, SheetGrabber } from './Sheet';
 import { useVisualViewport } from '../hooks/useVisualViewport';
 import { t, tp } from '../i18n';
 import { ProviderBadge } from './ProviderBadge';
@@ -103,7 +104,7 @@ export function AskJournalSheet({ desk, onClose }: { desk: boolean; onClose: () 
         style={{ width: desk ? 'min(440px, 40vw)' : '100%', flexShrink: 0, height: desk ? '100%' : '88%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', background: 'var(--surface)', borderRadius: desk ? 0 : '24px 24px 0 0', border: desk ? 'none' : '1px solid var(--line)', borderInlineStart: '1px solid var(--line)', boxShadow: desk ? 'none' : '0 20px 60px rgba(30,20,12,.3)', overflow: 'hidden' }}
       >
         <div style={{ padding: desk ? '18px 22px 12px' : '14px 20px 10px', borderBottom: '1px solid var(--line)' }}>
-          {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 12px' }} />}
+          {!desk && <SheetGrabber style={{ margin: '0 auto 12px' }} />}
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <Icon name="feather" size={17} color="var(--accent)" />
             <h3 style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 500, color: 'var(--ink)', margin: 0, flex: 1 }}>{t('assistant.ask.title')}</h3>
@@ -170,13 +171,14 @@ export function AskJournalSheet({ desk, onClose }: { desk: boolean; onClose: () 
 
   if (desk) return panel;
   return (
-    <div
-      onClick={onClose}
-      // Fixed + sized to the visual viewport so the panel's input pins above the
+    <SheetBackdrop
+      onClose={onClose}
+      align="bottom"
+      // Sized to the visual viewport so the panel's input pins above the
       // keyboard and the transcript scrolls within (see useVisualViewport).
-      style={{ position: 'fixed', left: 0, right: 0, top: vp.offsetTop, height: vp.height, zIndex: 60, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+      style={{ top: vp.offsetTop, height: vp.height, bottom: 'auto' }}
     >
       {panel}
-    </div>
+    </SheetBackdrop>
   );
 }
