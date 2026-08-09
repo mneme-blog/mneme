@@ -15,6 +15,7 @@ import { Icon } from './Icon';
 import { Btn } from './primitives';
 import { fmtDuration } from './recorder';
 import { toAiError } from '../ai/types';
+import { transcribeErrorMessage } from '../ai/errors';
 import { transcribe, transcriptionConfig, transcriptionDestination, type TranscribeDestination } from '../ai/transcribe';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -190,17 +191,7 @@ export function TranscriptStrip({
       setOpen(true);
     } catch (e) {
       const err = toAiError(e);
-      setError(
-        err.hint === 'auth'
-          ? t('assistant.error.keyRejectedShort')
-          : err.hint === 'session'
-            ? t('media.transcribe.signedOut')
-            : err.hint === 'quota'
-              ? t('media.transcribe.limitReached')
-              : err.hint === 'model'
-                ? t('media.transcribe.modelMissing')
-                : t('media.transcribe.failed', { message: err.message }),
-      );
+      setError(transcribeErrorMessage(err));
     } finally {
       setBusy(false);
     }

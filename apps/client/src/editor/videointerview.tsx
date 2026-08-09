@@ -19,6 +19,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { t, tp, fmtNumber } from '../i18n';
 import type { MediaAttachment } from '../sync/engine';
 import { toAiError } from '../ai/types';
+import { transcribeErrorMessage } from '../ai/errors';
 import type { TranscribeDestination } from '../ai/transcribe';
 import { watchTranscribeRun, type TranscribeRunStatus } from '../ai/transcribeRuns';
 import { watchRenderProgress, type RenderProgress } from '../video/film';
@@ -149,17 +150,7 @@ export function VideoInterviewCardView({
       await onTranscribe?.(setBatch);
     } catch (e) {
       const err = toAiError(e);
-      setTranscribeError(
-        err.hint === 'auth'
-          ? t('assistant.error.keyRejectedShort')
-          : err.hint === 'session'
-            ? t('media.transcribe.signedOut')
-            : err.hint === 'quota'
-              ? t('media.transcribe.limitReached')
-              : err.hint === 'model'
-                ? t('media.transcribe.modelMissing')
-                : t('media.transcribe.failed', { message: err.message }),
-      );
+      setTranscribeError(transcribeErrorMessage(err));
     } finally {
       setTranscribing(false);
       setBatch(null);

@@ -13,6 +13,7 @@ import { ProviderBadge } from './ProviderBadge';
 import { makeProvider } from '../ai/provider';
 import { editorSystemPrompt, editorUserMessage, type AiEditorAction } from '../ai/prompts';
 import { toAiError, type AiSettings } from '../ai/types';
+import { chatErrorMessage } from '../ai/errors';
 
 // Message keys (not the translated strings) — resolved with t() at render time.
 const TITLE_KEYS: Record<AiEditorAction, MessageKey> = {
@@ -57,15 +58,7 @@ export function AiActionDialog({ action, entryTitle, entryText, settings, onInse
       .catch((e: unknown) => {
         const err = toAiError(e);
         if (err.hint !== 'aborted') {
-          setError(
-            err.hint === 'auth'
-              ? t('assistant.error.keyRejected')
-              : err.hint === 'refused'
-                ? t('assistant.error.refused')
-                : provider.local
-                  ? t('assistant.error.ollamaUnreachable')
-                  : t('assistant.error.requestFailed', { message: err.message }),
-          );
+          setError(chatErrorMessage(err, provider.local, 'assistant.error.refused'));
         }
       })
       .finally(() => setBusy(false));

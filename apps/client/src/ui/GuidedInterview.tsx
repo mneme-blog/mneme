@@ -32,6 +32,7 @@ import { buildInterviewHistory, HISTORY_BUDGET_CHARS } from '../ai/interview';
 import { markdownToDoc, splitMarkdownTitle, docToText } from '../editor/doc';
 import { DocPreview } from '../editor/DocPreview';
 import { toAiError, type AiMessage } from '../ai/types';
+import { chatErrorMessage } from '../ai/errors';
 
 const pStyle: JSX.CSSProperties = { fontFamily: 'var(--ui)', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)', margin: 0 };
 
@@ -132,13 +133,7 @@ export function GuidedInterviewSheet({
   const errorText = (e: unknown): string => {
     const err = toAiError(e);
     if (err.hint === 'aborted') return '';
-    return err.hint === 'auth'
-      ? t('assistant.error.keyRejected')
-      : err.hint === 'refused'
-        ? t('assistant.error.refusedRespond')
-        : provider.local
-          ? t('assistant.error.ollamaUnreachable')
-          : t('assistant.error.requestFailed', { message: err.message });
+    return chatErrorMessage(err, provider.local, 'assistant.error.refusedRespond');
   };
 
   // Stream one assistant turn onto `messages` (the interview Q&A). On

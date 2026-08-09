@@ -16,6 +16,7 @@ import { makeProvider } from '../ai/provider';
 import { buildJournalContext, CLOUD_BUDGET_CHARS, LOCAL_BUDGET_CHARS } from '../ai/context';
 import { chatSystemPrompt } from '../ai/prompts';
 import { toAiError, type AiMessage } from '../ai/types';
+import { chatErrorMessage } from '../ai/errors';
 
 const pStyle: JSX.CSSProperties = { fontFamily: 'var(--ui)', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)', margin: 0 };
 
@@ -77,15 +78,7 @@ export function AskJournalSheet({ desk, onClose }: { desk: boolean; onClose: () 
     } catch (e) {
       const err = toAiError(e);
       if (err.hint !== 'aborted') {
-        setError(
-          err.hint === 'auth'
-            ? t('assistant.error.keyRejected')
-            : err.hint === 'refused'
-              ? t('assistant.error.refusedAnswer')
-              : provider.local
-                ? t('assistant.error.ollamaUnreachable')
-                : t('assistant.error.requestFailed', { message: err.message }),
-        );
+        setError(chatErrorMessage(err, provider.local, 'assistant.error.refusedAnswer'));
         // Drop an empty assistant bubble; keep partial text if any arrived.
         setTranscript((prev) => (prev[prev.length - 1]?.content === '' ? prev.slice(0, -1) : prev));
       }
