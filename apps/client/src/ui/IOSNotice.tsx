@@ -2,6 +2,8 @@ import type { VNode } from 'preact';
 import { useState } from 'preact/hooks';
 import { isIOS, isTauri } from '../platform/shell';
 import { t } from '../i18n';
+import { Icon } from './Icon';
+import { Z } from './Sheet';
 
 // A one-time, dismissible banner shown ONLY to iOS PWA users. iOS clears a web
 // app's offline storage after ~7 days of inactivity (a privacy safeguard), which
@@ -46,7 +48,7 @@ export function IOSNotice(): VNode | null {
         top: 0,
         insetInlineStart: 0,
         insetInlineEnd: 0,
-        zIndex: 35,
+        zIndex: Z.notice,
         display: 'flex',
         alignItems: 'flex-start',
         gap: 10,
@@ -95,7 +97,7 @@ export function IOSNotice(): VNode | null {
         onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface)')}
         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
       >
-        ✕
+        <Icon name="x" size={15} />
       </button>
     </div>
   );

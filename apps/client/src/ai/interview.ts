@@ -4,7 +4,7 @@
 // entries (matched by the type-name label that GuidedInterview applies on save);
 // nothing here touches the network.
 import type { JournalEntry } from '../sync/engine';
-import { parseBody, docToText } from '../editor/doc';
+import { entryHeading, entryText } from './flatten';
 
 // Past entries are only context for question-asking, so cap each one tightly and
 // keep the whole block small — the model needs gist, not full re-reading.
@@ -14,12 +14,6 @@ export const HISTORY_BUDGET_CHARS = 6_000;
 export interface InterviewHistory {
   text: string;
   count: number;
-}
-
-function isoDate(ts: number): string {
-  const d = new Date(ts);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 /**
@@ -35,14 +29,8 @@ export function buildInterviewHistory(entries: JournalEntry[], label: string, bu
   const blocks: string[] = [];
   let used = 0;
   for (const e of past) {
-    let text: string;
-    try {
-      text = docToText(parseBody(e.bodyJson, e.bodyText)).trim();
-    } catch {
-      text = e.bodyText;
-    }
-    if (text.length > HISTORY_ENTRY_CAP) text = `${text.slice(0, HISTORY_ENTRY_CAP)}\n[…]`;
-    const block = `### ${e.title || 'Untitled'}\nDate: ${isoDate(e.createdAt)}\n\n${text}`;
+    const text = entryText(e, HISTORY_ENTRY_CAP, '[…]');
+    const block = `${entryHeading(e)}\n\n${text}`;
     if (used + block.length > budgetChars) break;
     blocks.push(block);
     used += block.length;

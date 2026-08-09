@@ -49,8 +49,9 @@ done
 [[ -f "$REPO_DIR/.env.prod" ]] || die "$REPO_DIR/.env.prod not found — set the stack up first"
 
 # The site probe is optional but worth having: container health proves the relay
-# is up, this proves the app is actually being served. Read the address the
-# stack already knows about rather than asking again.
+# is up, this proves the app is actually being served. Defaults to loopback;
+# override SITE_PROBE_URL when the SPA lives under a sub-path (e.g.
+# https://127.0.0.1/mneme/) so the probe hits the app, not just Caddy's root.
 SITE_PROBE_URL=${SITE_PROBE_URL:-https://127.0.0.1/}
 
 install -d -m 0755 "$LIB_DIR"

@@ -19,18 +19,16 @@ let db = 0;
 type SQLiteAPI = ReturnType<typeof SQLite.Factory>;
 
 // Run a single statement; collect any result rows (most writes return none).
-async function exec(sql: string, params?: SqlParam[]): Promise<{ rows: SqlValue[][]; columns: string[] }> {
+async function exec(sql: string, params?: SqlParam[]): Promise<{ rows: SqlValue[][] }> {
   const api = sqlite3!;
   const rows: SqlValue[][] = [];
-  let columns: string[] = [];
   for await (const stmt of api.statements(db, sql)) {
     if (params && params.length) api.bind_collection(stmt, params);
     while ((await api.step(stmt)) === SQLite.SQLITE_ROW) {
-      if (!columns.length) columns = api.column_names(stmt);
       rows.push(api.row(stmt) as SqlValue[]);
     }
   }
-  return { rows, columns };
+  return { rows };
 }
 
 async function open(dir: string, file: string): Promise<void> {
@@ -64,11 +62,11 @@ async function open(dir: string, file: string): Promise<void> {
   }
 }
 
-async function handle(req: DbRequest): Promise<{ rows: SqlValue[][]; columns: string[] }> {
+async function handle(req: DbRequest): Promise<{ rows: SqlValue[][] }> {
   switch (req.kind) {
     case 'open':
       await open(req.dir, req.file);
-      return { rows: [], columns: [] };
+      return { rows: [] };
     case 'run':
     case 'query':
       return exec(req.sql, req.params);
@@ -82,7 +80,7 @@ async function handle(req: DbRequest): Promise<{ rows: SqlValue[][]; columns: st
         await exec('ROLLBACK');
         throw e;
       }
-      return { rows: [], columns: [] };
+      return { rows: [] };
     }
   }
 }
@@ -103,8 +101,8 @@ self.onmessage = (ev: MessageEvent<DbRequest>) => {
   const req = ev.data;
   queue = queue.then(async () => {
     try {
-      const { rows, columns } = await handle(req);
-      const res: DbResponse = { id: req.id, ok: true, rows, columns };
+      const { rows } = await handle(req);
+      const res: DbResponse = { id: req.id, ok: true, rows };
       (self as unknown as Worker).postMessage(res);
     } catch (e) {
       const res: DbResponse = { id: req.id, ok: false, error: e instanceof Error ? e.message : String(e) };

@@ -8,7 +8,7 @@
 // Preferred container/codec order; the browser picks the first it supports
 // (Safari records mp4, everyone else webm). The chosen type rides along in the
 // Blob and is stored as the attachment's mime.
-export const MIME_CANDIDATES = [
+const MIME_CANDIDATES = [
   'video/webm;codecs=vp9,opus',
   'video/webm;codecs=vp8,opus',
   'video/webm',

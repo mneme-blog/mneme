@@ -16,6 +16,7 @@ import { parseBody, docToText, docMediaIds, docEntryLinks } from '../editor/doc'
 import { docToMarkdown, markdownToDoc } from '../editor/markdown';
 import { buildEntryLinkItems } from '../editor/wikilink';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { Z } from '../ui/Sheet';
 import { buildSlashCommands, createSlashHandle } from '../editor/slash';
 import { SlashMenu } from '../editor/SlashMenu';
 import { createMathHandle, MathDialog } from '../editor/math';
@@ -26,6 +27,7 @@ import { VideoCapture } from '../ui/VideoCapture';
 import { AudioCapture } from '../ui/AudioCapture';
 import { AttachmentList } from '../ui/Attachments';
 import { EntryThumbs, entryImages } from '../ui/EntryThumbs';
+import { listDate, monthKey } from '../ui/entryDates';
 import { Lightbox } from '../ui/Lightbox';
 import { TemplatesSheet } from '../ui/Templates';
 import { EntryDateTime } from '../ui/EntryDateTime';
@@ -35,18 +37,6 @@ import type { VideoInterviewData } from '../editor/videointerviewData';
 import { t, tp, fmtDate } from '../i18n';
 import '../editor/editor.css';
 
-// Compact list date: append the year only when the entry isn't from the current
-// year, so recent entries stay clean while older ones aren't ambiguous.
-function listDate(d: Date): string {
-  return d.getFullYear() === new Date().getFullYear()
-    ? fmtDate(d, { month: 'short', day: 'numeric' })
-    : fmtDate(d, { month: 'short', day: 'numeric', year: 'numeric' });
-}
-// The month/year a list separator groups by — entries are bucketed by their
-// (displayed) entry date.
-function monthKey(d: Date): string {
-  return `${d.getFullYear()}-${d.getMonth()}`;
-}
 const SAVE_DEBOUNCE_MS = 600;
 
 function countWords(text: string): number {
@@ -192,11 +182,11 @@ function EntryEditor({
     () => ({
       handlers: {
         resolveTitle: (id: string) => {
-          const target = entriesRef.current.find((x) => x.id === id && !x.deleted);
+          const target = entriesRef.current.find((x) => x.id === id);
           return target ? target.title || t('common.untitled') : null;
         },
         onOpen: (id: string) => {
-          if (entriesRef.current.some((x) => x.id === id && !x.deleted)) onOpenEntryRef.current(id);
+          if (entriesRef.current.some((x) => x.id === id)) onOpenEntryRef.current(id);
         },
       },
       suggest: {
@@ -211,7 +201,7 @@ function EntryEditor({
   const backlinks = useMemo(() => {
     const out: JournalEntry[] = [];
     for (const e of entries) {
-      if (e.deleted || e.id === entry.id || !e.bodyJson) continue;
+      if (e.id === entry.id || !e.bodyJson) continue;
       try {
         if (docEntryLinks(JSON.parse(e.bodyJson) as JSONContent).includes(entry.id)) out.push(e);
       } catch {
@@ -422,6 +412,10 @@ function EntryEditor({
   useEffect(() => {
     onEditorReady(editor);
     onWords(countWords(body.current.text));
+    // Without the cleanup, the parent keeps a DESTROYED TipTap instance when
+    // the last EntryEditor unmounts (entry deleted → empty state) and the
+    // still-rendered toolbar dispatches commands into it.
+    return () => onEditorReady(null);
   }, [editor]);
 
   // Hand off whenever the parent flips the mode. Rich→markdown serializes the
@@ -503,7 +497,6 @@ function EntryEditor({
   const labelSuggestions = useMemo(() => {
     const counts = new Map<string, number>();
     for (const e of entries) {
-      if (e.deleted) continue;
       for (const l of e.labels) counts.set(l, (counts.get(l) ?? 0) + 1);
     }
     for (const id of Object.keys(LABELS)) if (!counts.has(id)) counts.set(id, 0);
@@ -723,8 +716,8 @@ function EntryMenu({
       </button>
       {open && entry && (
         <>
-          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 65 }} />
-          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', insetInlineEnd: 0, zIndex: 66, minWidth: 196, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 10px 30px rgba(30,20,12,.18)', padding: 5 }}>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: Z.menu }} />
+          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', insetInlineEnd: 0, zIndex: Z.menu + 1, minWidth: 196, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 10px 30px rgba(30,20,12,.18)', padding: 5 }}>
             {onToggleMode && (
               <>
                 <button
@@ -754,9 +747,9 @@ function EntryMenu({
                 setOpen(false);
                 setConfirming(true);
               }}
-              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'start', padding: '9px 11px', borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--ui)', fontSize: 13.5, fontWeight: 600, color: '#E4573D' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'start', padding: '9px 11px', borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--ui)', fontSize: 13.5, fontWeight: 600, color: 'var(--danger)' }}
             >
-              <Icon name="trash" size={15} color="#E4573D" /> {t('editor.deleteEntry')}
+              <Icon name="trash" size={15} color="var(--danger)" /> {t('editor.deleteEntry')}
             </button>
           </div>
         </>
@@ -839,7 +832,7 @@ export function EditorScreen({
       return;
     }
     const next = entries
-      .filter((x) => !x.deleted && x.journalId === journalId && x.id !== entry?.id)
+      .filter((x) => x.journalId === journalId && x.id !== entry?.id)
       .sort((a, b) => b.updatedAt - a.updatedAt)[0];
     if (next) onSelectEntry(next.id);
   };
@@ -888,7 +881,7 @@ export function EditorScreen({
                 return [
                   sep && (
                     <div key={`m-${key}`} style={{ padding: '16px 0 7px', paddingInlineStart: 4, paddingInlineEnd: 13 }}>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: '#786f62', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>
                         {fmtDate(d, { month: 'long', year: 'numeric' })}
                       </span>
                     </div>

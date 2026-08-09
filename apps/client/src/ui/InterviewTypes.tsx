@@ -7,6 +7,8 @@ import type { JSX, VNode } from 'preact';
 import { useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { Sheet, Z } from './Sheet';
+import { BuiltinChip, BackToListAccessory, NewRecordButton, managerPadding, stopRow } from './manager';
 import { t } from '../i18n';
 import { useAppData } from '../state/data';
 import type { InterviewType } from '../sync/engine';
@@ -14,15 +16,6 @@ import type { InterviewType } from '../sync/engine';
 const UI_13 = { fontFamily: 'var(--ui)', fontSize: 13 } as const;
 const labelStyle: JSX.CSSProperties = { fontFamily: 'var(--ui)', fontSize: 11.5, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--ink-3)', display: 'block', marginBottom: 5 };
 const fieldStyle: JSX.CSSProperties = { width: '100%', boxSizing: 'border-box', fontFamily: 'var(--ui)', fontSize: 14, color: 'var(--ink)', padding: '10px 12px', borderRadius: 10, background: 'var(--paper)', border: '1px solid var(--line)', outline: 'none' };
-
-const handle = (fn: () => void) => (e: Event) => {
-  e.stopPropagation();
-  fn();
-};
-
-function BuiltinChip(): VNode {
-  return <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', border: '1px solid var(--line)', borderRadius: 6, padding: '1px 6px', flexShrink: 0 }}>{t('assistant.types.builtin')}</span>;
-}
 
 function EditorView({ type, onDone }: { type: InterviewType | null; onDone: () => void }): VNode {
   const { createInterviewType, updateInterviewType } = useAppData();
@@ -71,14 +64,7 @@ export function InterviewTypesSheet({ desk, onClose }: { desk: boolean; onClose:
   const [armedDelete, setArmedDelete] = useState<string | null>(null);
   const alive = interviewTypes.filter((it) => !it.deleted);
 
-  const newButton = (
-    <button
-      onClick={() => { setArmedDelete(null); setView('new'); }}
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 0', borderRadius: 12, border: '1.5px dashed var(--line)', background: 'transparent', cursor: 'pointer', color: 'var(--ink-3)', fontFamily: 'var(--ui)', fontSize: 13.5, fontWeight: 600 }}
-    >
-      <Icon name="plus" size={16} /> {t('assistant.types.new')}
-    </button>
-  );
+  const newButton = <NewRecordButton label={t('assistant.types.new')} onClick={() => { setArmedDelete(null); setView('new'); }} />;
 
   const row = (it: InterviewType): VNode => {
     const armed = armedDelete === it.id;
@@ -87,20 +73,20 @@ export function InterviewTypesSheet({ desk, onClose }: { desk: boolean; onClose:
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontWeight: 500, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name || t('common.untitled')}</span>
-            {it.builtin && <BuiltinChip />}
+            {it.builtin && <BuiltinChip labelKey="assistant.types.builtin" />}
           </div>
           {it.intro && <div style={{ ...UI_13, fontSize: 12, color: 'var(--ink-3)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.intro}</div>}
         </div>
         {armed ? (
-          <button onClick={handle(() => { deleteInterviewType(it.id); setArmedDelete(null); })} style={{ ...UI_13, fontWeight: 600, color: '#fff', background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '6px 11px', cursor: 'pointer', flexShrink: 0 }}>
+          <button onClick={stopRow(() => { deleteInterviewType(it.id); setArmedDelete(null); })} style={{ ...UI_13, fontWeight: 600, color: '#fff', background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '6px 11px', cursor: 'pointer', flexShrink: 0 }}>
             {t('assistant.types.deleteConfirm')}
           </button>
         ) : (
           <>
-            <button title={t('common.edit')} aria-label={t('common.edit')} onClick={handle(() => { setArmedDelete(null); setView(it); })} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+            <button title={t('common.edit')} aria-label={t('common.edit')} onClick={stopRow(() => { setArmedDelete(null); setView(it); })} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
               <Icon name="feather" size={15} color="var(--ink-2)" />
             </button>
-            <button title={t('common.delete')} aria-label={t('common.delete')} onClick={handle(() => setArmedDelete(it.id))} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+            <button title={t('common.delete')} aria-label={t('common.delete')} onClick={stopRow(() => setArmedDelete(it.id))} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
               <Icon name="x" size={15} color="var(--ink-2)" />
             </button>
           </>
@@ -123,27 +109,18 @@ export function InterviewTypesSheet({ desk, onClose }: { desk: boolean; onClose:
   );
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: desk ? 'center' : 'flex-end', justifyContent: 'center' }}
+    <Sheet
+      desk={desk}
+      onClose={onClose}
+      zIndex={Z.overlay}
+      width={560}
+      // Any click that bubbles to the sheet disarms a pending delete.
+      onCardClick={() => setArmedDelete(null)}
+      cardStyle={{ padding: managerPadding(desk) }}
+      title={view === 'list' ? t('assistant.types.title') : view === 'new' ? t('assistant.types.new') : t('assistant.types.edit')}
+      accessory={view !== 'list' && <BackToListAccessory label={t('assistant.types.allTypes')} title={t('assistant.types.backToList')} onClick={() => setView('list')} />}
     >
-      <div
-        onClick={(e) => { e.stopPropagation(); setArmedDelete(null); }}
-        style={{ width: desk ? 560 : '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: desk ? 20 : '24px 24px 0 0', border: '1px solid var(--line)', padding: desk ? 26 : '20px 22px calc(env(safe-area-inset-bottom, 0px) + 30px)', boxShadow: '0 20px 60px rgba(30,20,12,.3)' }}
-      >
-        {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 16px' }} />}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 0 16px' }}>
-          <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>
-            {view === 'list' ? t('assistant.types.title') : view === 'new' ? t('assistant.types.new') : t('assistant.types.edit')}
-          </h3>
-          {view !== 'list' && (
-            <button onClick={() => setView('list')} title={t('assistant.types.backToList')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--ui)', fontSize: 12.5 }}>
-              <Icon name="left" size={15} dirFlip /> {t('assistant.types.allTypes')}
-            </button>
-          )}
-        </div>
-        {view === 'list' ? listBody : <EditorView key={view === 'new' ? 'new' : view.id} type={view === 'new' ? null : view} onDone={() => setView('list')} />}
-      </div>
-    </div>
+      {view === 'list' ? listBody : <EditorView key={view === 'new' ? 'new' : view.id} type={view === 'new' ? null : view} onDone={() => setView('list')} />}
+    </Sheet>
   );
 }

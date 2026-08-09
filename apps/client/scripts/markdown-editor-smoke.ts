@@ -97,7 +97,7 @@ async function main(): Promise<void> {
   };
 
   editor.commands.setContent(source);
-  const original = editor.getJSON();
+  const original: JSONContent = editor.getJSON();
 
   // 1) doc → markdown
   const md = docToMarkdown(original);
@@ -110,7 +110,7 @@ async function main(): Promise<void> {
   // 2) markdown → doc, fed back through the real schema (must not throw)
   const parsed = markdownToDoc(md);
   editor.commands.setContent(parsed, { emitUpdate: false });
-  const after = editor.getJSON();
+  const after: JSONContent = editor.getJSON();
   const flat = JSON.stringify(after);
 
   assert(flat.includes('"entryId":"abc-123"'), 'entry link survives the round-trip through the editor');

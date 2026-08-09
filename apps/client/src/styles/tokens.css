@@ -12,6 +12,8 @@
   --line: #e6ddcc;
   --ph-a: #ede6d7;
   --ph-b: #f6f1e6;
+  /* Destructive-action red, shared by every delete affordance. */
+  --danger: #e4573d;
 
   --ui: 'Hanken Grotesk Variable', 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
   --serif: 'Newsreader Variable', 'Newsreader', Georgia, serif;

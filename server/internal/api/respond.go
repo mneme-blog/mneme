@@ -18,6 +18,16 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
+// writeInternalError answers a 500 with a generic message and logs the real
+// error server-side. The split matters both ways: an operator debugging a 500
+// needs the underlying error in the log, and the caller must not see
+// internals. Only the method, path, and error reach the log — never request
+// bodies (which are opaque ciphertext anyway, but the rule is the rule).
+func writeInternalError(w http.ResponseWriter, r *http.Request, msg string, err error) {
+	log.Printf("%s %s: %s: %v", r.Method, r.URL.Path, msg, err)
+	writeError(w, http.StatusInternalServerError, msg)
+}
+
 // decodeJSON reads a JSON body, rejecting unknown fields and oversized payloads.
 //
 // The decoder error is logged, never returned. encoding/json errors name the
@@ -32,6 +42,18 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
 	if err := dec.Decode(dst); err != nil {
 		log.Printf("decode %s %s: %v", r.Method, r.URL.Path, err)
 		writeError(w, http.StatusBadRequest, "invalid request body")
+		return false
+	}
+	return true
+}
+
+// confirmed answers the 400 for a wrong or missing typed confirmation. Every
+// destructive admin action enforces its word server-side — a stray request
+// holding a valid token must not be able to destroy anything — and this keeps
+// the message format identical across them.
+func confirmed(w http.ResponseWriter, got, want string) bool {
+	if got != want {
+		writeError(w, http.StatusBadRequest, `confirmation required: {"confirm":"`+want+`"}`)
 		return false
 	}
 	return true

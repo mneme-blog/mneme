@@ -3,7 +3,7 @@
 //
 // The exchange is deliberately two round-trips:
 //   main → 'probe'   (the clip Blobs)
-//   worker → 'probed' (the canonical output size + each clip's real duration)
+//   worker → 'probed' (the canonical output size)
 //   main → 'cards'   (title cards rasterized at exactly that size)
 //   worker → 'progress'… → 'done'
 // The worker has to measure the clips before anyone knows how big a card
@@ -33,8 +33,6 @@ export interface ProbedMessage {
   t: 'probed';
   width: number;
   height: number;
-  /** Measured per clip, in seconds — not the recorder's wall-clock guess. */
-  durations: number[];
 }
 
 export interface ProgressMessage {

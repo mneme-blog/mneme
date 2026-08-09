@@ -7,11 +7,13 @@ import type { JSX, VNode } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { Sheet, Z } from './Sheet';
 import { t, type MessageKey } from '../i18n';
 import { ProviderBadge } from './ProviderBadge';
 import { makeProvider } from '../ai/provider';
 import { editorSystemPrompt, editorUserMessage, type AiEditorAction } from '../ai/prompts';
 import { toAiError, type AiSettings } from '../ai/types';
+import { chatErrorMessage } from '../ai/errors';
 
 // Message keys (not the translated strings) — resolved with t() at render time.
 const TITLE_KEYS: Record<AiEditorAction, MessageKey> = {
@@ -56,15 +58,7 @@ export function AiActionDialog({ action, entryTitle, entryText, settings, onInse
       .catch((e: unknown) => {
         const err = toAiError(e);
         if (err.hint !== 'aborted') {
-          setError(
-            err.hint === 'auth'
-              ? t('assistant.error.keyRejected')
-              : err.hint === 'refused'
-                ? t('assistant.error.refused')
-                : provider.local
-                  ? t('assistant.error.ollamaUnreachable')
-                  : t('assistant.error.requestFailed', { message: err.message }),
-          );
+          setError(chatErrorMessage(err, provider.local, 'assistant.error.refused'));
         }
       })
       .finally(() => setBusy(false));
@@ -78,57 +72,56 @@ export function AiActionDialog({ action, entryTitle, entryText, settings, onInse
     : [];
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'absolute', inset: 0, zIndex: 70, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+    <Sheet
+      center
+      onClose={onClose}
+      zIndex={Z.overlay}
+      pad={16}
+      width={520}
+      cardStyle={{ borderRadius: 18, maxHeight: '85%', display: 'flex', flexDirection: 'column', gap: 13 }}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: 520, maxWidth: '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: 18, border: '1px solid var(--line)', padding: 22, boxShadow: '0 20px 60px rgba(30,20,12,.3)', maxHeight: '85%', display: 'flex', flexDirection: 'column', gap: 13 }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <Icon name="feather" size={16} color="var(--accent)" />
-          <h3 style={{ fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 500, color: 'var(--ink)', margin: 0, flex: 1 }}>{t(TITLE_KEYS[action])}</h3>
-          <ProviderBadge provider={provider} />
-        </div>
-
-        {error ? (
-          <p style={{ ...pStyle, color: 'var(--accent-ink)' }}>{error}</p>
-        ) : titleOptions.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <p style={pStyle}>{t('assistant.action.pickTitle')}</p>
-            {titleOptions.map((opt) => (
-              <button
-                key={opt}
-                onClick={() => { onPickTitle(opt); onClose(); }}
-                style={{ fontFamily: 'var(--serif)', fontSize: 15.5, color: 'var(--ink)', textAlign: 'start', padding: '11px 14px', borderRadius: 12, background: 'var(--paper)', border: '1px solid var(--line)', cursor: 'pointer' }}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div style={{ overflowY: 'auto', minHeight: 90, padding: '12px 14px', borderRadius: 12, background: 'var(--paper)', border: '1px solid var(--line)', fontFamily: 'var(--serif)', fontSize: 15, lineHeight: 1.65, color: 'var(--ink)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-            {text || <span style={{ color: 'var(--ink-3)' }}>{busy ? t('assistant.action.thinking') : t('assistant.action.nothing')}</span>}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: 10 }}>
-          {busy ? (
-            <>
-              <Btn kind="ghost" size="md" onClick={() => abortRef.current?.abort()} style={{ flex: 1 }}>{t('assistant.stop')}</Btn>
-              <Btn kind="ghost" size="md" onClick={onClose} style={{ flex: 1 }}>{t('common.cancel')}</Btn>
-            </>
-          ) : (
-            <>
-              <Btn kind="ghost" size="md" onClick={onClose} style={{ flex: 1 }}>{t('assistant.discard')}</Btn>
-              {action !== 'title' && text && !error && (
-                <Btn kind="primary" size="md" onClick={() => { onInsert(text); onClose(); }} style={{ flex: 2 }}>{t('assistant.action.insert')}</Btn>
-              )}
-            </>
-          )}
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+        <Icon name="feather" size={16} color="var(--accent)" />
+        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 500, color: 'var(--ink)', margin: 0, flex: 1 }}>{t(TITLE_KEYS[action])}</h3>
+        <ProviderBadge provider={provider} />
       </div>
-    </div>
+
+      {error ? (
+        <p style={{ ...pStyle, color: 'var(--accent-ink)' }}>{error}</p>
+      ) : titleOptions.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <p style={pStyle}>{t('assistant.action.pickTitle')}</p>
+          {titleOptions.map((opt) => (
+            <button
+              key={opt}
+              onClick={() => { onPickTitle(opt); onClose(); }}
+              style={{ fontFamily: 'var(--serif)', fontSize: 15.5, color: 'var(--ink)', textAlign: 'start', padding: '11px 14px', borderRadius: 12, background: 'var(--paper)', border: '1px solid var(--line)', cursor: 'pointer' }}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div style={{ overflowY: 'auto', minHeight: 90, padding: '12px 14px', borderRadius: 12, background: 'var(--paper)', border: '1px solid var(--line)', fontFamily: 'var(--serif)', fontSize: 15, lineHeight: 1.65, color: 'var(--ink)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+          {text || <span style={{ color: 'var(--ink-3)' }}>{busy ? t('assistant.action.thinking') : t('assistant.action.nothing')}</span>}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 10 }}>
+        {busy ? (
+          <>
+            <Btn kind="ghost" size="md" onClick={() => abortRef.current?.abort()} style={{ flex: 1 }}>{t('assistant.stop')}</Btn>
+            <Btn kind="ghost" size="md" onClick={onClose} style={{ flex: 1 }}>{t('common.cancel')}</Btn>
+          </>
+        ) : (
+          <>
+            <Btn kind="ghost" size="md" onClick={onClose} style={{ flex: 1 }}>{t('assistant.discard')}</Btn>
+            {action !== 'title' && text && !error && (
+              <Btn kind="primary" size="md" onClick={() => { onInsert(text); onClose(); }} style={{ flex: 2 }}>{t('assistant.action.insert')}</Btn>
+            )}
+          </>
+        )}
+      </div>
+    </Sheet>
   );
 }

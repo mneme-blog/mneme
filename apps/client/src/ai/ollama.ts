@@ -72,6 +72,10 @@ export class OllamaProvider implements AiProvider {
       }
     } catch (e) {
       throw toAiError(e);
+    } finally {
+      // Early return (chunk.done) and thrown errors alike must release the
+      // stream — an unreleased reader keeps the connection open until GC.
+      void reader.cancel().catch(() => undefined);
     }
     return text;
   }

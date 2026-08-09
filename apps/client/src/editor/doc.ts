@@ -212,84 +212,14 @@ export function splitMarkdownTitle(md: string): { title: string | null; body: st
 }
 
 /**
- * Parse a small Markdown subset — the shape the AI surfaces emit — into a
- * ProseMirror doc: `#`/`##`/`###` headings (capped at the schema's level 3),
- * `-`/`*` bullet lists, `1.` ordered lists, `>` blockquotes, and blank-line-
- * separated paragraphs. Inline emphasis markers are stripped to plain text.
- * Reused by every AI-written entry (guided interview + freeform draft).
+ * Markdown → ProseMirror for AI-synthesized drafts (guided interview +
+ * freeform). Re-exported from editor/markdown.ts — the app's one real parser
+ * (the source-mode toggle uses it too). There used to be a second, stripped-
+ * down implementation here under the SAME NAME with different behavior (inline
+ * emphasis discarded); delegating removes the trap and gives AI drafts real
+ * bold/italic marks.
  */
-export function markdownToDoc(md: string): JSONContent {
-  const lines = md.replace(/\r\n?/g, '\n').split('\n');
-  const content: JSONContent[] = [];
-  let para: string[] = [];
-  let bullets: JSONContent[] = [];
-  let ordered: JSONContent[] = [];
-  let quote: string[] = [];
-
-  const runs = (s: string): JSONContent[] => (s ? [{ type: 'text', text: s }] : []);
-  const item = (s: string): JSONContent => ({ type: 'listItem', content: [{ type: 'paragraph', content: runs(s) }] });
-  const flushPara = (): void => {
-    if (para.length) content.push({ type: 'paragraph', content: runs(para.join(' ')) });
-    para = [];
-  };
-  const flushBullets = (): void => {
-    if (bullets.length) content.push({ type: 'bulletList', content: bullets });
-    bullets = [];
-  };
-  const flushOrdered = (): void => {
-    if (ordered.length) content.push({ type: 'orderedList', attrs: { start: 1 }, content: ordered });
-    ordered = [];
-  };
-  const flushQuote = (): void => {
-    if (quote.length)
-      content.push({ type: 'blockquote', content: quote.map((q) => ({ type: 'paragraph', content: runs(q) })) });
-    quote = [];
-  };
-  const flushAll = (): void => {
-    flushPara();
-    flushBullets();
-    flushOrdered();
-    flushQuote();
-  };
-
-  for (const raw of lines) {
-    const t = raw.trim();
-    if (!t) {
-      flushAll();
-      continue;
-    }
-    const heading = /^(#{1,6})\s+(.*)$/.exec(t);
-    const bullet = /^[-*]\s+(.*)$/.exec(t);
-    const num = /^\d+[.)]\s+(.*)$/.exec(t);
-    const bq = /^>\s?(.*)$/.exec(t);
-    if (heading) {
-      flushAll();
-      content.push({ type: 'heading', attrs: { level: Math.min(3, heading[1].length) }, content: runs(stripInline(heading[2])) });
-    } else if (bullet) {
-      flushPara();
-      flushOrdered();
-      flushQuote();
-      bullets.push(item(stripInline(bullet[1])));
-    } else if (num) {
-      flushPara();
-      flushBullets();
-      flushQuote();
-      ordered.push(item(stripInline(num[1])));
-    } else if (bq) {
-      flushPara();
-      flushBullets();
-      flushOrdered();
-      quote.push(stripInline(bq[1]));
-    } else {
-      flushBullets();
-      flushOrdered();
-      flushQuote();
-      para.push(stripInline(t));
-    }
-  }
-  flushAll();
-  return { type: 'doc', content: content.length ? content : [{ type: 'paragraph' }] };
-}
+export { markdownToDoc } from './markdown';
 
 /** Convert the design's sample blocks into a ProseMirror doc (for lived-in seed content). */
 export function blocksToDoc(blocks: Block[]): JSONContent {

@@ -8,6 +8,7 @@ import { useEffect } from 'preact/hooks';
 import type { BadgeId } from '../state/badges';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { Z } from './Sheet';
 import { t, type MessageKey } from '../i18n';
 
 export const badgeName = (id: BadgeId): string => t(`badges.${id}.name` as MessageKey);
@@ -56,7 +57,7 @@ export function BadgeCelebration({ id, onDismiss }: { id: BadgeId; onDismiss: ()
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 95, // above the Lightbox (90) — a celebration tops everything
+        zIndex: Z.celebration, // above the Lightbox — a celebration tops everything
         background: 'var(--surface-glass)',
         backdropFilter: 'blur(14px)',
         WebkitBackdropFilter: 'blur(14px)',

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -154,6 +155,14 @@ func (s *Server) auth(next http.Handler) http.Handler {
 		}
 		hash := sha256.Sum256([]byte(token))
 		ownerID, deviceID, status, err := s.store.LookupSession(r.Context(), hash[:])
+		// A DB outage is not an invalid session: answering 401 during a Postgres
+		// blip tells every client its session was revoked, and a client that
+		// reacts by re-authenticating lands in the same outage.
+		if err != nil && !errors.Is(err, store.ErrNotFound) {
+			log.Printf("%s %s: session lookup failed: %v", r.Method, r.URL.Path, err)
+			writeError(w, http.StatusServiceUnavailable, "temporarily unavailable")
+			return
+		}
 		if err != nil {
 			writeError(w, http.StatusUnauthorized, "invalid or expired session")
 			return
@@ -210,4 +219,11 @@ type statusWriter struct {
 func (w *statusWriter) WriteHeader(code int) {
 	w.status = code
 	w.ResponseWriter.WriteHeader(code)
+}
+
+// Unwrap lets http.ResponseController reach the underlying writer through this
+// wrapper — the admin restore handler extends its per-request write deadline,
+// and Flush/ReaderFrom fast paths (streamed backup downloads) come back too.
+func (w *statusWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
 }

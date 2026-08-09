@@ -7,6 +7,8 @@ import type { JSX, VNode } from 'preact';
 import { useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { Sheet } from './Sheet';
+import { TypedConfirmForm } from './ConfirmDialog';
 import { t } from '../i18n';
 
 type Step = 'confirm' | 'working' | 'error';
@@ -20,13 +22,10 @@ export function DeleteVaultSheet({ desk, onClose, deleteVault }: {
   deleteVault: () => Promise<void>;
 }): VNode {
   const [step, setStep] = useState<Step>('confirm');
-  const [typed, setTyped] = useState('');
   const [error, setError] = useState('');
   const word = t('vault.delete.word');
-  const armed = typed.trim().toLowerCase() === word.toLowerCase();
 
   const run = async (): Promise<void> => {
-    if (!armed) return;
     setStep('working');
     setError('');
     try {
@@ -68,50 +67,26 @@ export function DeleteVaultSheet({ desk, onClose, deleteVault }: {
 
     // confirm
     return (
-      <form onSubmit={(e) => { e.preventDefault(); void run(); }} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <TypedConfirmForm
+        word={word}
+        label={t('vault.delete.typeToConfirm', { word })}
+        confirmLabel={t('vault.delete.forever')}
+        idleLabel={t('vault.delete.typeFirst', { word })}
+        onConfirm={() => void run()}
+        onCancel={onClose}
+      >
         <p style={pStyle}>{t('vault.delete.body')}</p>
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 12, background: 'var(--accent-soft)', border: '1px solid var(--accent-line)', fontFamily: 'var(--ui)', fontSize: 12.5, lineHeight: 1.5, color: 'var(--accent-ink)' }}>
           <Icon name="trash" size={16} color="var(--accent)" />
           <span>{t('vault.delete.callout')}</span>
         </div>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-          <span style={{ fontFamily: 'var(--ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)' }}>
-            {t('vault.delete.typeToConfirm', { word })}
-          </span>
-          <input
-            value={typed}
-            onInput={(e) => setTyped((e.target as HTMLInputElement).value)}
-            placeholder={word}
-            autocomplete="off"
-            spellcheck={false}
-            style={{ fontFamily: 'var(--mono)', fontSize: 14, padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${armed ? 'var(--accent)' : 'var(--line)'}`, background: 'var(--paper)', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box', width: '100%' }}
-          />
-        </label>
-        <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
-          <Btn kind="ghost" size="md" onClick={onClose} style={{ flex: 1 }}>{t('common.cancel')}</Btn>
-          <Btn kind={armed ? 'primary' : 'ghost'} size="md" type="submit" style={{ flex: 2, opacity: armed ? 1 : 0.55, pointerEvents: armed ? 'auto' : 'none' }}>
-            {armed ? t('vault.delete.forever') : t('vault.delete.typeFirst', { word })}
-          </Btn>
-        </div>
-      </form>
+      </TypedConfirmForm>
     );
   })();
 
   return (
-    <div
-      onClick={busy ? undefined : onClose}
-      style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: desk ? 'center' : 'flex-end', justifyContent: 'center' }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: desk ? 460 : '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: desk ? 20 : '24px 24px 0 0', border: '1px solid var(--line)', padding: desk ? 26 : '20px 22px 30px', boxShadow: '0 20px 60px rgba(30,20,12,.3)', maxHeight: '90%', overflowY: 'auto' }}
-      >
-        {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 16px' }} />}
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <Icon name="trash" size={18} color="var(--accent)" /> {t('vault.delete.title')}
-        </h3>
-        {body}
-      </div>
-    </div>
+    <Sheet desk={desk} onClose={busy ? undefined : onClose} scroll title={t('vault.delete.title')} icon="trash">
+      {body}
+    </Sheet>
   );
 }

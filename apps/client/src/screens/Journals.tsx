@@ -3,6 +3,7 @@ import { useState } from 'preact/hooks';
 import { t, tp, fmtNumber, type MessageKey } from '../i18n';
 import { Icon } from '../ui/Icon';
 import { Btn, Cover, SyncBadge, SyncNotice, Spinner } from '../ui/primitives';
+import { Sheet } from '../ui/Sheet';
 import { hexA } from '../ui/color';
 import type { CoverPattern, Journal } from '../data/sample';
 import type { TemplateRecord } from '../sync/engine';
@@ -47,32 +48,7 @@ export function NewJournalSheet({
         </div>
       </div>
 
-      <Field label={t('journals.field.colour')}>
-        <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
-          {JCOLORS.map((c) => (
-            <button
-              key={c}
-              onClick={() => setColor(c)}
-              style={{ width: 30, height: 30, borderRadius: 999, cursor: 'pointer', background: c, border: color === c ? '2.5px solid var(--ink)' : '2.5px solid transparent', outline: `1px solid ${hexA(c, 0.4)}`, outlineOffset: -1 }}
-            />
-          ))}
-        </div>
-      </Field>
-
-      <Field label={t('journals.field.cover')}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {JCOVERS.map((cv) => (
-            <button
-              key={cv}
-              onClick={() => setCover(cv)}
-              style={{ flex: 1, padding: 7, borderRadius: 12, cursor: 'pointer', background: 'var(--paper)', border: `1.5px solid ${cover === cv ? 'var(--accent)' : 'var(--line)'}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
-            >
-              <Cover journal={{ color, cover: cv }} w={28} h={36} r={6} />
-              <span style={{ fontFamily: 'var(--ui)', fontSize: 10.5, color: 'var(--ink-2)' }}>{t(`journals.cover.${cv}` as MessageKey)}</span>
-            </button>
-          ))}
-        </div>
-      </Field>
+      <StyleFields color={color} cover={cover} onColor={setColor} onCover={setCover} />
 
       <Field label={t('journals.field.startFrom')}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -117,19 +93,9 @@ export function NewJournalSheet({
   );
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: desk ? 'center' : 'flex-end', justifyContent: 'center' }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: desk ? 440 : '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: desk ? 20 : '24px 24px 0 0', border: '1px solid var(--line)', padding: desk ? 26 : '20px 22px 30px', boxShadow: '0 20px 60px rgba(30,20,12,.3)' }}
-      >
-        {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 16px' }} />}
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: '0 0 18px' }}>{t('journals.new')}</h3>
-        {body}
-      </div>
-    </div>
+    <Sheet desk={desk} onClose={onClose} width={440} title={t('journals.new')} headerMargin="0 0 18px">
+      {body}
+    </Sheet>
   );
 }
 
@@ -181,32 +147,7 @@ export function EditJournalSheet({
         </div>
       </div>
 
-      <Field label={t('journals.field.colour')}>
-        <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
-          {JCOLORS.map((c) => (
-            <button
-              key={c}
-              onClick={() => setColor(c)}
-              style={{ width: 30, height: 30, borderRadius: 999, cursor: 'pointer', background: c, border: color === c ? '2.5px solid var(--ink)' : '2.5px solid transparent', outline: `1px solid ${hexA(c, 0.4)}`, outlineOffset: -1 }}
-            />
-          ))}
-        </div>
-      </Field>
-
-      <Field label={t('journals.field.cover')}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {JCOVERS.map((cv) => (
-            <button
-              key={cv}
-              onClick={() => setCover(cv)}
-              style={{ flex: 1, padding: 7, borderRadius: 12, cursor: 'pointer', background: 'var(--paper)', border: `1.5px solid ${cover === cv ? 'var(--accent)' : 'var(--line)'}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
-            >
-              <Cover journal={{ color, cover: cv }} w={28} h={36} r={6} />
-              <span style={{ fontFamily: 'var(--ui)', fontSize: 10.5, color: 'var(--ink-2)' }}>{t(`journals.cover.${cv}` as MessageKey)}</span>
-            </button>
-          ))}
-        </div>
-      </Field>
+      <StyleFields color={color} cover={cover} onColor={setColor} onCover={setCover} />
 
       <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
         <Btn kind="ghost" size="md" onClick={onClose} style={{ flex: 1 }}>{t('common.cancel')}</Btn>
@@ -223,19 +164,49 @@ export function EditJournalSheet({
   );
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: desk ? 'center' : 'flex-end', justifyContent: 'center' }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: desk ? 440 : '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: desk ? 20 : '24px 24px 0 0', border: '1px solid var(--line)', padding: desk ? 26 : '20px 22px 30px', boxShadow: '0 20px 60px rgba(30,20,12,.3)' }}
-      >
-        {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 16px' }} />}
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: '0 0 18px' }}>{t('journals.edit.title')}</h3>
-        {body}
-      </div>
-    </div>
+    <Sheet desk={desk} onClose={onClose} width={440} title={t('journals.edit.title')} headerMargin="0 0 18px">
+      {body}
+    </Sheet>
+  );
+}
+
+// The colour + cover pickers, shared by the create and edit sheets (they were
+// two verbatim copies whose constants had already started to drift).
+function StyleFields({ color, cover, onColor, onCover }: {
+  color: string;
+  cover: CoverPattern;
+  onColor: (c: string) => void;
+  onCover: (c: CoverPattern) => void;
+}): VNode {
+  return (
+    <>
+      <Field label={t('journals.field.colour')}>
+        <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
+          {JCOLORS.map((c) => (
+            <button
+              key={c}
+              onClick={() => onColor(c)}
+              style={{ width: 30, height: 30, borderRadius: 999, cursor: 'pointer', background: c, border: color === c ? '2.5px solid var(--ink)' : '2.5px solid transparent', outline: `1px solid ${hexA(c, 0.4)}`, outlineOffset: -1 }}
+            />
+          ))}
+        </div>
+      </Field>
+
+      <Field label={t('journals.field.cover')}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {JCOVERS.map((cv) => (
+            <button
+              key={cv}
+              onClick={() => onCover(cv)}
+              style={{ flex: 1, padding: 7, borderRadius: 12, cursor: 'pointer', background: 'var(--paper)', border: `1.5px solid ${cover === cv ? 'var(--accent)' : 'var(--line)'}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
+            >
+              <Cover journal={{ color, cover: cv }} w={28} h={36} r={6} />
+              <span style={{ fontFamily: 'var(--ui)', fontSize: 10.5, color: 'var(--ink-2)' }}>{t(`journals.cover.${cv}` as MessageKey)}</span>
+            </button>
+          ))}
+        </div>
+      </Field>
+    </>
   );
 }
 
@@ -248,16 +219,23 @@ function Field({ label, children }: { label: string; children: ComponentChildren
   );
 }
 
+// The vault identity chip: the real owner-id prefix (matches the truncated
+// vault label on the operator dashboard) plus the seed-derived operator hint.
+// Both are non-secret — already cleartext on the relay.
 function AccountChip(): VNode {
+  const { ownerId, approvalHint } = useAppData();
+  const label = [ownerId?.slice(0, 4), approvalHint].filter(Boolean).join(' · ');
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
       <div style={{ width: 40, height: 40, borderRadius: 999, background: 'linear-gradient(145deg, var(--accent), #8E4128)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 600, flexShrink: 0 }}>V</div>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontFamily: 'var(--ui)', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{t('journals.vault')}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Icon name="lock" size={11} color="var(--accent)" />
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>7f3a · velvet harbor</span>
-        </div>
+        {label && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="lock" size={11} color="var(--accent)" />
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>{label}</span>
+          </div>
+        )}
       </div>
     </div>
   );

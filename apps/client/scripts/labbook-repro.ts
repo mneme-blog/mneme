@@ -61,16 +61,21 @@ async function main(): Promise<void> {
   const opened: string[] = [];
   const slashHandle = createSlashHandle();
   const wikiHandle = createSlashHandle();
-  let pickerItems: import('../src/editor/slash').SlashCommand[] = [];
-  let pickerSelect: ((item: import('../src/editor/slash').SlashCommand) => void) | null = null;
+  // A holder object (not two flow-narrowed `let`s): TypeScript pins a
+  // `let x = null` to type null across straight-line code because closure
+  // assignments aren't tracked — `picker.select?.()` stays callable.
+  const picker: {
+    items: import('../src/editor/slash').SlashCommand[];
+    select: ((item: import('../src/editor/slash').SlashCommand) => void) | null;
+  } = { items: [], select: null };
   wikiHandle.listener = {
     show: (s) => {
-      pickerItems = s.items;
-      pickerSelect = s.select;
+      picker.items = s.items;
+      picker.select = s.select;
     },
     hide: () => {
-      pickerItems = [];
-      pickerSelect = null;
+      picker.items = [];
+      picker.select = null;
     },
     keydown: () => false,
   };
@@ -95,9 +100,9 @@ async function main(): Promise<void> {
   // ── "[[" opens the picker; picking inserts an entryLink node ──
   editor.chain().focus().insertContent('[[Exp').run();
   await new Promise((r) => setTimeout(r, 0));
-  assert(pickerItems.length === 1 && pickerItems[0]?.title === 'Experiment 12', '"[[" query shows the matching entry');
-  pickerSelect?.(pickerItems[0] as import('../src/editor/slash').SlashCommand);
-  const json = editor.getJSON();
+  assert(picker.items.length === 1 && picker.items[0]?.title === 'Experiment 12', '"[[" query shows the matching entry');
+  picker.select?.(picker.items[0] as import('../src/editor/slash').SlashCommand);
+  const json: import('@tiptap/core').JSONContent = editor.getJSON();
   const para = json.content?.[0];
   const link = para?.content?.find((n) => n.type === 'entryLink');
   assert(link, 'picking inserts an entryLink node');
@@ -137,7 +142,7 @@ async function main(): Promise<void> {
   assert(editor.isActive('table'), 'cursor lands inside the table');
   assert(editor.chain().focus().addRowAfter().run(), 'addRowAfter runs');
   assert(editor.chain().focus().addColumnAfter().run(), 'addColumnAfter runs');
-  const table = editor.getJSON().content?.find((n) => n.type === 'table');
+  const table = (editor.getJSON() as import('@tiptap/core').JSONContent).content?.find((n) => n.type === 'table');
   assert(table?.content?.length === 3, 'table has 3 rows after addRowAfter');
   assert(table?.content?.[0]?.content?.length === 3, 'rows have 3 cells after addColumnAfter');
   assert(table?.content?.[0]?.content?.[0]?.type === 'tableHeader', 'first row is a header row');

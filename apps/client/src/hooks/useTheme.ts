@@ -10,25 +10,25 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 
 export interface ThemePalette {
   id: string;
-  name: string;
   accent: string;
 }
 
 /** Accent tints, orthogonal to the skin: any accent works on any skin.
  * Muted, ink-compatible tones; the default terracotta first. */
 export const PALETTES: ThemePalette[] = [
-  { id: 'terracotta', name: 'Terracotta', accent: '#B0563A' },
-  { id: 'moss', name: 'Moss', accent: '#6F7D4D' },
-  { id: 'sea', name: 'Sea', accent: '#3F7B82' },
-  { id: 'twilight', name: 'Twilight', accent: '#5C6291' },
-  { id: 'plum', name: 'Plum', accent: '#91527D' },
-  { id: 'rose', name: 'Rose', accent: '#C25573' },
+  { id: 'terracotta', accent: '#B0563A' },
+  { id: 'moss', accent: '#6F7D4D' },
+  { id: 'sea', accent: '#3F7B82' },
+  { id: 'twilight', accent: '#5C6291' },
+  { id: 'plum', accent: '#91527D' },
+  { id: 'rose', accent: '#C25573' },
 ];
 
+// Display names/hints live in the i18n catalog (`prefs.skin.*` /
+// `prefs.palette.*`), not here — a second English copy on the data would
+// silently drift from what the picker actually renders.
 export interface ThemeSkin {
   id: string;
-  name: string;
-  hint: string;
   /** Palette id adopted when the skin is picked (re-tintable afterwards). */
   accent: string;
   /** Swatch colors for the picker card (the skin's signature variant). */
@@ -38,12 +38,12 @@ export interface ThemeSkin {
 /** Full themes: each redefines the surface/ink ramp (and for some, the type)
  * via [data-skin] blocks in styles/tokens.css. Paper is the brand default. */
 export const SKINS: ThemeSkin[] = [
-  { id: 'paper', name: 'Paper', hint: 'Warm cream and serif — the classic', accent: 'terracotta', preview: { bg: '#f4eee2', ink: '#2a2521', accent: '#B0563A' } },
-  { id: 'modern', name: 'Modern', hint: 'Clean neutral grays, sans headings', accent: 'twilight', preview: { bg: '#fafafa', ink: '#1f1f1f', accent: '#5C6291' } },
-  { id: 'terminal', name: 'Terminal', hint: 'Graphite ops console — dense and technical', accent: 'sea', preview: { bg: '#0d1117', ink: '#d7dee8', accent: '#3F7B82' } },
-  { id: 'forest', name: 'Forest', hint: 'Mossy greens, a cabin notebook', accent: 'moss', preview: { bg: '#eef0e2', ink: '#232a1e', accent: '#6F7D4D' } },
-  { id: 'blossom', name: 'Blossom', hint: 'Soft rose and blush', accent: 'rose', preview: { bg: '#f9eef0', ink: '#322327', accent: '#C25573' } },
-  { id: 'lavender', name: 'Lavender', hint: 'Lilac calm', accent: 'twilight', preview: { bg: '#f0edf6', ink: '#2a2533', accent: '#5C6291' } },
+  { id: 'paper', accent: 'terracotta', preview: { bg: '#f4eee2', ink: '#2a2521', accent: '#B0563A' } },
+  { id: 'modern', accent: 'twilight', preview: { bg: '#fafafa', ink: '#1f1f1f', accent: '#5C6291' } },
+  { id: 'terminal', accent: 'sea', preview: { bg: '#0d1117', ink: '#d7dee8', accent: '#3F7B82' } },
+  { id: 'forest', accent: 'moss', preview: { bg: '#eef0e2', ink: '#232a1e', accent: '#6F7D4D' } },
+  { id: 'blossom', accent: 'rose', preview: { bg: '#f9eef0', ink: '#322327', accent: '#C25573' } },
+  { id: 'lavender', accent: 'twilight', preview: { bg: '#f0edf6', ink: '#2a2533', accent: '#5C6291' } },
 ];
 
 function initialMode(): ThemeMode {

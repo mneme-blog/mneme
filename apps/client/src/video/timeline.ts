@@ -55,3 +55,20 @@ export function planTimeline(clipDurations: number[], fps: number, cardSeconds: 
 export function estimateSeconds(clipDurations: number[], cardSeconds: number): number {
   return clipDurations.reduce((a, b) => a + b, 0) + clipDurations.length * cardSeconds;
 }
+
+// ── output geometry (shared by the worker and the realtime fallback) ────────
+
+const even = (n: number): number => Math.max(2, Math.floor(n / 2) * 2);
+
+/**
+ * The film's canonical frame size, derived from the FIRST clip's display size:
+ * short edge pinned to 720, long edge clamped to [640, 1280], both rounded to
+ * even (encoders reject odd dimensions).
+ */
+export function canonicalSize(displayWidth: number, displayHeight: number): { width: number; height: number } {
+  const landscape = displayWidth >= displayHeight;
+  const short = 720;
+  const ratio = landscape ? displayWidth / displayHeight : displayHeight / displayWidth;
+  const long = Math.min(1280, Math.max(640, Math.round(short * ratio)));
+  return landscape ? { width: even(long), height: even(short) } : { width: even(short), height: even(long) };
+}

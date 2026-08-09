@@ -17,7 +17,7 @@ import (
 func (s *Server) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	owner := principalOf(r.Context()).OwnerID
 	if _, err := s.wipeOwner(r.Context(), owner); err != nil {
-		writeError(w, http.StatusInternalServerError, "account deletion failed")
+		writeInternalError(w, r, "account deletion failed", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

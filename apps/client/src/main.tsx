@@ -35,12 +35,16 @@ function Root(): VNode {
   );
 }
 
-// Restore the persisted language (and RTL direction) before first paint.
-void initI18n().then(() => {
-  render(
-    <I18nProvider>
-      <Root />
-    </I18nProvider>,
-    root,
-  );
-});
+// Restore the persisted language (and RTL direction) before first paint. A
+// failed locale-chunk load must not leave a blank page — render anyway and
+// fall back to the built-in English catalog.
+void initI18n()
+  .catch((e) => console.error('[i18n] init failed — rendering with the English fallback:', e))
+  .then(() => {
+    render(
+      <I18nProvider>
+        <Root />
+      </I18nProvider>,
+      root,
+    );
+  });

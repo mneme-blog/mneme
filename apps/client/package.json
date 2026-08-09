@@ -10,6 +10,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "check": "node scripts/check-all.mjs",
     "csp": "node -e \"import('./csp.js').then(m=>console.log(m.policy({frameAncestors:true})))\""
   },
   "dependencies": {
@@ -39,8 +40,9 @@
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.1",
+    "@types/jsdom": "^30.0.0",
     "@types/katex": "^0.16.7",
-    "@types/node": "^26.1.0",
+    "@types/node": "^22.20.1",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
     "jsdom": "^29.1.1",
     "tsx": "^4.19.2",

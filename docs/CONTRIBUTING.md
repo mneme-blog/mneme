@@ -8,8 +8,8 @@ together, see [ARCHITECTURE.md](./ARCHITECTURE.md); for the security rules, [SEC
 
 ## Prerequisites
 
-- **Node 20+** and **pnpm 10** (`corepack enable` sorts it out)
-- **Go 1.22+** (the Dockerfile uses 1.23)
+- **Node 22+** and **pnpm 11** (`corepack enable` sorts it out)
+- **Go 1.25** (match `server/go.mod`; the Dockerfile pins the same)
 - **Docker** (for Postgres + MinIO via `docker-compose.yml`)
 
 ## Setup
@@ -44,23 +44,35 @@ gofmt -l .                         # must print nothing
 go vet ./...
 go test ./...                      # unit tests, no DB needed
 
-# Server end-to-end (needs Postgres up)
+# The client regression suite (no relay/Chrome needed; same set CI runs)
+pnpm --filter client check
+
+# Server end-to-end (needs Postgres up, and a DEDICATED test database — the
+# suite truncates everything it finds; it refuses to run against a database
+# whose name doesn't contain "test")
 docker compose up -d postgres
-TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal?sslmode=disable \
+docker compose exec postgres createdb -U journal journal_test   # once
+TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal_test?sslmode=disable \
   go test -tags e2e ./e2e/...
 
-# Full client↔relay round-trips (relay must be running)
-pnpm --filter client exec tsx apps/client/scripts/integration.ts          # register → auth → encrypt → push/pull
-pnpm --filter client exec tsx apps/client/scripts/templates-roundtrip.ts  # templates through the entry oplog
+# Full client↔relay round-trips (relay must be running; `exec` runs from
+# apps/client/, so the path is scripts/…, not apps/client/scripts/…)
+pnpm --filter client exec tsx scripts/integration.ts          # register → auth → encrypt → push/pull
+pnpm --filter client exec tsx scripts/templates-roundtrip.ts  # templates through the entry oplog
 ```
 
-There are more focused regression scripts in `apps/client/scripts/` — e.g. `seedlock-methods.ts`
-(passphrase/security-key seals, no relay needed), `journal-sync-roundtrip.ts` and
-`interview-types-roundtrip.ts` (record routing, relay needed), `ai-roundtrip.ts`, `labbook-repro.ts`,
-`location-repro.ts`, and `dayone-import*.ts`. Each feature's CLAUDE.md §0 note names its check.
+`pnpm --filter client check` runs every repro script that needs no external
+service (the list lives in `apps/client/scripts/check-all.mjs`). The
+relay-dependent ones (`integration`, `templates-roundtrip`,
+`interview-types-roundtrip`, `journal-sync-roundtrip`, `ai-roundtrip`) and
+`film-e2e.mjs` (real Chrome + WebCodecs) stay manual. Each feature's CLAUDE.md
+§0 note names its check.
 
-There's no CI yet and no ESLint config yet — `typecheck` + `build` + `go test` are the gates. Adding
-ESLint/Prettier and a CI workflow is welcome (see SECURITY.md backlog).
+CI (`.github/workflows/ci.yml`) runs on every PR: gofmt + go vet + go build +
+go test + the Postgres e2e suite, shellcheck + the updater regression tests,
+and the client typecheck + build + regression suite. There is no ESLint/
+Prettier config yet — strict `tsc` (now covering `scripts/` too) is the TS
+gate; adding ESLint/Prettier is welcome.
 
 ## Conventions (from CLAUDE.md §11)
 

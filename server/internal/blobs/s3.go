@@ -54,11 +54,6 @@ func (s *s3Store) Put(ctx context.Context, key string, data []byte) error {
 	return err
 }
 
-func (s *s3Store) Delete(ctx context.Context, key string) error {
-	// RemoveObject on a missing key is a no-op in S3 semantics — matches the interface.
-	return s.client.RemoveObject(ctx, s.bucket, key, minio.RemoveObjectOptions{})
-}
-
 // DeletePrefix lists and removes every object under prefix. Deletion is driven
 // by what object storage actually holds, not by the media_blobs index, so
 // chunks that were uploaded but never finalized (and therefore have no index

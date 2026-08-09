@@ -3,11 +3,13 @@
 // except via onCapture; encryption and upload happen in the data layer
 // (state/data.tsx addMedia).
 import type { VNode } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useRef } from 'preact/hooks';
 import { t } from '../i18n';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
-import { fmtDuration } from './VideoCapture';
+import { Sheet, Z } from './Sheet';
+import { useMediaRecorder } from './useMediaRecorder';
+import { fmtDuration } from './recorder';
 
 // Preferred container/codec order; the browser picks the first it supports
 // (Safari records mp4, everyone else webm/opus). The chosen type rides along
@@ -24,8 +26,6 @@ function pickMimeType(): string | undefined {
   return MIME_CANDIDATES.find((m) => MediaRecorder.isTypeSupported(m));
 }
 
-type Stage = 'idle' | 'recording' | 'review' | 'error';
-
 // Scrolling bar waveform: one bar of mic level every BAR_INTERVAL_MS, newest on
 // the right. Confirms at a glance that sound is actually being picked up.
 const BAR_INTERVAL_MS = 50;
@@ -41,17 +41,6 @@ export function AudioCapture({
   onClose: () => void;
   onCapture: (blob: Blob, durationMs: number) => void;
 }): VNode {
-  const [stage, setStage] = useState<Stage>('idle');
-  const [error, setError] = useState('');
-  const [elapsed, setElapsed] = useState(0);
-  const [reviewUrl, setReviewUrl] = useState<string | null>(null);
-
-  const stream = useRef<MediaStream | null>(null);
-  const recorder = useRef<MediaRecorder | null>(null);
-  const startedAt = useRef(0);
-  const result = useRef<{ blob: Blob; durationMs: number } | null>(null);
-  const tick = useRef<ReturnType<typeof setInterval> | null>(null);
-
   // Live waveform plumbing: an AnalyserNode taps the mic stream (analysis only,
   // never routed to speakers) and a rAF loop paints level bars onto the canvas.
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -132,145 +121,76 @@ export function AudioCapture({
     raf.current = requestAnimationFrame(draw);
   };
 
-  // Acquire the microphone on mount; release everything on unmount.
-  useEffect(() => {
-    let cancelled = false;
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((s) => {
-        if (cancelled) {
-          s.getTracks().forEach((track) => track.stop());
-          return;
-        }
-        stream.current = s;
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setError(t('media.record.micUnavailable'));
-          setStage('error');
-        }
-      });
-    return () => {
-      cancelled = true;
-      if (tick.current) clearInterval(tick.current);
-      stopWave();
-      if (recorder.current && recorder.current.state !== 'inactive') recorder.current.stop();
-      stream.current?.getTracks().forEach((track) => track.stop());
-    };
-  }, []);
-
-  // Review object URLs are revoked when replaced or on unmount.
-  useEffect(() => () => { if (reviewUrl) URL.revokeObjectURL(reviewUrl); }, [reviewUrl]);
-
-  const startRecording = (): void => {
-    const s = stream.current;
-    if (!s) return;
-    const mimeType = pickMimeType();
-    let rec: MediaRecorder;
-    try {
-      rec = new MediaRecorder(s, mimeType ? { mimeType } : undefined);
-    } catch {
-      setError(t('media.record.unsupported'));
-      setStage('error');
-      return;
-    }
-    const parts: BlobPart[] = [];
-    rec.ondataavailable = (ev) => { if (ev.data.size > 0) parts.push(ev.data); };
-    rec.onstop = () => {
-      const durationMs = Date.now() - startedAt.current;
-      const blob = new Blob(parts, { type: rec.mimeType || 'audio/webm' });
-      result.current = { blob, durationMs };
-      setReviewUrl((old) => {
-        if (old) URL.revokeObjectURL(old);
-        return URL.createObjectURL(blob);
-      });
-      setStage('review');
-    };
-    recorder.current = rec;
-    startedAt.current = Date.now();
-    setElapsed(0);
-    rec.start(1000); // gather data every second so a crash loses little
-    tick.current = setInterval(() => setElapsed(Date.now() - startedAt.current), 250);
-    startWave(s);
-    setStage('recording');
-  };
-
-  const stopRecording = (): void => {
-    if (tick.current) clearInterval(tick.current);
-    stopWave();
-    recorder.current?.stop();
-  };
-
-  const retake = (): void => {
-    result.current = null;
-    setReviewUrl((old) => {
-      if (old) URL.revokeObjectURL(old);
-      return null;
-    });
-    setStage('idle');
-  };
+  const rec = useMediaRecorder({
+    acquire: () => navigator.mediaDevices.getUserMedia({ audio: true }),
+    makeRecorder: (s) => {
+      const mimeType = pickMimeType();
+      return new MediaRecorder(s, mimeType ? { mimeType } : undefined);
+    },
+    fallbackMime: 'audio/webm',
+    unavailableMessage: t('media.record.micUnavailable'),
+    onStart: startWave,
+    onStop: stopWave,
+  });
+  const { stage, error, elapsed, reviewUrl } = rec;
 
   const use = (): void => {
-    if (result.current) onCapture(result.current.blob, result.current.durationMs);
+    if (rec.result.current) onCapture(rec.result.current.blob, rec.result.current.durationMs);
     onClose();
   };
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(30,22,16,.45)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: desk ? 'center' : 'flex-end', justifyContent: 'center' }}
+    <Sheet
+      desk={desk}
+      onClose={onClose}
+      zIndex={Z.overlay}
+      dim="strong"
+      width={420}
+      cardStyle={{ padding: desk ? 22 : '18px 18px 28px' }}
+      title={stage === 'review' ? t('media.record.reviewTitle') : t('media.record.audioTitle')}
+      headerMargin="0 0 14px"
+      accessory={
+        <button onClick={onClose} title={t('common.close')} style={{ width: 32, height: 32, borderRadius: 10, border: '1px solid var(--line)', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <Icon name="x" size={16} color="var(--ink-2)" />
+        </button>
+      }
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: desk ? 420 : '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: desk ? 20 : '24px 24px 0 0', border: '1px solid var(--line)', padding: desk ? 22 : '18px 18px 28px', boxShadow: '0 20px 60px rgba(30,20,12,.3)' }}
-      >
-        {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 14px' }} />}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>
-            {stage === 'review' ? t('media.record.reviewTitle') : t('media.record.audioTitle')}
-          </h3>
-          <button onClick={onClose} title={t('common.close')} style={{ width: 32, height: 32, borderRadius: 10, border: '1px solid var(--line)', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <Icon name="x" size={16} color="var(--ink-2)" />
-          </button>
-        </div>
-
-        {stage === 'error' ? (
-          <div style={{ padding: '34px 10px', textAlign: 'center', color: 'var(--ink-2)', fontFamily: 'var(--ui)', fontSize: 14 }}>{error}</div>
-        ) : stage === 'review' && reviewUrl ? (
-          <audio src={reviewUrl} controls style={{ display: 'block', width: '100%' }} />
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '26px 16px', borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
-            {stage === 'recording' ? (
-              <>
-                <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: 56 }} />
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: 9, background: '#E4573D' }} />
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 15, color: 'var(--ink)' }}>{fmtDuration(elapsed)}</span>
-                </span>
-              </>
-            ) : (
-              <>
-                <span style={{ width: 54, height: 54, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', border: '1px solid var(--line)' }}>
-                  <Icon name="mic" size={24} color="var(--ink-2)" />
-                </span>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 15, color: 'var(--ink-3)' }}>{t('media.record.ready')}</span>
-              </>
-            )}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 16 }}>
-          {stage === 'idle' && <Btn onClick={startRecording} icon="mic">{t('media.record.start')}</Btn>}
-          {stage === 'recording' && <Btn kind="danger" onClick={stopRecording}>{t('media.record.stop')}</Btn>}
-          {stage === 'review' && (
+      {stage === 'error' ? (
+        <div style={{ padding: '34px 10px', textAlign: 'center', color: 'var(--ink-2)', fontFamily: 'var(--ui)', fontSize: 14 }}>{error}</div>
+      ) : stage === 'review' && reviewUrl ? (
+        <audio src={reviewUrl} controls style={{ display: 'block', width: '100%' }} />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '26px 16px', borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
+          {stage === 'recording' ? (
             <>
-              <Btn kind="ghost" onClick={retake}>{t('media.record.retake')}</Btn>
-              <Btn onClick={use} icon="check">{t('media.record.useAudio')}</Btn>
+              <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: 56 }} />
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ width: 9, height: 9, borderRadius: 9, background: 'var(--danger)' }} />
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 15, color: 'var(--ink)' }}>{fmtDuration(elapsed)}</span>
+              </span>
+            </>
+          ) : (
+            <>
+              <span style={{ width: 54, height: 54, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', border: '1px solid var(--line)' }}>
+                <Icon name="mic" size={24} color="var(--ink-2)" />
+              </span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 15, color: 'var(--ink-3)' }}>{t('media.record.ready')}</span>
             </>
           )}
-          {stage === 'error' && <Btn kind="ghost" onClick={onClose}>{t('common.close')}</Btn>}
         </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 16 }}>
+        {stage === 'idle' && <Btn onClick={rec.startRecording} icon="mic">{t('media.record.start')}</Btn>}
+        {stage === 'recording' && <Btn kind="danger" onClick={rec.stopRecording}>{t('media.record.stop')}</Btn>}
+        {stage === 'review' && (
+          <>
+            <Btn kind="ghost" onClick={rec.retake}>{t('media.record.retake')}</Btn>
+            <Btn onClick={use} icon="check">{t('media.record.useAudio')}</Btn>
+          </>
+        )}
+        {stage === 'error' && <Btn kind="ghost" onClick={onClose}>{t('common.close')}</Btn>}
       </div>
-    </div>
+    </Sheet>
   );
 }

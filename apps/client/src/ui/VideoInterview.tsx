@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
 import { ConfirmDialog } from './ConfirmDialog';
+import { SheetGrabber, Z } from './Sheet';
 import { ProviderBadge } from './ProviderBadge';
 import { useVisualViewport } from '../hooks/useVisualViewport';
 import { answerLimitSeconds, cameraConstraints, fmtCountdown, pickMimeType, recorderOptions } from './recorder';
@@ -262,10 +263,7 @@ export function VideoInterviewSheet({
       const durationMs = Date.now() - startedAt.current;
       const blob = new Blob(parts, { type: rec.mimeType || 'video/webm' });
       takes.current[index] = { blob, durationMs };
-      setReviewUrl((old) => {
-        if (old) URL.revokeObjectURL(old);
-        return URL.createObjectURL(blob);
-      });
+      setReviewUrl(URL.createObjectURL(blob));
       setStage('review');
     };
     recorder.current = rec;
@@ -280,22 +278,18 @@ export function VideoInterviewSheet({
     setStage('recording');
   };
 
-  const clearReview = (): void =>
-    setReviewUrl((old) => {
-      if (old) URL.revokeObjectURL(old);
-      return null;
-    });
+  // The [reviewUrl] effect above is the single owner of revocation — it fires
+  // on every change and on unmount, so setters must not also revoke.
+  const clearReview = (): void => setReviewUrl(null);
 
   const goTo = (i: number): void => {
     clearReview();
     setIndex(i);
     // Step back onto an already-recorded question and it opens in review, so a
     // stray tap can't silently overwrite the take.
-    setStage(takes.current[i] ? 'review' : 'idle');
-    if (takes.current[i]) {
-      const take = takes.current[i];
-      if (take) setReviewUrl(URL.createObjectURL(take.blob));
-    }
+    const take = takes.current[i];
+    setStage(take ? 'review' : 'idle');
+    if (take) setReviewUrl(URL.createObjectURL(take.blob));
   };
 
   const retake = (): void => {
@@ -413,11 +407,11 @@ export function VideoInterviewSheet({
   const ending = remainingMs <= 10_000;
   const shell: JSX.CSSProperties = desk
     ? { width: 'min(460px, 42vw)', flexShrink: 0, borderInlineStart: '1px solid var(--line)', background: 'var(--surface)', display: 'flex', flexDirection: 'column', height: '100%' }
-    : { position: 'fixed', insetInline: 0, bottom: 0, zIndex: 70, height: Math.round(vp.height * 0.9), background: 'var(--surface)', borderRadius: '24px 24px 0 0', border: '1px solid var(--line)', display: 'flex', flexDirection: 'column', boxShadow: '0 -12px 40px rgba(30,20,12,.22)' };
+    : { position: 'fixed', insetInline: 0, bottom: 0, zIndex: Z.overlay, height: Math.round(vp.height * 0.9), background: 'var(--surface)', borderRadius: '24px 24px 0 0', border: '1px solid var(--line)', display: 'flex', flexDirection: 'column', boxShadow: '0 -12px 40px rgba(30,20,12,.22)' };
 
   return (
     <div ref={panelRef} style={shell}>
-      {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '10px auto 4px' }} />}
+      {!desk && <SheetGrabber style={{ margin: '10px auto 4px' }} />}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--line)' }}>
         <Icon name="film" size={17} color="var(--accent-ink)" />
@@ -526,7 +520,7 @@ export function VideoInterviewSheet({
                     </span>
                   </span>
                   <span style={{ width: 34, height: 20, borderRadius: 99, flexShrink: 0, background: autoTranscribe ? 'var(--accent)' : 'var(--line)', position: 'relative', transition: 'background .15s' }}>
-                    <span style={{ position: 'absolute', top: 2, left: autoTranscribe ? 16 : 2, width: 16, height: 16, borderRadius: 99, background: 'var(--surface)', transition: 'left .15s' }} />
+                    <span style={{ position: 'absolute', top: 2, insetInlineStart: autoTranscribe ? 16 : 2, width: 16, height: 16, borderRadius: 99, background: 'var(--surface)', transition: 'inset-inline-start .15s' }} />
                   </span>
                 </button>
                 {/* Asked, not inferred: whisper treats the language as a
@@ -589,7 +583,7 @@ export function VideoInterviewSheet({
                 {stage === 'recording' && (
                   <>
                     <span style={{ position: 'absolute', top: 10, insetInlineStart: 10, display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(20,14,8,.7)', borderRadius: 999, padding: '4px 11px' }}>
-                      <span class={ending ? 'mneme-pulse' : undefined} style={{ width: 9, height: 9, borderRadius: 9, background: '#E4573D' }} />
+                      <span class={ending ? 'mneme-pulse' : undefined} style={{ width: 9, height: 9, borderRadius: 9, background: 'var(--danger)' }} />
                       <span style={{ fontFamily: 'var(--mono)', fontSize: 12.5, color: ending ? '#FFA893' : '#fff', fontVariantNumeric: 'tabular-nums' }}>
                         {fmtCountdown(remainingMs)}
                       </span>
@@ -597,7 +591,7 @@ export function VideoInterviewSheet({
                     {/* Drains left-to-right (start-to-end in RTL) so the clock
                         reads unmistakably as time left, not time spent. */}
                     <span style={{ position: 'absolute', insetInline: 0, bottom: 0, height: 3, background: 'rgba(255,255,255,.18)' }}>
-                      <span style={{ display: 'block', height: '100%', width: `${(remainingMs / limitMs) * 100}%`, background: ending ? '#E4573D' : '#fff', transition: 'width .25s linear' }} />
+                      <span style={{ display: 'block', height: '100%', width: `${(remainingMs / limitMs) * 100}%`, background: ending ? 'var(--danger)' : '#fff', transition: 'width .25s linear' }} />
                     </span>
                   </>
                 )}

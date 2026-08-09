@@ -5,18 +5,8 @@ import { Cover, ConnChip, SyncNotice } from '../ui/primitives';
 import type { Journal } from '../data/sample';
 import { useAppData } from '../state/data';
 import { EntryThumbs, entryImages } from '../ui/EntryThumbs';
+import { listDate, monthKey } from '../ui/entryDates';
 
-// Compact list date: append the year only when the entry isn't from the current
-// year, so recent entries stay clean while older ones aren't ambiguous.
-function listDate(d: Date): string {
-  const sameYear = d.getFullYear() === new Date().getFullYear();
-  return fmtDate(d, sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
-}
-// The month/year a list separator groups by — entries are bucketed by their
-// (displayed) entry date.
-function monthKey(d: Date): string {
-  return `${d.getFullYear()}-${d.getMonth()}`;
-}
 
 // Mobile-only drill-in: the entries of one notebook. Desktop never routes here —
 // it shows the journal-scoped list as the editor's left pane instead.
@@ -83,7 +73,7 @@ export function JournalEntriesScreen({ journal, onBack, onOpenEntry, onNew, onEd
               return [
                 sep && (
                   <div key={`m-${key}`} style={{ padding: '16px 2px 4px' }}>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: '#786f62', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>
                       {fmtDate(d, { month: 'long', year: 'numeric' })}
                     </span>
                   </div>

@@ -8,6 +8,7 @@
 import type { JSX, VNode } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
 import { Icon, type IconName } from './Icon';
+import { Sheet } from './Sheet';
 import { t } from '../i18n';
 import { useAppData } from '../state/data';
 import type { InterviewType, TemplateRecord } from '../sync/engine';
@@ -187,28 +188,23 @@ export function ComposeChooser({
     );
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+    <Sheet
+      onClose={onClose}
+      cardStyle={{ padding: '20px 22px calc(env(safe-area-inset-bottom, 0px) + 30px)' }}
+      title={t('shell.newEntry')}
+      headerMargin="0 0 14px"
+      accessory={
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--ink-3)' }} aria-label={t('common.close')}>
+          <Icon name="x" size={16} />
+        </button>
+      }
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: '24px 24px 0 0', border: '1px solid var(--line)', padding: '20px 22px calc(env(safe-area-inset-bottom, 0px) + 30px)', boxShadow: '0 20px 60px rgba(30,20,12,.3)' }}
-      >
-        <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 16px' }} />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 0 14px' }}>
-          <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>{t('shell.newEntry')}</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--ink-3)' }} aria-label={t('common.close')}>
-            <Icon name="x" size={16} />
-          </button>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-          {section('feather', t('shell.compose.empty'), t('shell.compose.emptyHint'), { onPick: onEmpty })}
-          {onInterview && section('mic', t('shell.compose.interview'), t('shell.compose.interviewHint'), { section: 'interview', body: interviewBody })}
-          {onVideoInterview && interviewCards.some((c) => c.type) && section('film', t('shell.compose.videoInterview'), t('shell.compose.videoInterviewHint'), { section: 'video', body: videoBody })}
-          {section('copy', t('shell.compose.template'), t('shell.compose.templateHint'), { section: 'template', body: templateBody })}
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        {section('feather', t('shell.compose.empty'), t('shell.compose.emptyHint'), { onPick: onEmpty })}
+        {onInterview && section('mic', t('shell.compose.interview'), t('shell.compose.interviewHint'), { section: 'interview', body: interviewBody })}
+        {onVideoInterview && interviewCards.some((c) => c.type) && section('film', t('shell.compose.videoInterview'), t('shell.compose.videoInterviewHint'), { section: 'video', body: videoBody })}
+        {section('copy', t('shell.compose.template'), t('shell.compose.templateHint'), { section: 'template', body: templateBody })}
       </div>
-    </div>
+    </Sheet>
   );
 }

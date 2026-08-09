@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -27,10 +26,7 @@ import (
 // vault stayed unreadable (no seed → no plaintext), but its integrity and
 // availability were entirely at the attacker's mercy.
 func TestDeviceBindingAuthorization(t *testing.T) {
-	dsn := os.Getenv("TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("set TEST_DATABASE_URL to run e2e")
-	}
+	dsn := testDSN(t)
 	ctx := context.Background()
 
 	st, err := store.New(ctx, dsn)

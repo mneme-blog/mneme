@@ -11,7 +11,7 @@ func (s *Server) handleListReminders(w http.ResponseWriter, r *http.Request) {
 
 	reminders, err := s.store.ListReminders(r.Context(), owner)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "list failed")
+		writeInternalError(w, r, "reminder list failed", err)
 		return
 	}
 
@@ -55,7 +55,7 @@ func (s *Server) handlePutReminder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.store.UpsertReminder(r.Context(), owner, req.ReminderID, fireAt); err != nil {
-		writeError(w, http.StatusInternalServerError, "save failed")
+		writeInternalError(w, r, "reminder save failed", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"reminder_id": req.ReminderID})
@@ -68,7 +68,7 @@ func (s *Server) handleDeleteReminder(w http.ResponseWriter, r *http.Request) {
 
 	ok, err := s.store.DeleteReminder(r.Context(), owner, id)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "delete failed")
+		writeInternalError(w, r, "reminder delete failed", err)
 		return
 	}
 	if !ok {

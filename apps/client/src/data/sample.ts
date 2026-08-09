@@ -54,12 +54,6 @@ export type Block =
   | { type: 'code'; lang?: string; text: string }
   | { type: 'math'; latex: string };
 
-export const MNEMONIC: string[] = [
-  'velvet', 'harbor', 'spiral', 'candle',
-  'meadow', 'quartz', 'ribbon', 'ember',
-  'willow', 'cobalt', 'thistle', 'lantern',
-];
-
 // Label palette — muted tones, similar L/C, varied hue.
 export const LABELS: Record<string, Label> = {
   reflection: { name: 'reflection', color: '#B0563A' }, // clay
@@ -184,11 +178,3 @@ export const ENTRIES: Entry[] = [
   },
 ];
 
-// Days in June 2026 that have at least one entry (for calendar dots).
-export const ENTRY_DAYS: Record<number, Entry[]> = (() => {
-  const m: Record<number, Entry[]> = {};
-  ENTRIES.forEach((e) => {
-    (m[e.day] = m[e.day] || []).push(e);
-  });
-  return m;
-})();

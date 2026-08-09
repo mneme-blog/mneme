@@ -7,8 +7,10 @@ import type { JSX, VNode } from 'preact';
 import { useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { Sheet } from './Sheet';
 import { generateMnemonic, mnemonicWords } from '../crypto/mnemonic';
-import { ManagerCredential } from '../screens/Onboarding';
+import { ManagerCredential } from './credentials';
+import { PhraseGrid, PhraseQuiz, RevealCopyRow, allQuizCorrect } from './phrase';
 import type { RotationProgress } from '../sync/rotate';
 import { t, type MessageKey } from '../i18n';
 
@@ -24,22 +26,16 @@ export function RotatePhraseSheet({ desk, onClose, rotate }: {
 }): VNode {
   const [step, setStep] = useState<Step>('warn');
   const [revealed, setRevealed] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [progress, setProgress] = useState<RotationProgress | null>(null);
   const [error, setError] = useState('');
   // Generated once per sheet open; only submitted to rotate() after the quiz.
   const [mnemonic] = useState(() => generateMnemonic());
   const words = mnemonicWords(mnemonic);
 
-  // Confirm quiz (same shape as onboarding): prove three words were written down.
+  // Confirm quiz (grid + quiz rendering shared with onboarding — ui/phrase.tsx).
   const quizIdx = [1, 5, 9];
   const [picks, setPicks] = useState<Record<number, string>>({});
-  const allCorrect = quizIdx.every((i) => picks[i] === words[i]);
-  const decoys = ['lantern', 'meadow', 'cobalt', 'thicket', 'ember', 'harbor', 'walnut', 'prairie', 'quartz'];
-  const options = (i: number): string[] => {
-    const set = [words[i], decoys[i % decoys.length], decoys[(i + 3) % decoys.length], decoys[(i + 6) % decoys.length]];
-    return set.sort((a, b) => (a > b ? 1 : -1));
-  };
+  const allCorrect = allQuizCorrect(words, quizIdx, picks);
 
   const run = async (): Promise<void> => {
     setStep('working');
@@ -77,26 +73,21 @@ export function RotatePhraseSheet({ desk, onClose, rotate }: {
         <form onSubmit={(e) => { e.preventDefault(); setStep('confirm'); }} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <ManagerCredential phrase={mnemonic} />
           <p style={pStyle}>{t('vault.rotate.reveal.body')}</p>
-          <div style={{ position: 'relative' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: desk ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 7, padding: 12, borderRadius: 14, background: 'var(--paper)', border: '1px solid var(--line)', filter: revealed ? 'none' : 'blur(7px)', transition: 'filter .2s', userSelect: 'none' }}>
-              {words.map((w, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 9, background: 'var(--surface)', border: '1px solid var(--line)' }}>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)', width: 16 }}>{String(i + 1).padStart(2, '0')}</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>{w}</span>
-                </div>
-              ))}
-            </div>
-            {!revealed && (
-              <button type="button" onClick={() => setRevealed(true)} style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ink)' }}>
-                <Icon name="eye" size={20} color="var(--ink)" />
-                <span style={{ fontFamily: 'var(--ui)', fontWeight: 600, fontSize: 13.5 }}>{t('vault.rotate.tapToReveal')}</span>
-              </button>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Btn kind="ghost" size="sm" icon={revealed ? 'eyeoff' : 'eye'} onClick={() => setRevealed((r) => !r)}>{revealed ? t('vault.rotate.hide') : t('vault.rotate.reveal')}</Btn>
-            <Btn kind="ghost" size="sm" icon="copy" onClick={async () => { try { await navigator.clipboard.writeText(mnemonic); } catch { /* clipboard unavailable */ } setCopied(true); setTimeout(() => setCopied(false), 1400); }}>{copied ? t('common.copied') : t('common.copy')}</Btn>
-          </div>
+          <PhraseGrid
+            desk={desk}
+            words={words}
+            revealed={revealed}
+            onReveal={() => setRevealed(true)}
+            compact
+            tapLabel="vault.rotate.tapToReveal"
+          />
+          <RevealCopyRow
+            revealed={revealed}
+            onToggle={() => setRevealed((r) => !r)}
+            phrase={mnemonic}
+            hideLabel="vault.rotate.hide"
+            revealLabel="vault.rotate.reveal"
+          />
           <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
             <Btn kind="ghost" size="md" onClick={onClose} style={{ flex: 1 }}>{t('common.cancel')}</Btn>
             <Btn kind="primary" size="md" type="submit" style={{ flex: 2 }}>{t('vault.rotate.written')}</Btn>
@@ -109,23 +100,14 @@ export function RotatePhraseSheet({ desk, onClose, rotate }: {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <p style={pStyle}>{t('vault.rotate.confirm.body')}</p>
-          {quizIdx.map((i) => (
-            <div key={i}>
-              <div style={{ fontFamily: 'var(--ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 7 }}>
-                {t('vault.rotate.confirm.word', { num: i + 1 })}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 7 }}>
-                {options(i).map((opt) => {
-                  const sel = picks[i] === opt;
-                  return (
-                    <button key={opt} onClick={() => setPicks((p) => ({ ...p, [i]: opt }))} style={{ fontFamily: 'var(--mono)', fontSize: 13.5, fontWeight: 500, padding: '10px 11px', borderRadius: 10, cursor: 'pointer', textAlign: 'start', background: sel ? 'var(--accent-soft)' : 'var(--paper)', border: `1.5px solid ${sel ? 'var(--accent)' : 'var(--line)'}`, color: sel ? 'var(--accent-ink)' : 'var(--ink)' }}>
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+          <PhraseQuiz
+            words={words}
+            quizIdx={quizIdx}
+            picks={picks}
+            onPick={(i, opt) => setPicks((p) => ({ ...p, [i]: opt }))}
+            compact
+            wordLabel="vault.rotate.confirm.word"
+          />
           <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
             <Btn kind="ghost" size="md" onClick={() => setStep('reveal')} style={{ flex: 1 }}>{t('common.back')}</Btn>
             <Btn kind={allCorrect ? 'primary' : 'ghost'} size="md" onClick={() => allCorrect && void run()} style={{ flex: 2, opacity: allCorrect ? 1 : 0.55, pointerEvents: allCorrect ? 'auto' : 'none' }}>
@@ -177,20 +159,8 @@ export function RotatePhraseSheet({ desk, onClose, rotate }: {
   })();
 
   return (
-    <div
-      onClick={busy ? undefined : onClose}
-      style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: desk ? 'center' : 'flex-end', justifyContent: 'center' }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: desk ? 460 : '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: desk ? 20 : '24px 24px 0 0', border: '1px solid var(--line)', padding: desk ? 26 : '20px 22px 30px', boxShadow: '0 20px 60px rgba(30,20,12,.3)', maxHeight: '90%', overflowY: 'auto' }}
-      >
-        {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 16px' }} />}
-        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <Icon name="shield" size={18} color="var(--accent)" /> {t('vault.rotate.title')}
-        </h3>
-        {body}
-      </div>
-    </div>
+    <Sheet desk={desk} onClose={busy ? undefined : onClose} scroll title={t('vault.rotate.title')} icon="shield">
+      {body}
+    </Sheet>
   );
 }

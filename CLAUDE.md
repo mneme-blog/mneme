@@ -235,6 +235,15 @@ Ask-my-journal on mobile, where the sidebar isn't there to host them), and the v
 (identity card with connection status, lock, phrase rotation, vault deletion — rows hand off to the
 existing sheets).
 
+Two more shipped features (previously undocumented here): a **WYSIWYG⇄Markdown source toggle** in
+the editor (`editor/markdown.ts` — `docToMarkdown`/`markdownToDoc`, a lossless round-trip that
+fences custom atoms (media, math, wikilinks, video interviews) so toggling can't destroy them;
+regression checks `scripts/markdown-roundtrip.ts` + `scripts/markdown-editor-smoke.ts`), and
+**gamification badges** (`state/badges.ts` engine + `hooks/useBadges.ts` + frosted celebration
+overlay `ui/BadgeCelebration.tsx`, PR #78 — computed locally over the decrypted entries, like the
+writing stats; nothing syncs; regression check `scripts/badges-repro.ts`; the math-formula dialog's
+click handling is covered by `scripts/math-click-repro.ts`).
+
 **Lab/learning-notebook capabilities** (a positioning widening, not a pivot): **tables**
 (`@tiptap/extension-table` TableKit, resizable; `/` Table command; row/column controls lead the
 toolbar strip while the cursor is inside a table — the template editor (`ui/Templates.tsx`) carries
@@ -511,7 +520,8 @@ sets `<html dir="rtl">`; layout uses **logical CSS properties** (inline-start/en
 direction-bearing icons opt into mirroring via `<Icon dirFlip>` + the `[dir='rtl'] .dir-flip` rule in
 `tokens.css`. The AI assistant is told to reply in the app language (`ai/prompts.ts`,
 `currentLocale().english`). Coverage/regression check: `pnpm --filter client exec tsx scripts/i18n-dump.ts`
-(writes the flat English reference + prints per-locale full coverage, currently `798/798`). Known refinement: gendered
+(writes the flat English reference + prints per-locale full coverage — all locales complete; the
+exact key count grows with features, so read it from the script's output rather than here). Known refinement: gendered
 languages get neutral phrasing around the shared `{noun}` media-delete placeholder; Arabic plurals use
 one/other with an `#other` fallback for two/few/many.
 
@@ -611,7 +621,7 @@ pnpm --filter client build           # typecheck + production build
 # Go server (in ./server)
 go build -o journald ./cmd/journald
 gofmt -l . && go vet ./... && go test ./...
-TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal?sslmode=disable \
+TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal_test?sslmode=disable \
   go test -tags e2e ./e2e/...        # full handshake + backup round-trip against a live Postgres
 
 # Operator backup / disaster recovery (same env as the server: DATABASE_URL, S3_*, BACKUP_*)
@@ -640,8 +650,13 @@ second pass (2026-08-05, 12 findings — H1 the unauthenticated whisper proxy, M
 security headers, M2 unbound record ciphertexts, M3 unthrottled admin token, plus six Low and two
 accepted Info items) and the first (2026-07-13, 18 findings, issues #40–#57). All closed.
 
-### Lint / format (per §11)
-TS: strict mode (eslint + prettier). Go: `gofmt` / `golangci-lint`. Rust: `clippy`.
+### Lint / format (what is actually enforced today)
+TS: strict `tsc` (`noUnusedLocals`/`noUnusedParameters`/`noUncheckedSideEffectImports`),
+covering `src/` **and** `scripts/`; no ESLint/Prettier config exists yet (§11 names them as the
+eventual toolchain — adding them is open work, not current reality). Go: `gofmt` + `go vet`
+(both CI-enforced); golangci-lint is likewise §11 aspiration, not configured. Rust: n/a until
+the Tauri shells exist. CI also runs the client regression suite (`pnpm --filter client check`)
+and shellchecks the deploy scripts.
 
 ### Sequencing
 Follow §10's build order strictly: scaffold+infra → client plaintext (validate UX) → crypto →

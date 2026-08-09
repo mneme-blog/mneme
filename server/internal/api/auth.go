@@ -134,7 +134,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "registration failed")
+		writeInternalError(w, r, "registration failed", err)
 		return
 	}
 	if ownerCreated {
@@ -191,7 +191,7 @@ func (s *Server) handleChallenge(w http.ResponseWriter, r *http.Request) {
 
 	nonce := make([]byte, 32)
 	if _, err := rand.Read(nonce); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not generate challenge")
+		writeInternalError(w, r, "could not generate challenge", err)
 		return
 	}
 	expires := time.Now().Add(challengeTTL)
@@ -201,11 +201,11 @@ func (s *Server) handleChallenge(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, store.ErrNotFound):
 		// Decoy: shaped like a real challenge, deliberately not persisted.
 	case err != nil:
-		writeError(w, http.StatusInternalServerError, "could not issue challenge")
+		writeInternalError(w, r, "could not issue challenge", err)
 		return
 	default:
 		if err := s.store.SaveChallenge(r.Context(), req.DeviceID, nonce, expires); err != nil {
-			writeError(w, http.StatusInternalServerError, "could not store challenge")
+			writeInternalError(w, r, "could not store challenge", err)
 			return
 		}
 	}
@@ -247,7 +247,7 @@ func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "device lookup failed")
+		writeInternalError(w, r, "device lookup failed", err)
 		return
 	}
 	if !ed25519.Verify(ed25519.PublicKey(pub), challenge, sig) {
@@ -277,7 +277,7 @@ func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 	// Single-use: consume the challenge only after the signature checks out.
 	ok, err := s.store.ConsumeChallenge(r.Context(), req.DeviceID, challenge)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "challenge lookup failed")
+		writeInternalError(w, r, "challenge lookup failed", err)
 		return
 	}
 	if !ok {
@@ -287,14 +287,14 @@ func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 
 	tokenBytes := make([]byte, sessionTokenLen)
 	if _, err := rand.Read(tokenBytes); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not issue session")
+		writeInternalError(w, r, "could not issue session", err)
 		return
 	}
 	token := base64.RawURLEncoding.EncodeToString(tokenBytes)
 	hash := sha256.Sum256([]byte(token))
 	expires := time.Now().Add(s.cfg.SessionTTL)
 	if err := s.store.CreateSession(r.Context(), hash[:], req.DeviceID, ownerID, expires); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not store session")
+		writeInternalError(w, r, "could not store session", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
