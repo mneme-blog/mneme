@@ -210,6 +210,39 @@ function rowToMedia(r: SqlValue[]): MediaRecord {
   };
 }
 
+
+// ── seeded-record tables (templates + interview_types) ──────────────────────
+//
+// The two tables are structurally identical (same seven access patterns, same
+// flag semantics); the descriptor keeps them from being maintained as slowly
+// diverging copies. Adding a synced, seedable record kind = one descriptor.
+interface SeededTable<T> {
+  table: string;
+  cols: string;
+  placeholders: string;
+  upsertSet: string;
+  params(t: T, dirty: 0 | 1, pristine: 0 | 1): SqlParam[];
+  fromRow(r: SqlValue[]): T;
+}
+
+const TEMPLATE_TABLE: SeededTable<TemplateRecord> = {
+  table: 'templates',
+  cols: TPL_COLS,
+  placeholders: TPL_PLACEHOLDERS,
+  upsertSet: TPL_UPSERT_SET,
+  params: templateParams,
+  fromRow: rowToTemplate,
+};
+
+const INTERVIEW_TABLE: SeededTable<InterviewType> = {
+  table: 'interview_types',
+  cols: ITV_COLS,
+  placeholders: ITV_PLACEHOLDERS,
+  upsertSet: ITV_UPSERT_SET,
+  params: interviewTypeParams,
+  fromRow: rowToInterviewType,
+};
+
 /**
  * Best-effort removal of a per-owner OPFS directory (`mneme/<ownerId>`). After a
  * phrase rotation the old owner's plaintext DB must not linger on disk — the
@@ -365,66 +398,68 @@ export class LocalDb {
     return rows.map(rowToEntry);
   }
 
-  // ── templates (schema v3) ──
+  // ── seeded-record tables: templates (v3) + interview types (v6) ──
+  // One implementation, two descriptors (TEMPLATE_TABLE / INTERVIEW_TABLE);
+  // the public per-kind methods below stay so call sites read naturally.
 
-  /** All non-deleted templates, oldest first (built-in seeds before user templates). */
-  async allTemplates(): Promise<TemplateRecord[]> {
+  /** All non-deleted rows, oldest first (built-in seeds before user records). */
+  async #allSeeded<T>(d: SeededTable<T>): Promise<T[]> {
     const rows = await this.#query(
-      `SELECT ${TPL_COLS} FROM templates WHERE deleted = 0 ORDER BY created_at ASC`,
+      `SELECT ${d.cols} FROM ${d.table} WHERE deleted = 0 ORDER BY created_at ASC`,
     );
-    return rows.map(rowToTemplate);
+    return rows.map(d.fromRow);
   }
 
-  /** Total template rows including tombstones — 0 means this device was never seeded. */
-  async templateCount(): Promise<number> {
-    const rows = await this.#query(`SELECT COUNT(*) FROM templates`);
+  /** Total rows including tombstones — 0 means this device was never seeded. */
+  async #seededCount<T>(d: SeededTable<T>): Promise<number> {
+    const rows = await this.#query(`SELECT COUNT(*) FROM ${d.table}`);
     return (rows[0]?.[0] as number) ?? 0;
   }
 
-  /** Templates still awaiting a relay push (rebuilds the outbox after a reload). */
-  async dirtyTemplates(): Promise<TemplateRecord[]> {
-    const rows = await this.#query(`SELECT ${TPL_COLS} FROM templates WHERE dirty = 1`);
-    return rows.map(rowToTemplate);
+  /** Rows still awaiting a relay push (rebuilds the outbox after a reload). */
+  async #dirtySeeded<T>(d: SeededTable<T>): Promise<T[]> {
+    const rows = await this.#query(`SELECT ${d.cols} FROM ${d.table} WHERE dirty = 1`);
+    return rows.map(d.fromRow);
   }
 
   /** A local create/edit/delete: wins on this device, loses pristine, joins the outbox. */
-  async putLocalTemplate(t: TemplateRecord): Promise<void> {
+  async #putLocalSeeded<T>(d: SeededTable<T>, t: T): Promise<void> {
     await this.#run(
-      `INSERT INTO templates (${TPL_COLS}) VALUES ${TPL_PLACEHOLDERS} ` +
-        `ON CONFLICT(id) DO UPDATE SET ${TPL_UPSERT_SET}`,
-      templateParams(t, 1, 0),
+      `INSERT INTO ${d.table} (${d.cols}) VALUES ${d.placeholders} ` +
+        `ON CONFLICT(id) DO UPDATE SET ${d.upsertSet}`,
+      d.params(t, 1, 0),
     );
   }
 
   /** Lay down built-in seeds (pristine, non-dirty). Existing rows — tombstones included — win. */
-  async seedTemplates(templates: TemplateRecord[]): Promise<void> {
-    if (!templates.length) return;
-    const statements = templates.map((t) => ({
-      sql: `INSERT OR IGNORE INTO templates (${TPL_COLS}) VALUES ${TPL_PLACEHOLDERS}`,
-      params: templateParams(t, 0, 1),
+  async #seedSeeded<T>(d: SeededTable<T>, items: T[]): Promise<void> {
+    if (!items.length) return;
+    const statements = items.map((t) => ({
+      sql: `INSERT OR IGNORE INTO ${d.table} (${d.cols}) VALUES ${d.placeholders}`,
+      params: d.params(t, 0, 1),
     }));
     const res = await this.#send({ kind: 'batch', statements });
     if (!res.ok) throw new Error(res.error);
   }
 
-  /** Merge relay templates under last-write-wins: only newer versions overwrite (§3). */
-  async mergeRemoteTemplates(templates: TemplateRecord[]): Promise<void> {
-    if (!templates.length) return;
-    const statements = templates.map((t) => ({
+  /** Merge relay rows under last-write-wins: only newer versions overwrite (§3). */
+  async #mergeRemoteSeeded<T>(d: SeededTable<T>, items: T[]): Promise<void> {
+    if (!items.length) return;
+    const statements = items.map((t) => ({
       sql:
-        `INSERT INTO templates (${TPL_COLS}) VALUES ${TPL_PLACEHOLDERS} ` +
-        `ON CONFLICT(id) DO UPDATE SET ${TPL_UPSERT_SET} WHERE excluded.updated_at > templates.updated_at`,
-      params: templateParams(t, 0, 0),
+        `INSERT INTO ${d.table} (${d.cols}) VALUES ${d.placeholders} ` +
+        `ON CONFLICT(id) DO UPDATE SET ${d.upsertSet} WHERE excluded.updated_at > ${d.table}.updated_at`,
+      params: d.params(t, 0, 0),
     }));
     const res = await this.#send({ kind: 'batch', statements });
     if (!res.ok) throw new Error(res.error);
   }
 
   /** Clear the dirty flag for versions the relay acknowledged (precise on updated_at). */
-  async markTemplatesSynced(templates: TemplateRecord[]): Promise<void> {
-    if (!templates.length) return;
-    const statements = templates.map((t) => ({
-      sql: `UPDATE templates SET dirty = 0 WHERE id = ? AND updated_at = ?`,
+  async #markSeededSynced<T extends { id: string; updatedAt: number }>(d: SeededTable<T>, items: T[]): Promise<void> {
+    if (!items.length) return;
+    const statements = items.map((t) => ({
+      sql: `UPDATE ${d.table} SET dirty = 0 WHERE id = ? AND updated_at = ?`,
       params: [t.id, t.updatedAt] as SqlParam[],
     }));
     const res = await this.#send({ kind: 'batch', statements });
@@ -436,96 +471,33 @@ export class LocalDb {
    * same built-in has superseded (the seeds were local-only, so no tombstone is
    * needed — the superseding record itself keeps the slug occupied).
    */
-  async dropTemplates(ids: string[]): Promise<void> {
+  async #dropSeeded<T>(d: SeededTable<T>, ids: string[]): Promise<void> {
     if (!ids.length) return;
     const statements = ids.map((id) => ({
-      sql: `DELETE FROM templates WHERE id = ? AND pristine = 1`,
+      sql: `DELETE FROM ${d.table} WHERE id = ? AND pristine = 1`,
       params: [id] as SqlParam[],
     }));
     const res = await this.#send({ kind: 'batch', statements });
     if (!res.ok) throw new Error(res.error);
   }
 
-  // ── interview types (schema v6) ──
+  allTemplates(): Promise<TemplateRecord[]> { return this.#allSeeded(TEMPLATE_TABLE); }
+  templateCount(): Promise<number> { return this.#seededCount(TEMPLATE_TABLE); }
+  dirtyTemplates(): Promise<TemplateRecord[]> { return this.#dirtySeeded(TEMPLATE_TABLE); }
+  putLocalTemplate(t: TemplateRecord): Promise<void> { return this.#putLocalSeeded(TEMPLATE_TABLE, t); }
+  seedTemplates(templates: TemplateRecord[]): Promise<void> { return this.#seedSeeded(TEMPLATE_TABLE, templates); }
+  mergeRemoteTemplates(templates: TemplateRecord[]): Promise<void> { return this.#mergeRemoteSeeded(TEMPLATE_TABLE, templates); }
+  markTemplatesSynced(templates: TemplateRecord[]): Promise<void> { return this.#markSeededSynced(TEMPLATE_TABLE, templates); }
+  dropTemplates(ids: string[]): Promise<void> { return this.#dropSeeded(TEMPLATE_TABLE, ids); }
 
-  /** All non-deleted interview types, oldest first (built-in seeds before user types). */
-  async allInterviewTypes(): Promise<InterviewType[]> {
-    const rows = await this.#query(
-      `SELECT ${ITV_COLS} FROM interview_types WHERE deleted = 0 ORDER BY created_at ASC`,
-    );
-    return rows.map(rowToInterviewType);
-  }
-
-  /** Total interview-type rows including tombstones — 0 means this device was never seeded. */
-  async interviewTypeCount(): Promise<number> {
-    const rows = await this.#query(`SELECT COUNT(*) FROM interview_types`);
-    return (rows[0]?.[0] as number) ?? 0;
-  }
-
-  /** Interview types still awaiting a relay push (rebuilds the outbox after a reload). */
-  async dirtyInterviewTypes(): Promise<InterviewType[]> {
-    const rows = await this.#query(`SELECT ${ITV_COLS} FROM interview_types WHERE dirty = 1`);
-    return rows.map(rowToInterviewType);
-  }
-
-  /** A local create/edit/delete: wins on this device, loses pristine, joins the outbox. */
-  async putLocalInterviewType(t: InterviewType): Promise<void> {
-    await this.#run(
-      `INSERT INTO interview_types (${ITV_COLS}) VALUES ${ITV_PLACEHOLDERS} ` +
-        `ON CONFLICT(id) DO UPDATE SET ${ITV_UPSERT_SET}`,
-      interviewTypeParams(t, 1, 0),
-    );
-  }
-
-  /** Lay down built-in seeds (pristine, non-dirty). Existing rows — tombstones included — win. */
-  async seedInterviewTypes(types: InterviewType[]): Promise<void> {
-    if (!types.length) return;
-    const statements = types.map((t) => ({
-      sql: `INSERT OR IGNORE INTO interview_types (${ITV_COLS}) VALUES ${ITV_PLACEHOLDERS}`,
-      params: interviewTypeParams(t, 0, 1),
-    }));
-    const res = await this.#send({ kind: 'batch', statements });
-    if (!res.ok) throw new Error(res.error);
-  }
-
-  /** Merge relay interview types under last-write-wins: only newer versions overwrite (§3). */
-  async mergeRemoteInterviewTypes(types: InterviewType[]): Promise<void> {
-    if (!types.length) return;
-    const statements = types.map((t) => ({
-      sql:
-        `INSERT INTO interview_types (${ITV_COLS}) VALUES ${ITV_PLACEHOLDERS} ` +
-        `ON CONFLICT(id) DO UPDATE SET ${ITV_UPSERT_SET} WHERE excluded.updated_at > interview_types.updated_at`,
-      params: interviewTypeParams(t, 0, 0),
-    }));
-    const res = await this.#send({ kind: 'batch', statements });
-    if (!res.ok) throw new Error(res.error);
-  }
-
-  /** Clear the dirty flag for versions the relay acknowledged (precise on updated_at). */
-  async markInterviewTypesSynced(types: InterviewType[]): Promise<void> {
-    if (!types.length) return;
-    const statements = types.map((t) => ({
-      sql: `UPDATE interview_types SET dirty = 0 WHERE id = ? AND updated_at = ?`,
-      params: [t.id, t.updatedAt] as SqlParam[],
-    }));
-    const res = await this.#send({ kind: 'batch', statements });
-    if (!res.ok) throw new Error(res.error);
-  }
-
-  /**
-   * Hard-delete pristine built-in seeds that another device's edit/delete of the
-   * same built-in has superseded (the seeds were local-only, so no tombstone is
-   * needed — the superseding record itself keeps the slug occupied).
-   */
-  async dropInterviewTypes(ids: string[]): Promise<void> {
-    if (!ids.length) return;
-    const statements = ids.map((id) => ({
-      sql: `DELETE FROM interview_types WHERE id = ? AND pristine = 1`,
-      params: [id] as SqlParam[],
-    }));
-    const res = await this.#send({ kind: 'batch', statements });
-    if (!res.ok) throw new Error(res.error);
-  }
+  allInterviewTypes(): Promise<InterviewType[]> { return this.#allSeeded(INTERVIEW_TABLE); }
+  interviewTypeCount(): Promise<number> { return this.#seededCount(INTERVIEW_TABLE); }
+  dirtyInterviewTypes(): Promise<InterviewType[]> { return this.#dirtySeeded(INTERVIEW_TABLE); }
+  putLocalInterviewType(t: InterviewType): Promise<void> { return this.#putLocalSeeded(INTERVIEW_TABLE, t); }
+  seedInterviewTypes(types: InterviewType[]): Promise<void> { return this.#seedSeeded(INTERVIEW_TABLE, types); }
+  mergeRemoteInterviewTypes(types: InterviewType[]): Promise<void> { return this.#mergeRemoteSeeded(INTERVIEW_TABLE, types); }
+  markInterviewTypesSynced(types: InterviewType[]): Promise<void> { return this.#markSeededSynced(INTERVIEW_TABLE, types); }
+  dropInterviewTypes(ids: string[]): Promise<void> { return this.#dropSeeded(INTERVIEW_TABLE, ids); }
 
   // ── journals (schema v5 + v8) ──
 

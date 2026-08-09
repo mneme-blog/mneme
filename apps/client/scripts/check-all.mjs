@@ -10,6 +10,7 @@ import { spawnSync } from 'node:child_process';
 
 const SCRIPTS = [
   // security-relevant regressions first — fail fast on what matters most
+  'record-codec', // wire-codec field mapping (silent LWW field loss)
   'record-binding', // AAD record binding (audit M2)
   'seedlock-methods', // at-rest seals (Argon2id / PRF)
   'link-safety', // href allowlist (audit M1, #42)
