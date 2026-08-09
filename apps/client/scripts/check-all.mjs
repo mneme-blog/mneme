@@ -16,6 +16,7 @@ const SCRIPTS = [
   'seedlock-methods', // at-rest seals (Argon2id / PRF)
   'link-safety', // href allowlist (audit M1, #42)
   'ollama-url', // privacy-badge URL classification (audit L4, #49)
+  'phrase-quiz', // recovery-phrase confirm quiz (gates onboarding + rotation)
   'transcribe-repro', // transcription gating incl. CSP + same-origin default
   // feature regressions
   'badges-repro',

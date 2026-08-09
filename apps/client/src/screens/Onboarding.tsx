@@ -8,6 +8,7 @@ import { webauthnAvailable, PrfUnsupportedError } from '../platform/webauthn';
 import { APP_VERSION, buildTimeLabel } from '../buildinfo';
 import { t, tp, type MessageKey } from '../i18n';
 import { ManagerCredential, PassField } from '../ui/credentials';
+import { PhraseGrid, PhraseQuiz, RevealCopyRow, allQuizCorrect } from '../ui/phrase';
 import type { SealChoice } from '../state/data';
 
 type View = 'welcome' | 'create' | 'confirm' | 'restore' | 'passphrase' | 'unlock';
@@ -42,20 +43,14 @@ export function Onboarding({ desk, hasVault, unlockMethod, onEnter, onUnlock, on
 }): VNode {
   const [view, setView] = useState<View>(hasVault ? 'unlock' : 'welcome');
   const [revealed, setRevealed] = useState(false);
-  const [copied, setCopied] = useState(false);
   // A real, freshly generated recovery phrase for this onboarding session.
   const [mnemonic] = useState(() => generateMnemonic());
   const words = mnemonicWords(mnemonic);
 
-  // confirm step
+  // confirm step (grid + quiz rendering shared with RotatePhrase — ui/phrase.tsx)
   const quizIdx = [2, 6, 10];
   const [picks, setPicks] = useState<Record<number, string>>({});
-  const allCorrect = quizIdx.every((i) => picks[i] === words[i]);
-  const decoys = ['cedar', 'gravel', 'maple', 'signal', 'orchid', 'pewter', 'driftwood', 'saffron', 'copper'];
-  const options = (i: number): string[] => {
-    const set = [words[i], decoys[i % decoys.length], decoys[(i + 3) % decoys.length], decoys[(i + 6) % decoys.length]];
-    return set.sort((a, b) => (a > b ? 1 : -1));
-  };
+  const allCorrect = allQuizCorrect(words, quizIdx, picks);
 
   // restore step
   const [restoreWords, setRestoreWords] = useState<string[]>(Array(12).fill(''));
@@ -205,38 +200,24 @@ export function Onboarding({ desk, hasVault, unlockMethod, onEnter, onUnlock, on
           <strong style={{ color: 'var(--ink)' }}>{t('onboarding.create.lead')}</strong> {t('onboarding.create.body')}
         </p>
 
-        <div style={{ position: 'relative', marginTop: 18 }}>
-          <div
-            style={{
-              display: 'grid', gridTemplateColumns: desk ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 8,
-              padding: 14, borderRadius: 16, background: 'var(--surface)', border: '1px solid var(--line)',
-              filter: revealed ? 'none' : 'blur(7px)', transition: 'filter .2s', userSelect: 'none',
-            }}
-          >
-            {words.map((w, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 11px', borderRadius: 10, background: 'var(--paper)', border: '1px solid var(--line)' }}>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', width: 16 }}>{String(i + 1).padStart(2, '0')}</span>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--ink)', fontWeight: 500 }}>{w}</span>
-              </div>
-            ))}
-          </div>
-          {!revealed && (
-            <button
-              type="button"
-              onClick={() => setRevealed(true)}
-              style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ink)' }}
-            >
-              <Icon name="eye" size={22} color="var(--ink)" />
-              <span style={{ fontFamily: 'var(--ui)', fontWeight: 600, fontSize: 14 }}>{t('onboarding.tapToReveal')}</span>
-              <span style={{ fontFamily: 'var(--ui)', fontSize: 12, color: 'var(--ink-2)' }}>{t('onboarding.noOneWatching')}</span>
-            </button>
-          )}
-        </div>
+        <PhraseGrid
+          desk={desk}
+          words={words}
+          revealed={revealed}
+          onReveal={() => setRevealed(true)}
+          tapLabel="onboarding.tapToReveal"
+          tapHint="onboarding.noOneWatching"
+          style={{ marginTop: 18 }}
+        />
 
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <Btn kind="ghost" size="sm" icon={revealed ? 'eyeoff' : 'eye'} onClick={() => setRevealed((r) => !r)}>{revealed ? t('onboarding.hide') : t('onboarding.reveal')}</Btn>
-          <Btn kind="ghost" size="sm" icon="copy" onClick={async () => { try { await navigator.clipboard.writeText(words.join(' ')); } catch { /* clipboard unavailable */ } setCopied(true); setTimeout(() => setCopied(false), 1400); }}>{copied ? t('common.copied') : t('common.copy')}</Btn>
-        </div>
+        <RevealCopyRow
+          revealed={revealed}
+          onToggle={() => setRevealed((r) => !r)}
+          phrase={mnemonic}
+          hideLabel="onboarding.hide"
+          revealLabel="onboarding.reveal"
+          style={{ marginTop: 12 }}
+        />
 
         <Callout>
           <Icon name="shield" size={16} color="var(--accent)" />
@@ -258,35 +239,14 @@ export function Onboarding({ desk, hasVault, unlockMethod, onEnter, onUnlock, on
         <h2 style={hStyle(desk)}>{t('onboarding.confirm.title')}</h2>
         <p style={pStyle}>{t('onboarding.confirm.body')}</p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 20 }}>
-          {quizIdx.map((i) => (
-            <div key={i}>
-              <div style={{ fontFamily: 'var(--ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 8 }}>
-                {t('onboarding.confirm.word', { num: i + 1 })}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-                {options(i).map((opt) => {
-                  const sel = picks[i] === opt;
-                  return (
-                    <button
-                      key={opt}
-                      onClick={() => setPicks((p) => ({ ...p, [i]: opt }))}
-                      style={{
-                        fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 500, padding: '11px 12px', borderRadius: 11, cursor: 'pointer',
-                        textAlign: 'start', transition: 'all .12s',
-                        background: sel ? 'var(--accent-soft)' : 'var(--surface)',
-                        border: `1.5px solid ${sel ? 'var(--accent)' : 'var(--line)'}`,
-                        color: sel ? 'var(--accent-ink)' : 'var(--ink)',
-                      }}
-                    >
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
+        <PhraseQuiz
+          words={words}
+          quizIdx={quizIdx}
+          picks={picks}
+          onPick={(i, opt) => setPicks((p) => ({ ...p, [i]: opt }))}
+          wordLabel="onboarding.confirm.word"
+          style={{ marginTop: 20 }}
+        />
 
         <div style={{ flex: 1 }} />
         <Btn
