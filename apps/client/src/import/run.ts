@@ -171,8 +171,7 @@ function parseDate(iso: string | undefined): number {
   return Number.isNaN(t) ? Date.now() : t;
 }
 
-// A short, monotonic-enough suffix for generated journal ids. Day One imports run
-// in the browser where Date.now() is available (unlike the workflow sandbox).
+// A short, monotonic-enough suffix for generated journal ids.
 function idStamp(): string {
   return Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
 }

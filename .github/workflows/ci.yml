@@ -79,6 +79,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: typecheck + build
         run: pnpm --filter client build
+      # The client regression suite (jsdom + pure-logic repro scripts, incl. the
+      # security-critical ones: record-binding, seedlock-methods, link-safety,
+      # ollama-url). The relay-dependent roundtrip scripts and film-e2e.mjs
+      # (real Chrome) stay manual — see docs/CONTRIBUTING.md.
+      - name: regression checks
+        run: pnpm --filter client check
 
   # Publish images for the head of main — the admin dashboard's "Switch to
   # main" development channel. Gated on every other job being green, so a

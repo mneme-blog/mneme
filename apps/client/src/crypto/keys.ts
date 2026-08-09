@@ -16,7 +16,7 @@ const KEY_LEN = 32;
 export interface Identity {
   /** XChaCha20-Poly1305 key for entry bodies. */
   dataKey: Uint8Array;
-  /** Reserved for chunked media (not used yet). */
+  /** XChaCha20-Poly1305 key for chunked media (crypto/media.ts). */
   mediaKey: Uint8Array;
   /** Wraps the sealed AI-assistant settings (API key etc.) at rest. */
   aiKey: Uint8Array;

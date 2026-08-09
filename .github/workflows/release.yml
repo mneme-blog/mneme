@@ -31,19 +31,22 @@ permissions:
   packages: write # push the image to GHCR
 
 jobs:
-  release:
+  # Settle on one tag for the whole workflow: it becomes the ref that gets
+  # checked out, the image tag, the version compiled into the binary, and the
+  # release to create. The typed input wins; otherwise fall back to the ref the
+  # run started on, which is what the `push` trigger and the bump workflow's
+  # handoff both rely on.
+  #
+  # Guarded, because a bare dispatch with an empty box lands here as "main" —
+  # which would publish an image tagged `main` and try to create a release
+  # called `main`. Fail before anything is checked out.
+  resolve:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
-      # Settle on one tag for the whole job: it becomes the ref that gets checked
-      # out, the image tag, the version compiled into the binary, and the release
-      # to create. The typed input wins; otherwise fall back to the ref the run
-      # started on, which is what the `push` trigger and the bump workflow's
-      # handoff both rely on.
-      #
-      # Still guarded, because a bare dispatch with an empty box lands here as
-      # "main" — which would publish an image tagged `main` and try to create a
-      # release called `main`. Fail before anything is checked out.
       - name: Resolve the tag
+        id: tag
         env:
           INPUT_TAG: ${{ inputs.tag }}
         run: |
@@ -51,8 +54,75 @@ jobs:
           if ! printf '%s' "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
             echo "::error::'$TAG' is not a version tag. Type the tag (e.g. v0.3.0) into the 'tag' box when running this workflow." && exit 1
           fi
-          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Publishing **$TAG**" >> "$GITHUB_STEP_SUMMARY"
+
+  # The same gates CI runs on every PR, at the tag's ref. A release publishes
+  # images that the one-click updater then offers to every install — an
+  # untested tag must never get that far. (A tag cut from a green main commit
+  # re-runs these redundantly; that redundancy is cheap and closes the gap for
+  # tags cut from anywhere else.)
+  test:
+    needs: resolve
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: journal
+          POSTGRES_PASSWORD: journal_dev
+          POSTGRES_DB: journal
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U journal"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+      - name: server tests
+        working-directory: server
+        run: |
+          test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+          go vet ./...
+          go build ./...
+          go test ./...
+          go test -tags e2e ./e2e/...
+        env:
+          TEST_DATABASE_URL: postgres://journal:journal_dev@localhost:5432/journal?sslmode=disable
+          E2E_ALLOW_WIPE: "1" # ephemeral CI service container
+      - name: shellcheck + updater tests
+        run: |
+          shellcheck deploy/updater/mneme-updater.sh deploy/updater/install.sh deploy/prod.sh
+          ./deploy/updater/updater-test.sh
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: client build + regression checks
+        run: |
+          pnpm --filter client build
+          pnpm --filter client check
+
+  release:
+    needs: [resolve, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Export the tag
+        env:
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: echo "TAG=$TAG" >> "$GITHUB_ENV"
 
       - uses: actions/checkout@v7
         with:

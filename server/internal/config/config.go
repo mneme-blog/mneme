@@ -122,7 +122,7 @@ func (t TranscribeConfig) Summary() string {
 		quota, rate)
 }
 
-// S3Config is consumed by the (not-yet-wired) media blob coordination — §10 step 5.
+// S3Config is consumed by the media blob coordination (internal/blobs) — §10 step 5.
 type S3Config struct {
 	Endpoint  string
 	AccessKey string
