@@ -33,7 +33,7 @@ import { loadSealedSeed, storeSealedSeed, clearSealedSeed, loadAiSettingsRecord,
 import { sealAiSettings, openAiSettings, type AiSyncMeta } from '../ai/settings';
 import type { AiSettings } from '../ai/types';
 import { pushEntries, pushTemplates, pushInterviewTypes, pushJournals, pushAiSettings, pullEntries, type JournalEntry, type MediaAttachment, type TemplateRecord, type InterviewType, type AiSettingsRecord } from '../sync/engine';
-import { uploadMedia, downloadMedia } from '../sync/media';
+import { uploadMedia, downloadMedia, type MediaProgress } from '../sync/media';
 import { rotateAccount, type RotationProgress } from '../sync/rotate';
 import { newEntryId, newMediaId, newTemplateId, newRecordId } from '../sync/ids';
 import type { Journal, CoverPattern } from '../data/sample';
@@ -198,8 +198,12 @@ interface AppData {
    * upload-queue slot and delete it from the relay (queued durably if offline).
    */
   removeMedia(mediaId: string): void;
-  /** Resolve an attachment to playable bytes: local DB first, then relay download. */
-  mediaBlob(entryId: string, att: MediaAttachment): Promise<Blob | null>;
+  /**
+   * Resolve an attachment to playable bytes: local DB first, then relay download.
+   * `onProgress` fires only for the relay path (a local hit is instant), which is
+   * what lets the media cards show a transfer bar instead of a bare "Loading…".
+   */
+  mediaBlob(entryId: string, att: MediaAttachment, onProgress?: MediaProgress): Promise<Blob | null>;
   /**
    * Resolve a small thumbnail for an image attachment (the overview lists). Served
    * from the cached downscaled JPEG when present; otherwise generated once from the
@@ -1354,7 +1358,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
   // Resolve attachment bytes for playback: outbox → local DB → relay download
   // (decrypted with the media key, then cached locally for next time).
   const mediaBlob: AppData['mediaBlob'] = useCallback(
-    async (entryId, att) => {
+    async (entryId, att, onProgress) => {
       const queued = pendingMedia.current.get(att.id);
       if (queued?.data) return bytesToBlob(queued.data, att.mime);
       if (dbReady.current) {
@@ -1364,7 +1368,7 @@ export function AppDataProvider({ children }: { children: ComponentChildren }): 
       const s = session.current;
       if (!s) return null;
       try {
-        const data = await downloadMedia(relay, s.token, s.identity.mediaKey, att.id);
+        const data = await downloadMedia(relay, s.token, s.identity.mediaKey, att.id, onProgress);
         if (dbReady.current) {
           void db.putMedia({
             id: att.id,

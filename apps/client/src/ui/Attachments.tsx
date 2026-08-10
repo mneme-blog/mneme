@@ -9,6 +9,7 @@
 import type { VNode } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { JournalEntry, MediaAttachment } from '../sync/engine';
+import type { MediaProgress } from '../sync/media';
 import { useAppData } from '../state/data';
 import { t, fmtNumber } from '../i18n';
 import { Icon } from './Icon';
@@ -19,7 +20,18 @@ import { transcribeErrorMessage } from '../ai/errors';
 import { transcribe, transcriptionConfig, transcriptionDestination, type TranscribeDestination } from '../ai/transcribe';
 import { ConfirmDialog } from './ConfirmDialog';
 
-export type MediaResolver = (att: MediaAttachment) => Promise<Blob | null>;
+/**
+ * Resolve one attachment's bytes. `onProgress` is optional on purpose: it fires
+ * only while bytes come off the relay (a local hit resolves instantly), so a
+ * resolver that never calls it simply shows no bar.
+ */
+export type MediaResolver = (att: MediaAttachment, onProgress?: MediaProgress) => Promise<Blob | null>;
+
+/** Ciphertext bytes transferred so far, as reported by sync/media.ts. */
+export interface MediaLoadState {
+  loaded: number;
+  total: number;
+}
 
 export function fmtBytes(n: number): string {
   if (n < 1024) return t('media.bytes.b', { n: fmtNumber(n) });
@@ -47,11 +59,21 @@ function mediaIcon(kind: MediaAttachment['kind']): 'mic' | 'video' | 'image' | '
 // minutes, so retry quietly a few times before leaving it to the button.
 const AUTO_RETRY_DELAYS_MS = [8_000, 30_000, 90_000];
 
+// A download reports every stream chunk (tens of KB), which for a phone video is
+// hundreds of updates — coalesce to a repaint budget the eye can't outrun.
+const PROGRESS_INTERVAL_MS = 120;
+
 // Resolve an attachment to a playable object URL; `failed` flips on when the
 // bytes aren't reachable yet (e.g. recorded on another device, not uploaded).
-export function useMediaUrl(att: MediaAttachment, resolve: MediaResolver): { url: string | null; failed: boolean; retry: () => void } {
+// `progress` is non-null once bytes start arriving from the relay — the local
+// path resolves in one step and never reports, so the bar stays out of the way.
+export function useMediaUrl(
+  att: MediaAttachment,
+  resolve: MediaResolver,
+): { url: string | null; failed: boolean; retry: () => void; progress: MediaLoadState | null } {
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [progress, setProgress] = useState<MediaLoadState | null>(null);
   // Bump to retry a failed load.
   const [attempt, setAttempt] = useState(0);
   // Background retries spent on the current attachment (capped, cheap: each is
@@ -68,13 +90,24 @@ export function useMediaUrl(att: MediaAttachment, resolve: MediaResolver): { url
   useEffect(() => {
     let objectUrl: string | null = null;
     let cancelled = false;
+    let lastPaint = 0;
     setFailed(false);
+    setProgress(null);
     // Reset before resolving: the previous attachment's object URL was revoked
     // by this effect's cleanup, so keeping it in state would render a broken
     // frame until the new blob lands.
     setUrl(null);
-    void resolve(att).then((blob) => {
+    void resolve(att, (loaded, total) => {
       if (cancelled) return;
+      const now = Date.now();
+      // Always paint the first (0-byte "started") and the final update; throttle
+      // what lies between.
+      if (loaded > 0 && loaded < total && now - lastPaint < PROGRESS_INTERVAL_MS) return;
+      lastPaint = now;
+      setProgress({ loaded, total });
+    }).then((blob) => {
+      if (cancelled) return;
+      setProgress(null);
       if (!blob) {
         setFailed(true);
         return;
@@ -101,11 +134,63 @@ export function useMediaUrl(att: MediaAttachment, resolve: MediaResolver): { url
   return {
     url,
     failed,
+    progress,
     retry: () => {
       autoTries.current = 0;
       setAttempt((n) => n + 1);
     },
   };
+}
+
+/**
+ * The transfer bar under a loading media placeholder. Determinate once the relay
+ * has told us the total (the common case — media metadata precedes the first
+ * chunk); the indeterminate stripe covers the gap before that, which is the
+ * whole point of the component: a large video downloading and a video that will
+ * never arrive used to look identical.
+ */
+export function MediaLoadingBar({
+  progress,
+  dark = false,
+  showBytes = false,
+  width = 148,
+}: {
+  progress: MediaLoadState | null;
+  /** On a dark backdrop (the lightbox, a video frame) instead of a card surface. */
+  dark?: boolean;
+  /** Also spell out transferred / total — worth the room on the big cards only. */
+  showBytes?: boolean;
+  width?: number;
+}): VNode {
+  const ratio = progress && progress.total > 0 ? Math.min(1, progress.loaded / progress.total) : null;
+  const track = dark ? 'rgba(255,255,255,.2)' : 'var(--line)';
+  const fill = dark ? 'rgba(255,255,255,.85)' : 'var(--accent-ink)';
+  return (
+    <span style={{ display: 'block', width, maxWidth: '80%', flexShrink: 0 }}>
+      <span style={{ display: 'block', height: 4, borderRadius: 999, background: track, overflow: 'hidden' }}>
+        {ratio === null ? (
+          <span class="mneme-indeterminate" style={{ display: 'block', height: '100%', width: '40%', borderRadius: 999, background: fill }} />
+        ) : (
+          <span style={{ display: 'block', height: '100%', width: `${Math.round(ratio * 100)}%`, borderRadius: 999, background: fill, transition: 'width .18s linear' }} />
+        )}
+      </span>
+      {ratio !== null && (
+        <span
+          style={{
+            display: 'block',
+            marginTop: 4,
+            textAlign: 'center',
+            fontFamily: 'var(--mono)',
+            fontSize: 10.5,
+            color: dark ? 'rgba(255,255,255,.7)' : 'var(--ink-3)',
+          }}
+        >
+          {fmtNumber(ratio, { style: 'percent', maximumFractionDigits: 0 })}
+          {showBytes && progress ? ` · ${fmtBytes(progress.loaded)} / ${fmtBytes(progress.total)}` : ''}
+        </span>
+      )}
+    </span>
+  );
 }
 
 // Deleting a media item is destructive and unrecoverable (no relay-side copy the
@@ -320,7 +405,7 @@ export function MediaCard({
   /** Where transcription goes — drives the non-local per-use confirm. */
   transcribeDest?: TranscribeDestination;
 }): VNode {
-  const { url, failed, retry } = useMediaUrl(att, resolve);
+  const { url, failed, retry, progress } = useMediaUrl(att, resolve);
   const [confirming, setConfirming] = useState(false);
   const compact = att.kind === 'audio' || att.kind === 'file';
 
@@ -336,7 +421,14 @@ export function MediaCard({
   const placeholder = (
     <div style={{ height: compact ? 64 : 150, display: 'flex', flexDirection: compact ? 'row' : 'column', alignItems: 'center', justifyContent: 'center', gap: 9, color: 'var(--ink-3)' }}>
       <Icon name={mediaIcon(att.kind)} size={compact ? 18 : 22} color="var(--ink-3)" />
-      {failed ? retryBtn : <span style={{ fontFamily: 'var(--ui)', fontSize: 12.5 }}>{t('media.loading', { noun: mediaNoun(att.kind) })}</span>}
+      {failed ? (
+        retryBtn
+      ) : (
+        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, minWidth: 0 }}>
+          <span style={{ fontFamily: 'var(--ui)', fontSize: 12.5 }}>{t('media.loading', { noun: mediaNoun(att.kind) })}</span>
+          <MediaLoadingBar progress={progress} showBytes={!compact} width={compact ? 110 : 172} />
+        </span>
+      )}
     </div>
   );
 
@@ -377,7 +469,7 @@ export function MediaCard({
         ) : failed ? (
           retryBtn
         ) : (
-          <span style={{ fontFamily: 'var(--ui)', fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>{t('common.loading')}</span>
+          <MediaLoadingBar progress={progress} width={92} />
         )}
         {deleteBtn}
         {confirming && (
@@ -447,7 +539,7 @@ function GalleryTile({
   onOpen?: () => void;
   onDelete?: () => void;
 }): VNode {
-  const { url, failed, retry } = useMediaUrl(att, resolve);
+  const { url, failed, retry, progress } = useMediaUrl(att, resolve);
   const [confirming, setConfirming] = useState(false);
 
   // Reserve the right footprint before bytes arrive (and for unreachable photos).
@@ -476,7 +568,10 @@ function GalleryTile({
               {t('common.retry')}
             </button>
           ) : (
-            <span style={{ fontFamily: 'var(--ui)', fontSize: 11.5 }}>{t('common.loading')}</span>
+            <>
+              <span style={{ fontFamily: 'var(--ui)', fontSize: 11.5 }}>{t('common.loading')}</span>
+              <MediaLoadingBar progress={progress} width={96} />
+            </>
           )}
         </div>
       )}
@@ -558,7 +653,7 @@ export function AttachmentList({ entry }: { entry: JournalEntry }): VNode | null
         <MediaCard
           key={att.id}
           att={att}
-          resolve={(a) => mediaBlob(entry.id, a)}
+          resolve={(a, onProgress) => mediaBlob(entry.id, a, onProgress)}
           onDelete={() => {
             updateEntry(entry.id, { attachments: attachments.filter((a) => a.id !== att.id) });
             removeMedia(att.id);

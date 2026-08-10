@@ -163,7 +163,14 @@ Media (§10 step 5) is in for **video, audio, images, and file attachments**: vi
 `getUserMedia`+MediaRecorder in the editor (`ui/VideoCapture.tsx`, `ui/AudioCapture.tsx`, inserted via the `/` slash menu; `addMedia`
 in `state/data.tsx`), chunked XChaCha20 encryption under the media key with per-chunk AAD
 (`crypto/media.ts`), local plaintext bytes + upload outbox in the wa-sqlite `media` table (schema v2),
-background upload + lazy cross-device download (`sync/media.ts`, `state/data.tsx`). Recordings are
+background upload + lazy cross-device download (`sync/media.ts`, `state/data.tsx`). A cross-device
+download reports **transfer progress** all the way to the card: `RelayClient.downloadMediaChunk`
+reads the response as a stream (a ~1 MiB chunk is seconds of silence on a phone) and
+`downloadMedia`'s optional `onProgress` accumulates it against the relay's ciphertext total, which
+`mediaBlob` forwards to `useMediaUrl` → `MediaLoadingBar` (`ui/Attachments.tsx`, reused by the
+gallery tiles, lightbox, interview clips, and location photo). The bar is determinate once the
+metadata GET has landed and an indeterminate stripe before that — the local-DB path resolves in one
+step and reports nothing, so a card served from disk never flashes a bar. Recordings are
 **inline TipTap nodes** (`editor/media.tsx`, a block atom whose attrs carry the `MediaAttachment`
 metadata inside bodyJson — still inside the encrypted entry body, `sync/engine.ts`); deleting one
 requires an explicit confirmation and then purges the local bytes **and the relay copy**

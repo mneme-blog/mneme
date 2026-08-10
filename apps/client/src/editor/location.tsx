@@ -14,7 +14,7 @@ import { render, type VNode } from 'preact';
 import { useState } from 'preact/hooks';
 import { t, fmtNumber } from '../i18n';
 import type { MediaAttachment } from '../sync/engine';
-import { useMediaUrl, type MediaResolver } from '../ui/Attachments';
+import { useMediaUrl, MediaLoadingBar, type MediaResolver } from '../ui/Attachments';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Icon } from '../ui/Icon';
 import { haversineKm, type GeoPoint } from '../location/mercator';
@@ -93,7 +93,7 @@ function fmtDistance(km: number): string {
 
 // The travel photo under the map — lazily resolved, with a loading placeholder.
 function LocationPhoto({ att, resolve }: { att: MediaAttachment; resolve: MediaResolver }): VNode {
-  const { url, failed, retry } = useMediaUrl(att, resolve);
+  const { url, failed, retry, progress } = useMediaUrl(att, resolve);
   return (
     <div style={{ marginTop: 8, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
       {url ? (
@@ -106,7 +106,10 @@ function LocationPhoto({ att, resolve }: { att: MediaAttachment; resolve: MediaR
               {t('editorx.location.retry')}
             </button>
           ) : (
-            <span style={{ fontFamily: 'var(--ui)', fontSize: 12 }}>{t('editorx.location.loadingPhoto')}</span>
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontFamily: 'var(--ui)', fontSize: 12 }}>{t('editorx.location.loadingPhoto')}</span>
+              <MediaLoadingBar progress={progress} width={140} />
+            </span>
           )}
         </div>
       )}
