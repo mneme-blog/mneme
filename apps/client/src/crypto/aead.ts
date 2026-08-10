@@ -1,7 +1,9 @@
 // AEAD for entry bodies (CLAUDE.md §3/§6): [version:1B][nonce:24B][ct+tag],
 // XChaCha20-Poly1305 with a random 24-byte nonce. Only the client encrypts and
 // decrypts — the relay treats the whole blob as opaque bytes.
-import { xchacha20poly1305 } from '@noble/ciphers/chacha';
+// @noble/ciphers v2 dropped extensionless subpath exports — the specifier must
+// carry the `.js` (the export map has no './chacha' entry any more).
+import { xchacha20poly1305 } from '@noble/ciphers/chacha.js';
 import { randomBytes } from './bytes';
 
 const VERSION = 0x01;
