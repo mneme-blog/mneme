@@ -5,7 +5,7 @@ import type { VNode } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import type { MediaAttachment } from '../sync/engine';
 import { t } from '../i18n';
-import { useMediaUrl, fmtBytes, type MediaResolver } from './Attachments';
+import { useMediaUrl, fmtBytes, MediaLoadingBar, type MediaResolver } from './Attachments';
 import { Icon } from './Icon';
 
 // Prev/next keep their physical left/right positions and glyphs even in RTL —
@@ -98,7 +98,7 @@ export function Lightbox({
 
 // Keyed by att.id so navigation resets the per-image load state cleanly.
 function LightboxImage({ att, resolve }: { att: MediaAttachment; resolve: MediaResolver }): VNode {
-  const { url, failed, retry } = useMediaUrl(att, resolve);
+  const { url, failed, retry, progress } = useMediaUrl(att, resolve);
   // Stop clicks on the image from closing the overlay (backdrop clicks do).
   const stop = (e: MouseEvent): void => e.stopPropagation();
   const [hidden, setHidden] = useState(true); // fade in once decoded
@@ -124,7 +124,10 @@ function LightboxImage({ att, resolve }: { att: MediaAttachment; resolve: MediaR
           {t('media.retryUnavailable')}
         </button>
       ) : (
-        <span style={{ fontFamily: 'var(--ui)', fontSize: 13 }}>{t('common.loading')}</span>
+        <>
+          <span style={{ fontFamily: 'var(--ui)', fontSize: 13 }}>{t('common.loading')}</span>
+          <MediaLoadingBar progress={progress} dark width={180} />
+        </>
       )}
     </div>
   );

@@ -7,6 +7,7 @@ import { LabelField } from '../ui/LabelField';
 import { LABELS, type Journal } from '../data/sample';
 import { useAppData } from '../state/data';
 import type { JournalEntry, MediaAttachment, TemplateRecord } from '../sync/engine';
+import type { MediaProgress } from '../sync/media';
 import { useRichEditor } from '../editor/useRichEditor';
 import { insertMediaAttachment, insertImageGallery, docImages } from '../editor/media';
 import { insertLocation } from '../editor/location';
@@ -237,7 +238,7 @@ function EntryEditor({
   aiSettingsRef.current = aiSettings;
   const mediaHandlers = useMemo(
     () => ({
-      resolve: (att: MediaAttachment) => mediaBlob(entry.id, att),
+      resolve: (att: MediaAttachment, onProgress?: MediaProgress) => mediaBlob(entry.id, att, onProgress),
       onRemoved: (att: MediaAttachment) => removeMedia(att.id),
       onOpenImage: (att: MediaAttachment) => openImageRef.current(att),
       // `language` is passed only by the video-interview card, which knows the
@@ -606,7 +607,7 @@ function EntryEditor({
         <Lightbox
           items={lightbox.items}
           index={lightbox.index}
-          resolve={(att) => mediaBlob(entry.id, att)}
+          resolve={(att, onProgress) => mediaBlob(entry.id, att, onProgress)}
           onNavigate={(index) => setLightbox((cur) => (cur ? { ...cur, index } : cur))}
           onClose={() => setLightbox(null)}
         />

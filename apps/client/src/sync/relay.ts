@@ -131,12 +131,39 @@ export class RelayClient {
     return (await res.json()) as MediaMeta;
   }
 
-  async downloadMediaChunk(token: string, mediaId: string, index: number): Promise<Uint8Array> {
+  /**
+   * Download one encrypted chunk. With `onBytes` the body is read as a stream so
+   * a slow chunk reports partial arrival — a ~1 MiB chunk on a phone connection
+   * is seconds of otherwise silent waiting (sync/media.ts turns this into the
+   * loading bar). Bodyless responses (jsdom, mocked fetch) fall back to buffering.
+   */
+  async downloadMediaChunk(token: string, mediaId: string, index: number, onBytes?: (n: number) => void): Promise<Uint8Array> {
     const res = await fetch(`${this.baseUrl}/v1/media/${mediaId}/chunks/${index}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     await this.check(res);
-    return new Uint8Array(await res.arrayBuffer());
+    if (!onBytes || !res.body) {
+      const buf = new Uint8Array(await res.arrayBuffer());
+      onBytes?.(buf.length);
+      return buf;
+    }
+    const reader = res.body.getReader();
+    const parts: Uint8Array[] = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      parts.push(value);
+      total += value.length;
+      onBytes(value.length);
+    }
+    const out = new Uint8Array(total);
+    let offset = 0;
+    for (const part of parts) {
+      out.set(part, offset);
+      offset += part.length;
+    }
+    return out;
   }
 
   /**

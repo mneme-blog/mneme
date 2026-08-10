@@ -20,7 +20,7 @@ import { t, tp } from '../i18n';
 import type { MediaAttachment } from '../sync/engine';
 import { toAiError } from '../ai/types';
 import type { TranscribeDestination } from '../ai/transcribe';
-import { TranscriptStrip, useMediaUrl, type MediaResolver } from '../ui/Attachments';
+import { TranscriptStrip, useMediaUrl, MediaLoadingBar, type MediaResolver } from '../ui/Attachments';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Icon } from '../ui/Icon';
 import {
@@ -65,7 +65,7 @@ export function insertVideoInterview(editor: Editor, data: VideoInterviewData): 
 // One answer clip's player, lazily resolved. A clip recorded on another device
 // downloads on first view; until then (or on failure) the row offers a retry.
 function ClipPlayer({ att, resolve }: { att: MediaAttachment; resolve: MediaResolver }): VNode {
-  const { url, failed, retry } = useMediaUrl(att, resolve);
+  const { url, failed, retry, progress } = useMediaUrl(att, resolve);
   return (
     <div style={{ borderRadius: 10, overflow: 'hidden', background: 'var(--surface)', border: '1px solid var(--line)' }}>
       {url ? (
@@ -81,7 +81,10 @@ function ClipPlayer({ att, resolve }: { att: MediaAttachment; resolve: MediaReso
               {t('editorx.videoInterview.retry')}
             </button>
           ) : (
-            <span style={{ fontFamily: 'var(--ui)', fontSize: 12 }}>{t('editorx.videoInterview.loadingClip')}</span>
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontFamily: 'var(--ui)', fontSize: 12 }}>{t('editorx.videoInterview.loadingClip')}</span>
+              <MediaLoadingBar progress={progress} showBytes width={168} />
+            </span>
           )}
         </div>
       )}

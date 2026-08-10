@@ -242,6 +242,25 @@ input {
   animation: mneme-spin 0.8s linear infinite;
 }
 
+/* Media transfer bar (MediaLoadingBar in ui/Attachments.tsx) before the relay
+   has reported a total: a stripe sweeping the track, so "still working" and
+   "never arriving" don't look the same. Determinate fills animate their width
+   instead and need no keyframes. */
+@keyframes mneme-indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+.mneme-indeterminate {
+  animation: mneme-indeterminate 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mneme-indeterminate {
+    animation: none;
+    width: 100%;
+    opacity: 0.45;
+  }
+}
+
 /* Badge celebration card entrance (ui/BadgeCelebration.tsx): a small pop —
    scale up with a slight overshoot while fading in. */
 @keyframes mneme-badge-pop {
