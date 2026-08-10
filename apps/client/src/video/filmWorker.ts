@@ -38,7 +38,7 @@ import {
   type VideoCodec,
   type VideoSample,
 } from 'mediabunny';
-import { CARD_SECONDS, FILM_FPS, planTimeline } from './timeline';
+import { CARD_SECONDS, FILM_FPS, planTimeline, canonicalSize } from './timeline';
 import { chunkFrames, downmixToMono, fitLength, resampleLinear, silence } from './audiomix';
 import type { FromWorker, ToWorker } from './filmProtocol';
 
@@ -66,21 +66,12 @@ function checkCanceled(): void {
 }
 
 /** H.264 requires even dimensions; round down rather than up to stay in budget. */
-const even = (n: number): number => Math.max(2, Math.floor(n / 2) * 2);
 
 /**
  * The canonical frame size, from the FIRST clip's shape. 720 on the short edge:
  * high enough to look right full-screen, low enough that six 90-second clips
  * re-encode without exhausting a mid-range phone.
  */
-function canonicalSize(displayWidth: number, displayHeight: number): { width: number; height: number } {
-  const landscape = displayWidth >= displayHeight;
-  const short = 720;
-  const ratio = landscape ? displayWidth / displayHeight : displayHeight / displayWidth;
-  const long = Math.min(1280, Math.max(640, Math.round(short * ratio)));
-  return landscape ? { width: even(long), height: even(short) } : { width: even(short), height: even(long) };
-}
-
 function bitrateFor(width: number, height: number): number {
   return Math.round(Math.min(6_000_000, Math.max(1_000_000, width * height * FILM_FPS * 0.09)));
 }
@@ -110,7 +101,7 @@ async function probe(): Promise<void> {
     post({ t: 'progress', phase: 'probe', frame: i + 1, totalFrames: clips.length });
   }
   probed = { width, height, durations };
-  post({ t: 'probed', width, height, durations });
+  post({ t: 'probed', width, height });
 }
 
 // ── audio ───────────────────────────────────────────────────

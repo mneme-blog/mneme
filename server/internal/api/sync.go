@@ -60,7 +60,7 @@ func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
 			incoming += int64(len(e.Ciphertext))
 		}
 	}
-	if incoming > 0 && s.quotaExceeded(w, r.Context(), owner, incoming) {
+	if incoming > 0 && s.quotaExceeded(r.Context(), w, owner, incoming) {
 		return
 	}
 
@@ -93,7 +93,7 @@ func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
 			Deleted:    e.Deleted,
 		})
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, "push failed")
+			writeInternalError(w, r, "push failed", err)
 			return
 		}
 		switch {
@@ -134,7 +134,7 @@ func (s *Server) handlePull(w http.ResponseWriter, r *http.Request) {
 
 	entries, err := s.store.PullEntries(r.Context(), owner, req.Since, limit)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "pull failed")
+		writeInternalError(w, r, "pull failed", err)
 		return
 	}
 

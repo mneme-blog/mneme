@@ -89,6 +89,11 @@ export const prefs = {
   'prefs.vault.import': 'Import from Day One',
   'prefs.vault.delete': 'Delete vault',
 
+  'prefs.relay': 'Relay server',
+  'prefs.relay.urlLabel': 'Relay server URL',
+  'prefs.relay.invalid': 'Enter a full URL including the scheme, e.g. https://relay.example.com',
+  'prefs.relay.help': 'Points the app at a different server. A signed-in vault re-authenticates against it. Leave empty to use the default.',
+
   'prefs.info.section': 'About',
   'prefs.info.tagline': 'A private place to remember.',
   'prefs.info.version': 'Version',

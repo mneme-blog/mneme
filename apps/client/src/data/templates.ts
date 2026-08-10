@@ -147,8 +147,6 @@ const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 const BY_SLUG = new Map(BUILTIN_TEMPLATES.map((b) => [b.slug, b]));
 
 /** Slug list, for tests/tooling that need to know the built-in set. */
-export const BUILTIN_TEMPLATE_SLUGS: string[] = BUILTIN_TEMPLATES.map((b) => b.slug);
-
 /** Materialize the built-ins as pristine template records (fresh random ids),
     with their content in the current locale. */
 export function seedBuiltinTemplates(now: number): TemplateRecord[] {

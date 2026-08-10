@@ -296,6 +296,7 @@ const fr: Partial<Record<MessageKey, string>> = {
   'editorx.preview.location': 'Lieu',
   'media.noun.audio': 'enregistrement audio',
   'media.noun.video': 'enregistrement vidéo',
+  'media.noun.film': 'film',
   'media.noun.image': 'photo',
   'media.noun.file': 'fichier',
   'media.noun.recording': 'enregistrement',
@@ -629,7 +630,6 @@ const fr: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'étiquette',
   'shell.search.field.date': 'date',
   'shell.search.field.content': 'contenu',
-  'shell.photo': 'photo',
   'shell.removeLabel': 'Retirer « {name} »',
   'shell.daysAgo#one': 'il y a {count} jour',
   'shell.daysAgo#other': 'il y a {count} jours',
@@ -712,6 +712,10 @@ const fr: Partial<Record<MessageKey, string>> = {
   'prefs.vault.data': 'Données',
   'prefs.vault.import': 'Importer depuis Day One',
   'prefs.vault.delete': 'Supprimer le coffre',
+  'prefs.relay': 'Serveur relais',
+  'prefs.relay.urlLabel': 'URL du serveur relais',
+  'prefs.relay.invalid': 'Saisissez une URL complète avec le schéma, p. ex. https://relay.example.com',
+  'prefs.relay.help': "Fait pointer l'application vers un autre serveur. Un coffre connecté s'y ré-authentifie. Laissez vide pour le serveur par défaut.",
   'prefs.info.section': 'À propos',
   'prefs.info.tagline': 'Un lieu intime pour se souvenir.',
   'prefs.info.version': 'Version',
@@ -887,6 +891,10 @@ const fr: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'Enregistrez votre premier entretien vidéo.',
   'badges.memory-keeper.name': 'Gardien des souvenirs',
   'badges.memory-keeper.desc': 'Ajoutez une photo, un audio ou une vidéo à une entrée.',
+  'media.transcribe.busyFor': 'Transcription… {seconds}s',
+  'media.transcribe.busyCount': 'Transcription des réponses… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'C’est le serveur fourni avec votre déploiement, mais enregistré comme adresse absolue il compte comme serveur tiers : votre connexion n’est pas jointe et chaque requête est rejetée.',
+  'assistant.transcribe.bundledFix': 'Utiliser {path} à la place',
 };
 
 export default fr;

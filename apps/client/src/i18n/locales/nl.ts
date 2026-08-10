@@ -295,6 +295,7 @@ const nl: Partial<Record<MessageKey, string>> = {
   'editorx.preview.location': 'Locatie',
   'media.noun.audio': 'audio-opname',
   'media.noun.video': 'video-opname',
+  'media.noun.film': 'film',
   'media.noun.image': 'foto',
   'media.noun.file': 'bestand',
   'media.noun.recording': 'opname',
@@ -627,7 +628,6 @@ const nl: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'label',
   'shell.search.field.date': 'datum',
   'shell.search.field.content': 'inhoud',
-  'shell.photo': 'foto',
   'shell.removeLabel': '"{name}" verwijderen',
   'shell.daysAgo#one': '{count} dag geleden',
   'shell.daysAgo#other': '{count} dagen geleden',
@@ -710,6 +710,10 @@ const nl: Partial<Record<MessageKey, string>> = {
   'prefs.vault.data': 'Gegevens',
   'prefs.vault.import': 'Importeren uit Day One',
   'prefs.vault.delete': 'Kluis verwijderen',
+  'prefs.relay': 'Relayserver',
+  'prefs.relay.urlLabel': 'Relayserver-URL',
+  'prefs.relay.invalid': 'Voer een volledige URL met schema in, bijv. https://relay.example.com',
+  'prefs.relay.help': 'Laat de app naar een andere server wijzen. Een aangemelde kluis verifieert zich daar opnieuw. Laat leeg voor de standaard.',
   'prefs.info.section': 'Over',
   'prefs.info.tagline': 'Een privéplek om te onthouden.',
   'prefs.info.version': 'Versie',
@@ -885,6 +889,10 @@ const nl: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'Neem je eerste video-interview op.',
   'badges.memory-keeper.name': 'Herinneringsbewaarder',
   'badges.memory-keeper.desc': 'Voeg een foto, audio of video toe aan een notitie.',
+  'media.transcribe.busyFor': 'Transcriberen… {seconds}s',
+  'media.transcribe.busyCount': 'Antwoorden transcriberen… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'Dit is de meegeleverde server van je deployment, maar opgeslagen als absoluut adres telt hij als externe server: je aanmelding wordt niet meegestuurd en elk verzoek wordt geweigerd.',
+  'assistant.transcribe.bundledFix': 'Gebruik in plaats daarvan {path}',
 };
 
 export default nl;

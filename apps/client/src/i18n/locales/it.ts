@@ -296,6 +296,7 @@ const it: Partial<Record<MessageKey, string>> = {
   'editorx.preview.location': 'Luogo',
   'media.noun.audio': 'registrazione audio',
   'media.noun.video': 'registrazione video',
+  'media.noun.film': 'film',
   'media.noun.image': 'foto',
   'media.noun.file': 'file',
   'media.noun.recording': 'registrazione',
@@ -647,7 +648,6 @@ const it: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'etichetta',
   'shell.search.field.date': 'data',
   'shell.search.field.content': 'contenuto',
-  'shell.photo': 'foto',
   'shell.removeLabel': 'Rimuovi “{name}”',
   'shell.daysAgo#one': '{count} giorno fa',
   'shell.daysAgo#other': '{count} giorni fa',
@@ -730,6 +730,10 @@ const it: Partial<Record<MessageKey, string>> = {
   'prefs.vault.data': 'Dati',
   'prefs.vault.import': 'Importa da Day One',
   'prefs.vault.delete': 'Elimina caveau',
+  'prefs.relay': 'Server relay',
+  'prefs.relay.urlLabel': 'URL del server relay',
+  'prefs.relay.invalid': 'Inserisci un URL completo con lo schema, ad es. https://relay.example.com',
+  'prefs.relay.help': "Indirizza l'app a un altro server. Una cassaforte connessa vi si autentica di nuovo. Lascia vuoto per il server predefinito.",
   'prefs.info.section': 'Informazioni',
   'prefs.info.tagline': 'Un luogo privato per ricordare.',
   'prefs.info.version': 'Versione',
@@ -905,6 +909,10 @@ const it: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'Registra la tua prima intervista video.',
   'badges.memory-keeper.name': 'Custode dei ricordi',
   'badges.memory-keeper.desc': 'Aggiungi una foto, un audio o un video a una voce.',
+  'media.transcribe.busyFor': 'Trascrizione… {seconds}s',
+  'media.transcribe.busyCount': 'Trascrizione delle risposte… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'Questo è il server incluso nel tuo deployment, ma salvato come indirizzo assoluto conta come server di terze parti: il tuo accesso non viene allegato e ogni richiesta viene rifiutata.',
+  'assistant.transcribe.bundledFix': 'Usa invece {path}',
 };
 
 export default it;

@@ -22,7 +22,7 @@ import (
 
 // quotaExceeded reports whether the owner is already at or over its limit, and
 // writes the 413 if so. incoming is the size of the write being attempted.
-func (s *Server) quotaExceeded(w http.ResponseWriter, ctx context.Context, owner string, incoming int64) bool {
+func (s *Server) quotaExceeded(ctx context.Context, w http.ResponseWriter, owner string, incoming int64) bool {
 	limit := s.cfg.Quota.BytesPerOwner
 	if limit <= 0 {
 		return false

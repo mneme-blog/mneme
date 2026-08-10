@@ -82,8 +82,7 @@ func (s *Server) handleAdminUpdate(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	if req.Confirm != "update" {
-		writeError(w, http.StatusBadRequest, `confirmation required: {"confirm":"update"}`)
+	if !confirmed(w, req.Confirm, "update") {
 		return
 	}
 	if !deploy.ValidTag(req.Tag) {
@@ -116,8 +115,7 @@ func (s *Server) handleAdminRollback(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	if req.Confirm != "rollback" {
-		writeError(w, http.StatusBadRequest, `confirmation required: {"confirm":"rollback"}`)
+	if !confirmed(w, req.Confirm, "rollback") {
 		return
 	}
 	status := s.spool.Status(0)

@@ -59,7 +59,6 @@ export const shell = {
   'shell.search.field.content': 'content',
 
   // ── Shared primitives ──
-  'shell.photo': 'photo',
   'shell.removeLabel': 'Remove "{name}"',
 
   // ── iOS PWA caveat notice (ui/IOSNotice.tsx) — iOS only ──

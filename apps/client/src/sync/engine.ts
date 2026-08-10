@@ -214,8 +214,59 @@ export function decryptRecord(dataKey: Uint8Array, recordId: string, blob: Uint8
   }
 }
 
-export function encryptEntry(dataKey: Uint8Array, e: JournalEntry): Uint8Array {
-  const body: EntryBody = {
+// ── the per-kind codec table ────────────────────────────────────────────────
+//
+// One codec per record kind: how a record maps onto the wire (encode → the
+// encrypted body; decode → the record from a pulled body). Encode and decode
+// live side by side ON PURPOSE — they used to be five hand-written pusher
+// functions and a mirror-image pull router 200 lines apart, which is exactly
+// how a field gets added to one side and silently stripped by the other on the
+// next LWW round-trip. The AssertNever checks below turn that field loss into
+// a compile error.
+
+interface Codec<R, B extends RecordBody> {
+  /** The cleartext oplog id this record is stored under (throws if absent). */
+  wireId(rec: R): string;
+  deleted(rec: R): boolean;
+  /** Project the record into its encrypted wire body. */
+  encode(rec: R): B;
+  /** Rebuild the record from a pulled body (+ the cleartext id/tombstone flag). */
+  decode(wireId: string, body: B, deleted: boolean): R;
+}
+
+// Compile-time completeness guard: the encrypted body must carry every record
+// field except the ones deliberately excluded (cleartext wire fields and
+// local-only flags), and no field the record doesn't have. Add a field to a
+// record type without adding it to its body — or vice versa — and the matching
+// AssertNever below stops compiling. This is the guard against the silent
+// LWW field loss CLAUDE.md could previously only warn about in prose.
+type AssertNever<T extends never> = T;
+
+type _EntryFieldsAllCarried = AssertNever<Exclude<keyof Omit<JournalEntry, 'id' | 'deleted'>, keyof EntryBody>>;
+type _EntryBodyNoOrphans = AssertNever<Exclude<keyof Omit<EntryBody, 'kind'>, keyof JournalEntry>>;
+type _TemplateFieldsAllCarried = AssertNever<Exclude<keyof Omit<TemplateRecord, 'id' | 'deleted' | 'pristine'>, keyof TemplateBody>>;
+type _TemplateBodyNoOrphans = AssertNever<Exclude<keyof Omit<TemplateBody, 'kind'>, keyof TemplateRecord>>;
+type _InterviewFieldsAllCarried = AssertNever<Exclude<keyof Omit<InterviewType, 'id' | 'deleted' | 'pristine'>, keyof InterviewTypeBody>>;
+type _InterviewBodyNoOrphans = AssertNever<Exclude<keyof Omit<InterviewTypeBody, 'kind'>, keyof InterviewType>>;
+type _JournalFieldsAllCarried = AssertNever<Exclude<keyof Omit<JournalRecord, 'id' | 'recordId' | 'deleted' | 'pristine'>, keyof JournalBody>>;
+type _JournalBodyNoOrphans = AssertNever<Exclude<keyof Omit<JournalBody, 'kind' | 'journalId'>, keyof JournalRecord>>;
+// (AiSettingsBody is checked structurally by its codec: `settings` is the whole
+// object, so there is no field-by-field projection to drift.)
+export type _CodecCompletenessChecks = [
+  _EntryFieldsAllCarried,
+  _EntryBodyNoOrphans,
+  _TemplateFieldsAllCarried,
+  _TemplateBodyNoOrphans,
+  _InterviewFieldsAllCarried,
+  _InterviewBodyNoOrphans,
+  _JournalFieldsAllCarried,
+  _JournalBodyNoOrphans,
+];
+
+const entryCodec: Codec<JournalEntry, EntryBody> = {
+  wireId: (e) => e.id,
+  deleted: (e) => e.deleted ?? false,
+  encode: (e) => ({
     journalId: e.journalId,
     title: e.title,
     bodyText: e.bodyText,
@@ -224,17 +275,133 @@ export function encryptEntry(dataKey: Uint8Array, e: JournalEntry): Uint8Array {
     attachments: e.attachments,
     createdAt: e.createdAt,
     updatedAt: e.updatedAt,
+  }),
+  decode: (wireId, body, deleted) => ({
+    id: wireId,
+    journalId: body.journalId,
+    title: body.title,
+    bodyText: body.bodyText,
+    bodyJson: body.bodyJson,
+    labels: body.labels ?? [],
+    attachments: body.attachments,
+    createdAt: body.createdAt,
+    updatedAt: body.updatedAt,
+    deleted,
+  }),
+};
+
+const templateCodec: Codec<TemplateRecord, TemplateBody> = {
+  wireId: (t) => t.id,
+  deleted: (t) => t.deleted ?? false,
+  encode: (t) => ({
+    kind: 'template',
+    name: t.name,
+    bodyText: t.bodyText,
+    bodyJson: t.bodyJson,
+    builtin: t.builtin,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+  }),
+  decode: (wireId, body, deleted) => ({
+    id: wireId,
+    name: body.name,
+    bodyText: body.bodyText,
+    bodyJson: body.bodyJson,
+    builtin: body.builtin,
+    createdAt: body.createdAt,
+    updatedAt: body.updatedAt,
+    deleted,
+  }),
+};
+
+const interviewTypeCodec: Codec<InterviewType, InterviewTypeBody> = {
+  wireId: (t) => t.id,
+  deleted: (t) => t.deleted ?? false,
+  encode: (t) => ({
+    kind: 'interviewType',
+    name: t.name,
+    intro: t.intro,
+    prompt: t.prompt,
+    builtin: t.builtin,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+  }),
+  decode: (wireId, body, deleted) => ({
+    id: wireId,
+    name: body.name,
+    intro: body.intro,
+    prompt: body.prompt,
+    builtin: body.builtin,
+    createdAt: body.createdAt,
+    updatedAt: body.updatedAt,
+    deleted,
+  }),
+};
+
+const journalCodec: Codec<JournalRecord, JournalBody> = {
+  wireId: (j) => {
+    if (!j.recordId) throw new Error('journal record has no wire id');
+    return j.recordId;
+  },
+  deleted: (j) => j.deleted ?? false,
+  encode: (j) => ({
+    kind: 'journal',
+    journalId: j.id, // the leaky id stays inside the ciphertext (§3)
+    name: j.name,
+    subtitle: j.subtitle,
+    color: j.color,
+    cover: j.cover,
+    createdAt: j.createdAt,
+    updatedAt: j.updatedAt,
+  }),
+  decode: (wireId, body, deleted) => ({
+    id: body.journalId,
+    recordId: wireId,
+    name: body.name,
+    subtitle: body.subtitle,
+    color: body.color,
+    cover: body.cover,
+    createdAt: body.createdAt,
+    updatedAt: body.updatedAt,
+    deleted,
+  }),
+};
+
+const aiSettingsCodec: Codec<AiSettingsRecord, AiSettingsBody> = {
+  wireId: (r) => r.recordId,
+  deleted: (r) => r.deleted ?? r.settings === null,
+  encode: (r) => ({
+    kind: 'aiSettings',
+    settings: r.settings ?? undefined,
+    updatedAt: r.updatedAt,
+  }),
+  decode: (wireId, body, deleted) => ({
+    recordId: wireId,
+    settings: deleted ? null : (body.settings ?? null),
+    updatedAt: body.updatedAt,
+    deleted,
+  }),
+};
+
+function toPush<R, B extends RecordBody>(codec: Codec<R, B>, dataKey: Uint8Array, rec: R): PushEntry {
+  const id = codec.wireId(rec);
+  const body = codec.encode(rec);
+  return {
+    entry_id: id,
+    // Every kind uses updatedAt as its clock; read it from the body so the
+    // clock can never disagree with what was encrypted.
+    lww_clock: body.updatedAt,
+    ciphertext: toBase64(encryptRecord(dataKey, id, body)),
+    deleted: codec.deleted(rec),
   };
-  return encryptRecord(dataKey, e.id, body);
+}
+
+export function encryptEntry(dataKey: Uint8Array, e: JournalEntry): Uint8Array {
+  return encryptRecord(dataKey, e.id, entryCodec.encode(e));
 }
 
 export function toPushEntry(dataKey: Uint8Array, e: JournalEntry): PushEntry {
-  return {
-    entry_id: e.id,
-    lww_clock: e.updatedAt,
-    ciphertext: toBase64(encryptEntry(dataKey, e)),
-    deleted: e.deleted ?? false,
-  };
+  return toPush(entryCodec, dataKey, e);
 }
 
 /**
@@ -279,25 +446,11 @@ export async function pushEntries(
   entries: JournalEntry[],
 ): Promise<Set<string>> {
   if (entries.length === 0) return new Set();
-  return pushInChunks(relay, token, entries.map((e) => toPushEntry(dataKey, e)));
+  return pushInChunks(relay, token, entries.map((e) => toPush(entryCodec, dataKey, e)));
 }
 
 export function toPushTemplate(dataKey: Uint8Array, t: TemplateRecord): PushEntry {
-  const body: TemplateBody = {
-    kind: 'template',
-    name: t.name,
-    bodyText: t.bodyText,
-    bodyJson: t.bodyJson,
-    builtin: t.builtin,
-    createdAt: t.createdAt,
-    updatedAt: t.updatedAt,
-  };
-  return {
-    entry_id: t.id,
-    lww_clock: t.updatedAt,
-    ciphertext: toBase64(encryptRecord(dataKey, t.id, body)),
-    deleted: t.deleted ?? false,
-  };
+  return toPush(templateCodec, dataKey, t);
 }
 
 /** Push templates through the same oplog; returns the acknowledged template ids (see pushEntries). */
@@ -308,25 +461,11 @@ export async function pushTemplates(
   templates: TemplateRecord[],
 ): Promise<Set<string>> {
   if (templates.length === 0) return new Set();
-  return pushInChunks(relay, token, templates.map((t) => toPushTemplate(dataKey, t)));
+  return pushInChunks(relay, token, templates.map((t) => toPush(templateCodec, dataKey, t)));
 }
 
 export function toPushInterviewType(dataKey: Uint8Array, t: InterviewType): PushEntry {
-  const body: InterviewTypeBody = {
-    kind: 'interviewType',
-    name: t.name,
-    intro: t.intro,
-    prompt: t.prompt,
-    builtin: t.builtin,
-    createdAt: t.createdAt,
-    updatedAt: t.updatedAt,
-  };
-  return {
-    entry_id: t.id,
-    lww_clock: t.updatedAt,
-    ciphertext: toBase64(encryptRecord(dataKey, t.id, body)),
-    deleted: t.deleted ?? false,
-  };
+  return toPush(interviewTypeCodec, dataKey, t);
 }
 
 /** Push interview types through the same oplog; returns the acknowledged ids (see pushEntries). */
@@ -337,27 +476,11 @@ export async function pushInterviewTypes(
   types: InterviewType[],
 ): Promise<Set<string>> {
   if (types.length === 0) return new Set();
-  return pushInChunks(relay, token, types.map((t) => toPushInterviewType(dataKey, t)));
+  return pushInChunks(relay, token, types.map((t) => toPush(interviewTypeCodec, dataKey, t)));
 }
 
 export function toPushJournal(dataKey: Uint8Array, j: JournalRecord): PushEntry {
-  if (!j.recordId) throw new Error('journal record has no wire id');
-  const body: JournalBody = {
-    kind: 'journal',
-    journalId: j.id,
-    name: j.name,
-    subtitle: j.subtitle,
-    color: j.color,
-    cover: j.cover,
-    createdAt: j.createdAt,
-    updatedAt: j.updatedAt,
-  };
-  return {
-    entry_id: j.recordId,
-    lww_clock: j.updatedAt,
-    ciphertext: toBase64(encryptRecord(dataKey, j.recordId, body)),
-    deleted: j.deleted ?? false,
-  };
+  return toPush(journalCodec, dataKey, j);
 }
 
 /** Push journals through the same oplog; returns the acknowledged RECORD ids, not journal ids (see pushEntries). */
@@ -368,32 +491,26 @@ export async function pushJournals(
   journals: JournalRecord[],
 ): Promise<Set<string>> {
   if (journals.length === 0) return new Set();
-  return pushInChunks(relay, token, journals.map((j) => toPushJournal(dataKey, j)));
+  return pushInChunks(relay, token, journals.map((j) => toPush(journalCodec, dataKey, j)));
 }
 
 export function toPushAiSettings(dataKey: Uint8Array, rec: AiSettingsRecord): PushEntry {
-  const body: AiSettingsBody = {
-    kind: 'aiSettings',
-    settings: rec.settings ?? undefined,
-    updatedAt: rec.updatedAt,
-  };
-  return {
-    entry_id: rec.recordId,
-    lww_clock: rec.updatedAt,
-    ciphertext: toBase64(encryptRecord(dataKey, rec.recordId, body)),
-    deleted: rec.deleted ?? rec.settings === null,
-  };
+  return toPush(aiSettingsCodec, dataKey, rec);
 }
 
-/** Push the AI-settings singleton; returns true when the relay accepted it. */
+/**
+ * Push the AI-settings singleton. Like the sibling pushers, any per-record
+ * answer settles the record — applied, or rejected because the relay already
+ * holds this clock or newer (the next pull brings the newer copy here). The
+ * caller retires the queued record either way, so there is nothing to return.
+ */
 export async function pushAiSettings(
   relay: RelayClient,
   token: string,
   dataKey: Uint8Array,
   rec: AiSettingsRecord,
-): Promise<boolean> {
-  const resp = await relay.push(token, [toPushAiSettings(dataKey, rec)]);
-  return resp.results.some((r) => r.applied && r.entry_id === rec.recordId);
+): Promise<void> {
+  await relay.push(token, [toPushAiSettings(dataKey, rec)]);
 }
 
 export interface PullResult {
@@ -434,60 +551,19 @@ export async function pullEntries(
       console.warn(`sync: skipping record ${item.entry_id} — it did not decrypt`);
       continue;
     }
+    // Route by the kind inside the ciphertext to the codec that wrote it —
+    // pre-template blobs carry no kind and decode as entries, the original
+    // wire shape.
     if (body.kind === 'template') {
-      templates.push({
-        id: item.entry_id,
-        name: body.name,
-        bodyText: body.bodyText,
-        bodyJson: body.bodyJson,
-        builtin: body.builtin,
-        createdAt: body.createdAt,
-        updatedAt: body.updatedAt,
-        deleted: item.deleted,
-      });
+      templates.push(templateCodec.decode(item.entry_id, body, item.deleted));
     } else if (body.kind === 'interviewType') {
-      interviewTypes.push({
-        id: item.entry_id,
-        name: body.name,
-        intro: body.intro,
-        prompt: body.prompt,
-        builtin: body.builtin,
-        createdAt: body.createdAt,
-        updatedAt: body.updatedAt,
-        deleted: item.deleted,
-      });
+      interviewTypes.push(interviewTypeCodec.decode(item.entry_id, body, item.deleted));
     } else if (body.kind === 'journal') {
-      journals.push({
-        id: body.journalId,
-        recordId: item.entry_id,
-        name: body.name,
-        subtitle: body.subtitle,
-        color: body.color,
-        cover: body.cover,
-        createdAt: body.createdAt,
-        updatedAt: body.updatedAt,
-        deleted: item.deleted,
-      });
+      journals.push(journalCodec.decode(item.entry_id, body, item.deleted));
     } else if (body.kind === 'aiSettings') {
-      aiSettings.push({
-        recordId: item.entry_id,
-        settings: item.deleted ? null : (body.settings ?? null),
-        updatedAt: body.updatedAt,
-        deleted: item.deleted,
-      });
+      aiSettings.push(aiSettingsCodec.decode(item.entry_id, body, item.deleted));
     } else {
-      entries.push({
-        id: item.entry_id,
-        journalId: body.journalId,
-        title: body.title,
-        bodyText: body.bodyText,
-        bodyJson: body.bodyJson,
-        labels: body.labels ?? [],
-        attachments: body.attachments,
-        createdAt: body.createdAt,
-        updatedAt: body.updatedAt,
-        deleted: item.deleted,
-      });
+      entries.push(entryCodec.decode(item.entry_id, body, item.deleted));
     }
   }
   return { entries, templates, interviewTypes, journals, aiSettings, cursor: resp.cursor, more: resp.more };

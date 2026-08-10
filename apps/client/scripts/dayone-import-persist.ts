@@ -49,14 +49,14 @@ async function makeWorker() {
   async function exec(sql: string, params?: unknown[]): Promise<unknown[][]> {
     const rows: unknown[][] = [];
     for await (const stmt of api.statements(db, sql)) {
-      if (params && params.length) api.bind_collection(stmt, params as SQLite.SQLiteCompatibleType[]);
+      if (params && params.length) api.bind_collection(stmt, params as Parameters<typeof api.bind_collection>[1]);
       while ((await api.step(stmt)) === SQLite.SQLITE_ROW) rows.push(api.row(stmt));
     }
     return rows;
   }
   // mirrors worker.ts handle()
   async function handle(req: Req): Promise<unknown[][]> {
-    if (req.kind === 'run' || req.kind === 'query') return exec(req.sql, req.params);
+    if (req.kind !== 'batch') return exec(req.sql, req.params);
     await exec('BEGIN');
     try {
       for (const s of req.statements) await exec(s.sql, s.params);
@@ -176,7 +176,7 @@ const api: ImportApi = {
     putLocal(next);
     markSynced(next);
   },
-  async addMedia(entryId, kind, blob) {
+  async addMedia(_entryId, kind, blob) {
     const att: MediaAttachment = { id: `m${++seq}`, kind, mime: blob.type, bytes: (await blob.arrayBuffer()).byteLength, createdAt: 0 };
     return att;
   },

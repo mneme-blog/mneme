@@ -29,6 +29,7 @@ import { InterviewTypesSheet } from './ui/InterviewTypes';
 import { VideoInterviewSheet } from './ui/VideoInterview';
 import { ComposeChooser } from './ui/ComposeChooser';
 import { BadgeCelebration } from './ui/BadgeCelebration';
+import { Z } from './ui/Sheet';
 import { useBadges } from './hooks/useBadges';
 import type { InterviewType } from './sync/engine';
 import { t } from './i18n';
@@ -207,7 +208,7 @@ function MobileNav({ flow, setFlow, onCompose, onSettings, onSearch }: {
     </button>
   );
   return (
-    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 40, paddingBottom: 22, paddingTop: 8, display: 'flex', alignItems: 'center', background: 'var(--surface-glass)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderTop: '1px solid var(--line)' }}>
+    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: Z.nav, paddingBottom: 22, paddingTop: 8, display: 'flex', alignItems: 'center', background: 'var(--surface-glass)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderTop: '1px solid var(--line)' }}>
       {/* Sync progress rides the top edge of the bar — self-hides when fully synced. */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 0 }}><SyncProgressBar flush /></div>
       {item(flow === 'journals', 'books', t('shell.nav.journals'), () => setFlow('journals'))}
@@ -230,7 +231,7 @@ export function App(): VNode {
   // Gamification badges: derived from the decrypted entries; celebrates one
   // newly earned badge at a time (state/badges.ts, quiet catch-up on first run).
   const badges = useBadges();
-  const [flow, setFlowRaw] = useState<Flow>('journals');
+  const [flow, setFlow] = useState<Flow>('journals');
   const [modal, setModal] = useState(false);
   const [rotateOpen, setRotateOpen] = useState(false);
   const [deleteVaultOpen, setDeleteVaultOpen] = useState(false);
@@ -261,8 +262,11 @@ export function App(): VNode {
   // Where the mobile editor's back button returns to (the flow it was entered from).
   const [editorReturn, setEditorReturn] = useState<Flow>('journals');
 
-  // ⌘/Ctrl+K opens search from anywhere (once unlocked).
+  // ⌘/Ctrl+K opens search from anywhere — once unlocked. Not registered while
+  // locked: a press on the lock screen would set searchOpen and pop the palette
+  // over the app the moment the vault unlocks.
   useEffect(() => {
+    if (status === 'locked') return;
     const onKey = (ev: KeyboardEvent): void => {
       if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'k') {
         ev.preventDefault();
@@ -271,7 +275,7 @@ export function App(): VNode {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [status]);
 
   // App never unmounts across a lock — the locked branch is an early return, so
   // every open sheet/flow would otherwise survive into the next unlock (e.g.
@@ -280,7 +284,7 @@ export function App(): VNode {
   // each unlock — same vault or a brand-new one — starts on a clean slate.
   useEffect(() => {
     if (status !== 'locked') return;
-    setFlowRaw('journals');
+    setFlow('journals');
     setModal(false);
     setRotateOpen(false);
     setDeleteVaultOpen(false);
@@ -325,8 +329,6 @@ export function App(): VNode {
       />
     );
   }
-
-  const setFlow = (f: Flow) => setFlowRaw(f);
 
   // Open an existing entry in the editor, remembering which flow to return to.
   const openEntry = (id: string) => {
@@ -458,28 +460,73 @@ export function App(): VNode {
     if (template) newEntryFromTemplate(template, j.id);
   };
 
+  // ONE list of the app-level sheets, rendered by both the desktop and the
+  // mobile branch below. These were two hand-maintained copies; forgetting a
+  // sheet in one produced a silent desktop/mobile feature mismatch. The few
+  // genuine per-platform differences are explicit `desk ?` decisions here.
+  const appSheets = (desk: boolean): VNode => (
+    <>
+      {modal && <NewJournalSheet desk={desk} templates={templates.filter((t) => !t.deleted)} onClose={() => setModal(false)} onCreate={onCreateJournal} />}
+      {prefsOpen && (
+        <PreferencesSheet
+          desk={desk}
+          theme={theme}
+          onClose={() => setPrefsOpen(false)}
+          ownerId={ownerId}
+          status={status}
+          onLock={lock}
+          onRotate={() => setRotateOpen(true)}
+          onDeviceUnlock={() => setDeviceUnlockOpen(true)}
+          onImport={() => setImportOpen(true)}
+          onDeleteVault={() => setDeleteVaultOpen(true)}
+          onAiSettings={() => setAiSettingsOpen(true)}
+          // Mobile-only rows — the desktop sidebar hosts these entry points.
+          onTemplates={desk ? undefined : () => setTemplatesOpen(true)}
+          onAsk={desk ? undefined : aiSettings?.enabled ? () => setAskOpen(true) : null}
+          onInterview={desk ? undefined : aiSettings?.enabled ? () => setInterviewOpen(true) : null}
+          onInterviewTypes={aiSettings?.enabled ? () => setInterviewTypesOpen(true) : null}
+        />
+      )}
+      {templatesOpen && <TemplatesSheet desk={desk} onClose={() => setTemplatesOpen(false)} onUse={(t) => { setTemplatesOpen(false); newEntryFromTemplate(t); }} />}
+      {rotateOpen && <RotatePhraseSheet desk={desk} onClose={() => setRotateOpen(false)} rotate={rotatePhrase} />}
+      {deleteVaultOpen && <DeleteVaultSheet desk={desk} onClose={() => setDeleteVaultOpen(false)} deleteVault={deleteVault} />}
+      {deviceUnlockOpen && <DeviceUnlockSheet desk={desk} onClose={() => setDeviceUnlockOpen(false)} method={vaultMethod} apply={setDeviceUnlock} />}
+      {importOpen && <ImportDayOneSheet desk={desk} onClose={() => setImportOpen(false)} />}
+      {aiSettingsOpen && <AiSettingsSheet desk={desk} onClose={() => setAiSettingsOpen(false)} />}
+      {askOpen && <AskJournalSheet desk={desk} onClose={() => setAskOpen(false)} />}
+      {interviewOpen && (
+        <GuidedInterviewSheet
+          desk={desk}
+          // interviewStart is only ever set by the mobile compose chooser; on
+          // desktop it is null and these extra props are no-ops.
+          onClose={() => { setInterviewOpen(false); setInterviewStart(null); }}
+          onOpenEntry={openEntry}
+          onManageTypes={() => setInterviewTypesOpen(true)}
+          initial={interviewStart?.start}
+          journalId={interviewStart?.journalId}
+          onVideo={(it) => setVideoInterview({ start: it, journalId: interviewStart?.journalId })}
+        />
+      )}
+      {videoInterview && <VideoInterviewSheet desk={desk} onClose={() => setVideoInterview(null)} onOpenEntry={openEntry} onManageTypes={() => setInterviewTypesOpen(true)} initial={videoInterview.start} journalId={videoInterview.journalId} />}
+      {interviewTypesOpen && <InterviewTypesSheet desk={desk} onClose={() => setInterviewTypesOpen(false)} />}
+      {searchSheet}
+      {/* The journal edit/delete sheets were desktop-only render sites before
+          this list existed — mobile could SET editJournalId (the drill-in's
+          edit button) but no sheet ever appeared. Exactly the silent
+          desktop/mobile mismatch a single list prevents. */}
+      {deleteJournalSheet}
+      {editJournalSheet}
+      {badges.celebration && <BadgeCelebration id={badges.celebration} onDismiss={badges.dismissCelebration} />}
+    </>
+  );
+
   if (desk) {
     return (
       <div style={{ height: '100%', display: 'flex', background: 'var(--paper)', position: 'relative' }}>
         <Sidebar flow={flow} setFlow={setFlow} journals={journals} activeJournalId={activeJournalId} onNew={() => newEntry(activeJournalId ?? undefined)} onOpenJournal={openJournal} status={status} ownerId={ownerId} onTemplates={() => setTemplatesOpen(true)} onSearch={() => setSearchOpen(true)} onPreferences={() => setPrefsOpen(true)} onAsk={aiSettings?.enabled ? () => setAskOpen(true) : null} onInterview={aiSettings?.enabled ? () => setInterviewOpen(true) : null} />
         <div style={{ flex: 1, minWidth: 0 }}>{screen}</div>
         {/* Non-modal companions: flex siblings, so the app stays usable beside them. */}
-        {askOpen && <AskJournalSheet desk onClose={() => setAskOpen(false)} />}
-        {interviewOpen && <GuidedInterviewSheet desk onClose={() => setInterviewOpen(false)} onOpenEntry={openEntry} onManageTypes={() => setInterviewTypesOpen(true)} onVideo={(it) => setVideoInterview({ start: it })} />}
-        {videoInterview && <VideoInterviewSheet desk onClose={() => setVideoInterview(null)} onOpenEntry={openEntry} onManageTypes={() => setInterviewTypesOpen(true)} initial={videoInterview.start} journalId={videoInterview.journalId} />}
-        {searchSheet}
-        {deleteJournalSheet}
-        {editJournalSheet}
-        {prefsOpen && <PreferencesSheet desk theme={theme} onClose={() => setPrefsOpen(false)} ownerId={ownerId} status={status} onLock={lock} onRotate={() => setRotateOpen(true)} onDeviceUnlock={() => setDeviceUnlockOpen(true)} onImport={() => setImportOpen(true)} onDeleteVault={() => setDeleteVaultOpen(true)} onAiSettings={() => setAiSettingsOpen(true)} onInterviewTypes={aiSettings?.enabled ? () => setInterviewTypesOpen(true) : null} />}
-        {modal && <NewJournalSheet desk templates={templates.filter((t) => !t.deleted)} onClose={() => setModal(false)} onCreate={onCreateJournal} />}
-        {templatesOpen && <TemplatesSheet desk onClose={() => setTemplatesOpen(false)} onUse={(t) => { setTemplatesOpen(false); newEntryFromTemplate(t); }} />}
-        {rotateOpen && <RotatePhraseSheet desk onClose={() => setRotateOpen(false)} rotate={rotatePhrase} />}
-        {deleteVaultOpen && <DeleteVaultSheet desk onClose={() => setDeleteVaultOpen(false)} deleteVault={deleteVault} />}
-        {deviceUnlockOpen && <DeviceUnlockSheet desk onClose={() => setDeviceUnlockOpen(false)} method={vaultMethod} apply={setDeviceUnlock} />}
-        {importOpen && <ImportDayOneSheet desk onClose={() => setImportOpen(false)} />}
-        {aiSettingsOpen && <AiSettingsSheet desk onClose={() => setAiSettingsOpen(false)} />}
-        {interviewTypesOpen && <InterviewTypesSheet desk onClose={() => setInterviewTypesOpen(false)} />}
-        {badges.celebration && <BadgeCelebration id={badges.celebration} onDismiss={badges.dismissCelebration} />}
+        {appSheets(true)}
       </div>
     );
   }
@@ -505,21 +552,7 @@ export function App(): VNode {
           onTemplate={(tpl) => { setComposeOpen(false); newEntryFromTemplate(tpl, flow === 'journal' ? openJournalObj?.id : undefined); }}
         />
       )}
-      {searchSheet}
-      {deleteJournalSheet}
-      {modal && <NewJournalSheet desk={false} templates={templates.filter((t) => !t.deleted)} onClose={() => setModal(false)} onCreate={onCreateJournal} />}
-      {prefsOpen && <PreferencesSheet desk={false} theme={theme} onClose={() => setPrefsOpen(false)} ownerId={ownerId} status={status} onLock={lock} onRotate={() => setRotateOpen(true)} onDeviceUnlock={() => setDeviceUnlockOpen(true)} onImport={() => setImportOpen(true)} onDeleteVault={() => setDeleteVaultOpen(true)} onAiSettings={() => setAiSettingsOpen(true)} onTemplates={() => setTemplatesOpen(true)} onAsk={aiSettings?.enabled ? () => setAskOpen(true) : null} onInterview={aiSettings?.enabled ? () => setInterviewOpen(true) : null} onInterviewTypes={aiSettings?.enabled ? () => setInterviewTypesOpen(true) : null} />}
-      {templatesOpen && <TemplatesSheet desk={false} onClose={() => setTemplatesOpen(false)} onUse={(t) => { setTemplatesOpen(false); newEntryFromTemplate(t); }} />}
-      {rotateOpen && <RotatePhraseSheet desk={false} onClose={() => setRotateOpen(false)} rotate={rotatePhrase} />}
-      {deleteVaultOpen && <DeleteVaultSheet desk={false} onClose={() => setDeleteVaultOpen(false)} deleteVault={deleteVault} />}
-      {deviceUnlockOpen && <DeviceUnlockSheet desk={false} onClose={() => setDeviceUnlockOpen(false)} method={vaultMethod} apply={setDeviceUnlock} />}
-      {importOpen && <ImportDayOneSheet desk={false} onClose={() => setImportOpen(false)} />}
-      {aiSettingsOpen && <AiSettingsSheet desk={false} onClose={() => setAiSettingsOpen(false)} />}
-      {askOpen && <AskJournalSheet desk={false} onClose={() => setAskOpen(false)} />}
-      {interviewOpen && <GuidedInterviewSheet desk={false} onClose={() => { setInterviewOpen(false); setInterviewStart(null); }} onOpenEntry={openEntry} onManageTypes={() => setInterviewTypesOpen(true)} initial={interviewStart?.start} journalId={interviewStart?.journalId} onVideo={(it) => setVideoInterview({ start: it, journalId: interviewStart?.journalId })} />}
-      {videoInterview && <VideoInterviewSheet desk={false} onClose={() => setVideoInterview(null)} onOpenEntry={openEntry} onManageTypes={() => setInterviewTypesOpen(true)} initial={videoInterview.start} journalId={videoInterview.journalId} />}
-      {interviewTypesOpen && <InterviewTypesSheet desk={false} onClose={() => setInterviewTypesOpen(false)} />}
-      {badges.celebration && <BadgeCelebration id={badges.celebration} onDismiss={badges.dismissCelebration} />}
+      {appSheets(false)}
     </div>
   );
 }

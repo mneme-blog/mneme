@@ -295,6 +295,7 @@ const ja: Partial<Record<MessageKey, string>> = {
   'editorx.preview.location': '位置情報',
   'media.noun.audio': '音声録音',
   'media.noun.video': '動画録画',
+  'media.noun.film': 'フィルム',
   'media.noun.image': '写真',
   'media.noun.file': 'ファイル',
   'media.noun.recording': '録音',
@@ -631,7 +632,6 @@ const ja: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'ラベル',
   'shell.search.field.date': '日付',
   'shell.search.field.content': '内容',
-  'shell.photo': '写真',
   'shell.removeLabel': '「{name}」を削除',
   'shell.daysAgo#one': '{count} 日前',
   'shell.daysAgo#other': '{count} 日前',
@@ -714,6 +714,10 @@ const ja: Partial<Record<MessageKey, string>> = {
   'prefs.vault.data': 'データ',
   'prefs.vault.import': 'Day One から取り込む',
   'prefs.vault.delete': 'ボールトを削除',
+  'prefs.relay': 'リレーサーバー',
+  'prefs.relay.urlLabel': 'リレーサーバーの URL',
+  'prefs.relay.invalid': 'スキームを含む完全な URL を入力してください（例: https://relay.example.com）',
+  'prefs.relay.help': 'アプリを別のサーバーに向けます。サインイン中の保管庫はそこで再認証されます。空欄でデフォルトに戻ります。',
   'prefs.info.section': '概要',
   'prefs.info.tagline': '記憶のための、あなただけの場所。',
   'prefs.info.version': 'バージョン',
@@ -888,6 +892,10 @@ const ja: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': '初めてのビデオインタビューを録画しましょう。',
   'badges.memory-keeper.name': '思い出の番人',
   'badges.memory-keeper.desc': 'エントリーに写真・音声・動画を追加しましょう。',
+  'media.transcribe.busyFor': '文字起こし中… {seconds}秒',
+  'media.transcribe.busyCount': '回答を文字起こし中… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'これはデプロイに同梱されたサーバーですが、絶対アドレスとして保存するとサードパーティのサーバーとして扱われます。サインインが添付されず、すべてのリクエストが拒否されます。',
+  'assistant.transcribe.bundledFix': '代わりに {path} を使う',
 };
 
 export default ja;

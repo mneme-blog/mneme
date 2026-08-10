@@ -15,11 +15,14 @@
 // purges them locally and on the relay.
 import { Node, mergeAttributes, type Editor } from '@tiptap/core';
 import { render, type VNode } from 'preact';
-import { useState } from 'preact/hooks';
-import { t, tp } from '../i18n';
+import { useEffect, useState } from 'preact/hooks';
+import { t, tp, fmtNumber } from '../i18n';
 import type { MediaAttachment } from '../sync/engine';
 import { toAiError } from '../ai/types';
+import { transcribeErrorMessage } from '../ai/errors';
 import type { TranscribeDestination } from '../ai/transcribe';
+import { watchTranscribeRun, type TranscribeRunStatus } from '../ai/transcribeRuns';
+import { watchRenderProgress, type RenderProgress } from '../video/film';
 import { TranscriptStrip, useMediaUrl, MediaLoadingBar, type MediaResolver } from '../ui/Attachments';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Icon } from '../ui/Icon';
@@ -111,8 +114,9 @@ export function VideoInterviewCardView({
   onDelete?: () => void;
   /** Called after the user confirmed dropping the answer clips, keeping the film. */
   onDropClips?: () => void;
-  /** Transcribe every untranscribed answer clip; transcripts land per card. */
-  onTranscribe?: () => Promise<void>;
+  /** Transcribe every untranscribed answer clip; transcripts land per card.
+   *  Reports per-clip counts through `onProgress` for the running label. */
+  onTranscribe?: (onProgress?: (s: TranscribeRunStatus) => void) => Promise<void>;
   /** Persist a hand-edited transcript for one answer ('' clears it). */
   onSaveTranscript?: (cardIndex: number, text: string) => void;
   /** Where transcription goes — non-local destinations confirm first. */
@@ -123,6 +127,16 @@ export function VideoInterviewCardView({
   const [transcribing, setTranscribing] = useState(false);
   const [confirmingTranscribe, setConfirmingTranscribe] = useState(false);
   const [transcribeError, setTranscribeError] = useState('');
+  // Per-clip counts of the card's own batch run ("Transcribe answers").
+  const [batch, setBatch] = useState<TranscribeRunStatus | null>(null);
+  // A detached auto-transcribe run started by the interview sheet (which is
+  // gone by now) — followed through the run registry so this card can show it.
+  const [detachedRun, setDetachedRun] = useState<TranscribeRunStatus | null>(null);
+  // A film render for this session, whoever started it — the dialog may be
+  // closed, the encode keeps going, and this bar is what says so.
+  const [filmProgress, setFilmProgress] = useState<RenderProgress | null>(null);
+  useEffect(() => watchTranscribeRun(data.sessionId, setDetachedRun), [data.sessionId]);
+  useEffect(() => watchRenderProgress(data.sessionId, setFilmProgress), [data.sessionId]);
   // Two different counts: `answered` is what the header claims (an answer that
   // outlived its dropped source clip still counts), `clipCount` is what the
   // render/drop/delete affordances need (actual bytes present).
@@ -131,31 +145,25 @@ export function VideoInterviewCardView({
   const untranscribed = data.cards.filter((c) => c.clip && !c.transcript).length;
   const stale = isFilmStale(data);
 
-  // Transcripts appear under each question as they land (the node redraws per
-  // clip), so the running button needs no separate progress counter.
   const runTranscribe = async (): Promise<void> => {
     if (transcribing) return;
     setTranscribing(true);
     setTranscribeError('');
     try {
-      await onTranscribe?.();
+      await onTranscribe?.(setBatch);
     } catch (e) {
       const err = toAiError(e);
-      setTranscribeError(
-        err.hint === 'auth'
-          ? t('assistant.error.keyRejectedShort')
-          : err.hint === 'session'
-            ? t('media.transcribe.signedOut')
-            : err.hint === 'quota'
-              ? t('media.transcribe.limitReached')
-              : err.hint === 'model'
-                ? t('media.transcribe.modelMissing')
-                : t('media.transcribe.failed', { message: err.message }),
-      );
+      setTranscribeError(transcribeErrorMessage(err));
     } finally {
       setTranscribing(false);
+      setBatch(null);
     }
   };
+
+  // Whichever transcription run is live — the card's own batch or a detached
+  // auto-transcribe — feeds one progress line.
+  const transcribeRun = batch ?? detachedRun;
+  const filmPct = filmProgress ? Math.round(filmProgress.ratio * 100) : 0;
 
   return (
     <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
@@ -182,7 +190,7 @@ export function VideoInterviewCardView({
         )}
       </div>
 
-      {(data.film || onRender || (onTranscribe && untranscribed > 0) || transcribeError) && (
+      {(data.film || onRender || (onTranscribe && untranscribed > 0) || transcribeError || filmProgress || transcribeRun) && (
         <div style={{ padding: '11px 11px 0' }}>
           {data.film && (
             <>
@@ -197,8 +205,21 @@ export function VideoInterviewCardView({
               {t('media.film.stale')}
             </p>
           )}
-          <span style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: data.film ? 8 : 0 }}>
-            {onRender && clipCount > 0 && (
+          {/* A running render, whoever started it — the dialog may be long
+              closed. The finished film lands on this card by itself (the
+              editor folds attachFilm's write-back into the live doc). */}
+          {filmProgress && (
+            <div style={{ marginTop: data.film ? 8 : 0 }}>
+              <p style={{ fontFamily: 'var(--ui)', fontSize: 12, color: 'var(--ink-2)', margin: '0 0 5px' }}>
+                {t('media.film.rendering', { pct: fmtNumber(filmPct) })}
+              </p>
+              <div style={{ height: 5, borderRadius: 999, background: 'var(--surface)', border: '1px solid var(--line)', overflow: 'hidden' }}>
+                <div style={{ width: `${filmPct}%`, height: '100%', background: 'var(--accent)', transition: 'width .3s ease' }} />
+              </div>
+            </div>
+          )}
+          <span style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: data.film || filmProgress ? 8 : 0 }}>
+            {onRender && clipCount > 0 && !filmProgress && (
               <button
                 onClick={onRender}
                 style={{ fontFamily: 'var(--ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--accent-ink)', background: 'transparent', border: '1px solid var(--line)', borderRadius: 999, padding: '5px 13px', cursor: 'pointer' }}
@@ -216,7 +237,7 @@ export function VideoInterviewCardView({
                 {t('media.film.deleteClips')}
               </button>
             )}
-            {onTranscribe && untranscribed > 0 && (
+            {onTranscribe && untranscribed > 0 && !transcribeRun && (
               <button
                 onClick={() => {
                   if (transcribeDest && !transcribeDest.local) setConfirmingTranscribe(true);
@@ -229,6 +250,14 @@ export function VideoInterviewCardView({
               </button>
             )}
           </span>
+          {/* One progress line for either kind of run; each finished answer
+              also lands visibly as its transcript strip below. */}
+          {transcribeRun && (
+            <p style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--ui)', fontSize: 12, color: 'var(--ink-2)', margin: '7px 0 0' }}>
+              <span className="mneme-busy-dot" />
+              {t('media.transcribe.busyCount', { done: fmtNumber(transcribeRun.done), total: fmtNumber(transcribeRun.total) })}
+            </p>
+          )}
           {transcribeError && (
             <p style={{ fontFamily: 'var(--ui)', fontSize: 11.5, color: 'var(--accent-ink)', margin: '7px 0 0' }}>{transcribeError}</p>
           )}
@@ -413,7 +442,10 @@ export function videoInterviewNode(handlers: VideoInterviewHandlers): Node {
             editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...cur.attrs, cards }));
             return true;
           };
-          const onTranscribe = async (): Promise<void> => {
+          const onTranscribe = async (onProgress?: (s: TranscribeRunStatus) => void): Promise<void> => {
+            const pending = data.cards.filter((c) => c.clip && !c.transcript).length;
+            let done = 0;
+            onProgress?.({ done, total: pending });
             for (let i = 0; i < data.cards.length; i++) {
               const card = data.cards[i];
               if (!card.clip || card.transcript) continue;
@@ -421,6 +453,8 @@ export function videoInterviewNode(handlers: VideoInterviewHandlers): Node {
               // on pre-picker sessions, which means auto-detect.
               const text = await handlers.transcribe!(card.clip, data.lang);
               if (!writeTranscript(i, text)) return;
+              done++;
+              onProgress?.({ done, total: pending });
             }
           };
           render(

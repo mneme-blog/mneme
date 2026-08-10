@@ -9,7 +9,7 @@
 // as `__dayoneMedia` placeholder nodes carrying the moment identifier + kind.
 import type { JSONContent } from '@tiptap/core';
 import { safeHref } from '../editor/url';
-import type { MomentKind } from './dayone';
+import { parseMomentUrl, type MomentKind } from './dayone';
 
 /** Placeholder node type for an unresolved Day One media reference. */
 export const MEDIA_REF = '__dayoneMedia';
@@ -18,13 +18,6 @@ interface InlineResult {
   nodes: JSONContent[];
   /** Image refs pulled out of the inline run, in document order. */
   media: { identifier: string; kind: MomentKind }[];
-}
-
-function refFromUrl(url: string): { identifier: string; kind: MomentKind } | null {
-  const m = url.match(/^dayone-moment:\/(?:\/)?(?:(video|audio|pdfAttachment)\/)?([A-Za-z0-9-]+)/);
-  if (!m) return null;
-  const kind: MomentKind = m[1] === 'video' ? 'video' : m[1] === 'audio' ? 'audio' : m[1] === 'pdfAttachment' ? 'file' : 'image';
-  return { identifier: m[2], kind };
 }
 
 // Parse one inline run (a paragraph's text) into text/hardBreak nodes, carrying
@@ -49,7 +42,7 @@ function inline(s: string, marks: JSONContent['marks'] = []): InlineResult {
     }
     if (c === '!' && s[i + 1] === '[') {
       const m = s.slice(i).match(/^!\[[^\]]*\]\(([^)]+)\)/);
-      if (m) { const ref = refFromUrl(m[1]); if (ref) { flush(); media.push(ref); } i += m[0].length; continue; }
+      if (m) { const ref = parseMomentUrl(m[1]); if (ref) { flush(); media.push(ref); } i += m[0].length; continue; }
     }
     if (c === '[') {
       const m = s.slice(i).match(/^\[([^\]]*)\]\(([^)]+)\)/);

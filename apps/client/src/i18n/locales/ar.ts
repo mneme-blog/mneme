@@ -296,6 +296,7 @@ const ar: Partial<Record<MessageKey, string>> = {
   'editorx.preview.location': 'موقع',
   'media.noun.audio': 'تسجيل صوتي',
   'media.noun.video': 'تسجيل فيديو',
+  'media.noun.film': 'فيلم',
   'media.noun.image': 'صورة',
   'media.noun.file': 'ملف',
   'media.noun.recording': 'تسجيل',
@@ -631,7 +632,6 @@ const ar: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'وسم',
   'shell.search.field.date': 'تاريخ',
   'shell.search.field.content': 'محتوى',
-  'shell.photo': 'صورة',
   'shell.removeLabel': 'أزل «{name}»',
   'shell.daysAgo#one': 'قبل يوم واحد',
   'shell.daysAgo#other': 'قبل {count} أيام',
@@ -714,6 +714,10 @@ const ar: Partial<Record<MessageKey, string>> = {
   'prefs.vault.data': 'البيانات',
   'prefs.vault.import': 'استورد من Day One',
   'prefs.vault.delete': 'احذف الخزنة',
+  'prefs.relay': 'خادم الترحيل',
+  'prefs.relay.urlLabel': 'عنوان URL لخادم الترحيل',
+  'prefs.relay.invalid': 'أدخل عنوان URL كاملًا مع المخطط، مثل https://relay.example.com',
+  'prefs.relay.help': 'يوجّه التطبيق إلى خادم آخر. تعيد الخزنة المسجّلة الدخول المصادقة هناك. اتركه فارغًا لاستخدام الافتراضي.',
   'prefs.info.section': 'حول',
   'prefs.info.tagline': 'مكان خاص للتذكّر.',
   'prefs.info.version': 'الإصدار',
@@ -889,6 +893,10 @@ const ar: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'سجّل مقابلتك بالفيديو الأولى.',
   'badges.memory-keeper.name': 'حارس الذكريات',
   'badges.memory-keeper.desc': 'أضف صورة أو تسجيلًا صوتيًا أو فيديو إلى مدخل.',
+  'media.transcribe.busyFor': 'جارٍ التفريغ… {seconds} ث',
+  'media.transcribe.busyCount': 'جارٍ تفريغ الإجابات… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'هذا هو الخادم المرفق بنشرك، لكنه محفوظ كعنوان مطلق فيُعامل كخادم جهة خارجية: لا يُرفق تسجيل دخولك ويُرفض كل طلب.',
+  'assistant.transcribe.bundledFix': 'استخدم {path} بدلًا من ذلك',
 };
 
 export default ar;

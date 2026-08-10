@@ -78,6 +78,7 @@ export const media = {
 
   // Stitching a video interview's answer clips into one film. The render runs
   // on this device (WebCodecs, or a realtime fallback) — nothing is uploaded.
+  'media.noun.film': 'film',
   'media.film.render': 'Render film',
   'media.film.rerender': 'Re-render film',
   'media.film.stale': 'An answer changed since this film was made.',
@@ -105,6 +106,10 @@ export const media = {
   // was said; transcripts survive "Delete the source clips".
   'media.transcribe.action': 'Transcribe',
   'media.transcribe.busy': 'Transcribing…',
+  // A running whisper job is one opaque request — the ticking seconds are the
+  // honest "still working" signal; batch runs count clips instead.
+  'media.transcribe.busyFor': 'Transcribing… {seconds}s',
+  'media.transcribe.busyCount': 'Transcribing answers… {done}/{total}',
   'media.transcribe.show': 'Show transcript',
   'media.transcribe.hide': 'Hide transcript',
   // Speech-to-text mishears names and numbers, and the transcript is what

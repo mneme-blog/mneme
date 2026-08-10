@@ -85,7 +85,7 @@ func (s *Server) handlePutMediaChunk(w http.ResponseWriter, r *http.Request) {
 	// per rejected request. Charged against finalized usage: chunks in flight
 	// aren't counted yet, so a single upload can overshoot by its own size —
 	// acceptable for a bound on runaway growth.
-	if s.quotaExceeded(w, r.Context(), owner, maxChunkBytes) {
+	if s.quotaExceeded(r.Context(), w, owner, maxChunkBytes) {
 		return
 	}
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxChunkBytes))
@@ -130,7 +130,7 @@ func (s *Server) handleCompleteMedia(w http.ResponseWriter, r *http.Request) {
 		Chunks:  req.Chunks,
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "finalize failed")
+		writeInternalError(w, r, "finalize failed", err)
 		return
 	}
 	if created {
@@ -155,7 +155,7 @@ func (s *Server) handleGetMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "media lookup failed")
+		writeInternalError(w, r, "media lookup failed", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -179,11 +179,11 @@ func (s *Server) handleDeleteMedia(w http.ResponseWriter, r *http.Request) {
 	// index row (an upload that was never completed) must still be deletable,
 	// so a missing row is not a reason to skip the chunk sweep.
 	if _, err := s.store.GetMedia(r.Context(), owner, mediaID); err != nil && !errors.Is(err, store.ErrNotFound) {
-		writeError(w, http.StatusInternalServerError, "media lookup failed")
+		writeInternalError(w, r, "media lookup failed", err)
 		return
 	}
 	if err := s.store.DeleteMedia(r.Context(), owner, mediaID); err != nil {
-		writeError(w, http.StatusInternalServerError, "media deletion failed")
+		writeInternalError(w, r, "media deletion failed", err)
 		return
 	}
 	// Sweep the object prefix rather than the indexed chunk range: chunks

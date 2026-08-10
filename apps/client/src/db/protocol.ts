@@ -16,5 +16,5 @@ export type DbRequest =
   | { id: number; kind: 'batch'; statements: { sql: string; params?: SqlParam[] }[] };
 
 export type DbResponse =
-  | { id: number; ok: true; rows: SqlValue[][]; columns: string[] }
+  | { id: number; ok: true; rows: SqlValue[][] }
   | { id: number; ok: false; error: string };

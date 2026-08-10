@@ -14,8 +14,9 @@ import { useAppData } from '../state/data';
 import { t, fmtNumber } from '../i18n';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
-import { fmtDuration } from './VideoCapture';
+import { fmtDuration } from './recorder';
 import { toAiError } from '../ai/types';
+import { transcribeErrorMessage } from '../ai/errors';
 import { transcribe, transcriptionConfig, transcriptionDestination, type TranscribeDestination } from '../ai/transcribe';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -83,12 +84,19 @@ export function useMediaUrl(
     autoTries.current = 0;
   }, [att.id]);
 
+  // `resolve` is deliberately not a dependency: every caller passes an inline
+  // closure, and it only captures stable values (the context callbacks). The
+  // effect keys on the attachment identity instead.
   useEffect(() => {
     let objectUrl: string | null = null;
     let cancelled = false;
     let lastPaint = 0;
     setFailed(false);
     setProgress(null);
+    // Reset before resolving: the previous attachment's object URL was revoked
+    // by this effect's cleanup, so keeping it in state would render a broken
+    // frame until the new blob lands.
+    setUrl(null);
     void resolve(att, (loaded, total) => {
       if (cancelled) return;
       const now = Date.now();
@@ -186,8 +194,9 @@ export function MediaLoadingBar({
 }
 
 // Deleting a media item is destructive and unrecoverable (no relay-side copy the
-// user can get back; local bytes are purged) — always confirm first.
-export function ConfirmDeleteDialog({
+// user can get back; local bytes are purged) — always confirm first. Just the
+// media-specific texts around the shared ConfirmDialog.
+function ConfirmDeleteDialog({
   att,
   onCancel,
   onConfirm,
@@ -199,37 +208,18 @@ export function ConfirmDeleteDialog({
   const noun = mediaNoun(att.kind);
   const info = att.durationMs ? `${fmtDuration(att.durationMs)}, ${fmtBytes(att.bytes)}` : fmtBytes(att.bytes);
   return (
-    <div
-      role="dialog"
-      onClick={onCancel}
-      style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(30,22,16,.45)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}
+    <ConfirmDialog
+      icon={mediaIcon(att.kind)}
+      title={t('media.delete.title', { noun })}
+      confirmLabel={t('media.delete.confirm', { noun: att.kind === 'audio' || att.kind === 'video' ? t('media.noun.recording') : noun })}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: 400, maxWidth: '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: 20, border: '1px solid var(--line)', padding: 22, boxShadow: '0 20px 60px rgba(30,20,12,.3)' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <span style={{ width: 36, height: 36, borderRadius: 999, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(228,87,61,.12)' }}>
-            <Icon name={mediaIcon(att.kind)} size={17} color="#E4573D" />
-          </span>
-          <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>
-            {t('media.delete.title', { noun })}
-          </h3>
-        </div>
-        <p style={{ fontFamily: 'var(--ui)', fontSize: 13.5, lineHeight: 1.55, color: 'var(--ink-2)', margin: '0 0 18px' }}>
-          {att.name
-            ? t('media.delete.body', { name: att.name, noun, info })
-            : t('media.delete.bodyUnnamed', { noun, info })}{' '}
-          <strong style={{ color: 'var(--ink)' }}>{t('media.delete.irreversible')}</strong>
-        </p>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-          <Btn kind="ghost" onClick={onCancel}>{t('common.cancel')}</Btn>
-          <Btn kind="danger" onClick={onConfirm}>
-            {t('media.delete.confirm', { noun: att.kind === 'audio' || att.kind === 'video' ? t('media.noun.recording') : noun })}
-          </Btn>
-        </div>
-      </div>
-    </div>
+      {att.name
+        ? t('media.delete.body', { name: att.name, noun, info })
+        : t('media.delete.bodyUnnamed', { noun, info })}{' '}
+      <strong style={{ color: 'var(--ink)' }}>{t('media.delete.irreversible')}</strong>
+    </ConfirmDialog>
   );
 }
 
@@ -264,6 +254,17 @@ export function TranscriptStrip({
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
+  // Wall-clock seconds since the request left — a whisper job is one opaque
+  // HTTP round-trip, so a ticking count is the honest "still working" signal
+  // (a percentage would be invented).
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!busy) return;
+    setElapsed(0);
+    const started = Date.now();
+    const timer = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, [busy]);
   if (!transcript && !onTranscribe) return null;
 
   const run = async (): Promise<void> => {
@@ -275,17 +276,7 @@ export function TranscriptStrip({
       setOpen(true);
     } catch (e) {
       const err = toAiError(e);
-      setError(
-        err.hint === 'auth'
-          ? t('assistant.error.keyRejectedShort')
-          : err.hint === 'session'
-            ? t('media.transcribe.signedOut')
-            : err.hint === 'quota'
-              ? t('media.transcribe.limitReached')
-              : err.hint === 'model'
-                ? t('media.transcribe.modelMissing')
-                : t('media.transcribe.failed', { message: err.message }),
-      );
+      setError(transcribeErrorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -367,8 +358,8 @@ export function TranscriptStrip({
             disabled={busy}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--ui)', fontSize: 12, fontWeight: 600, color: 'var(--accent-ink)', background: 'transparent', border: '1px solid var(--line)', borderRadius: 999, padding: '4px 12px', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
           >
-            <Icon name="quote" size={13} color="var(--accent-ink)" />
-            {busy ? t('media.transcribe.busy') : t('media.transcribe.action')}
+            {busy ? <span className="mneme-busy-dot" /> : <Icon name="quote" size={13} color="var(--accent-ink)" />}
+            {busy ? (elapsed > 0 ? t('media.transcribe.busyFor', { seconds: fmtNumber(elapsed) }) : t('media.transcribe.busy')) : t('media.transcribe.action')}
           </button>
           {error && <p style={{ fontFamily: 'var(--ui)', fontSize: 11.5, color: 'var(--accent-ink)', margin: '6px 0 0' }}>{error}</p>}
           {confirming && dest && (

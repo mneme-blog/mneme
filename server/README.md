@@ -27,7 +27,7 @@ go test ./...                   # unit tests, no database needed
 
 # End-to-end against a real Postgres (full device handshake + sync):
 docker compose up -d postgres
-TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal?sslmode=disable \
+TEST_DATABASE_URL=postgres://journal:journal_dev@localhost:5432/journal_test?sslmode=disable \
   go test -tags e2e ./e2e/...
 ```
 

@@ -17,6 +17,7 @@ import { renderTitleCard } from './cards';
 import type { FilmJob, FilmResult, RenderProgress } from './film';
 import { RenderCanceled } from './film';
 import { pickMimeType } from '../ui/recorder';
+import { canonicalSize } from './timeline';
 
 /** Read one clip's natural size and duration without decoding it fully. */
 function probeClip(blob: Blob): Promise<{ width: number; height: number; durationMs: number }> {
@@ -45,8 +46,6 @@ function probeClip(blob: Blob): Promise<{ width: number; height: number; duratio
   });
 }
 
-const even = (n: number): number => Math.max(2, Math.floor(n / 2) * 2);
-
 export function renderRealtime(
   job: FilmJob,
   onProgress: (p: RenderProgress) => void,
@@ -54,8 +53,14 @@ export function renderRealtime(
   cardSeconds: number,
 ): { promise: Promise<FilmResult>; cancel: () => void } {
   let canceled = false;
+  // While a clip is playing, cancel must also stop the <video> element and
+  // settle the playback promise — the flag alone only stops the draw loop, and
+  // the promise would otherwise sit unresolved until the clip's natural end
+  // (a 90-second answer keeps playing decrypted media for 85 more seconds).
+  let interruptPlayback: (() => void) | null = null;
   const cancel = (): void => {
     canceled = true;
+    interruptPlayback?.();
   };
 
   const promise = (async (): Promise<FilmResult> => {
@@ -64,13 +69,12 @@ export function renderRealtime(
     };
     check();
 
-    const first = await probeClip(job.clips[0].blob);
-    const landscape = first.width >= first.height;
-    const short = 720;
-    const ratio = landscape ? first.width / first.height : first.height / first.width;
-    const long = Math.min(1280, Math.max(640, Math.round(short * ratio)));
-    const width = even(landscape ? long : short);
-    const height = even(landscape ? short : long);
+    // Measure every clip once, up front: clip 0's dimensions set the canvas
+    // geometry, and the durations feed the progress estimate below.
+    const probes = await Promise.all(job.clips.map((c) => probeClip(c.blob).catch(() => null)));
+    const first = probes[0];
+    if (!first) throw new Error('could not read clip');
+    const { width, height } = canonicalSize(first.width, first.height);
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -111,11 +115,11 @@ export function renderRealtime(
     };
     document.addEventListener('visibilitychange', onHidden);
 
-    const totalMs =
-      job.clips.length * cardSeconds * 1000 +
-      job.clips.reduce((a, c) => a + (c.blob.size > 0 ? 0 : 0), 0);
     const startedAt = Date.now();
-    let estimatedTotalMs = totalMs;
+    // Cards + measured clip durations, so the progress bar means something
+    // (unreadable durations count as ~30 s rather than zero).
+    const estimatedTotalMs =
+      job.clips.length * cardSeconds * 1000 + probes.reduce((a, p) => a + (p?.durationMs || 30_000), 0);
 
     const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
@@ -127,10 +131,6 @@ export function renderRealtime(
         engine: 'realtime',
       });
     };
-
-    // Measure the clips so the progress bar means something.
-    const probes = await Promise.all(job.clips.map((c) => probeClip(c.blob).catch(() => ({ durationMs: 0 }))));
-    estimatedTotalMs = job.clips.length * cardSeconds * 1000 + probes.reduce((a, p) => a + (p.durationMs || 30_000), 0);
 
     await audioCtx.resume().catch(() => undefined);
     recorder.start(1000);
@@ -160,6 +160,10 @@ export function renderRealtime(
         source.connect(dest);
         try {
           await new Promise<void>((resolve, reject) => {
+            interruptPlayback = () => {
+              el.pause();
+              reject(new RenderCanceled());
+            };
             el.onerror = () => reject(new Error('could not play clip'));
             el.onended = () => resolve();
             const draw = (): void => {
@@ -177,6 +181,7 @@ export function renderRealtime(
             el.play().catch(reject);
           });
         } finally {
+          interruptPlayback = null;
           source.disconnect();
           el.pause();
           el.removeAttribute('src');

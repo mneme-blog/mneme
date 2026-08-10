@@ -9,6 +9,7 @@ import type { VNode } from 'preact';
 import { useMemo, useRef, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { LabelChip } from './primitives';
+import { SheetBackdrop, Z } from './Sheet';
 import { useAppData } from '../state/data';
 import { search, normalize, type Hit } from '../search/core';
 import { t, monthName, fmtDate, type MessageKey } from '../i18n';
@@ -80,7 +81,6 @@ export function SearchSheet({ desk, onClose, onOpen }: {
     }
     // Empty query: offer the most recently touched entries as a starting point.
     return [...entries]
-      .filter((e) => !e.deleted)
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, 8)
       .map((e): Hit => ({ entry: e, field: 'content' }));
@@ -144,18 +144,18 @@ export function SearchSheet({ desk, onClose, onOpen }: {
               </span>
             </div>
             {h.snippet ? (
-              <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-2)', margin: '4px 0 0 16px', lineHeight: 1.45, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+              <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-2)', margin: '4px 0 0', marginInlineStart: 16, lineHeight: 1.45, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                 <Highlight text={h.snippet} tokens={tokens} />
               </p>
             ) : (
               h.entry.bodyText && (
-                <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-2)', margin: '4px 0 0 16px', lineHeight: 1.45, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <p style={{ fontFamily: 'var(--ui)', fontSize: 12.5, color: 'var(--ink-2)', margin: '4px 0 0', marginInlineStart: 16, lineHeight: 1.45, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {h.entry.bodyText}
                 </p>
               )
             )}
             {h.field === 'label' && h.entry.labels.length > 0 && (
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '6px 0 0 16px' }}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '6px 0 0', marginInlineStart: 16 }}>
                 {h.entry.labels.map((l) => <LabelChip key={l} id={l} size="sm" />)}
               </div>
             )}
@@ -191,7 +191,7 @@ export function SearchSheet({ desk, onClose, onOpen }: {
 
   if (desk) {
     return (
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, zIndex: 70, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
+      <SheetBackdrop onClose={onClose} zIndex={Z.overlay} align="top">
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
@@ -204,13 +204,13 @@ export function SearchSheet({ desk, onClose, onOpen }: {
           {inputRow}
           {rows}
         </div>
-      </div>
+      </SheetBackdrop>
     );
   }
 
   // Mobile: a full-height sheet so the keyboard and results share the screen.
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 70, background: 'var(--paper)', display: 'flex', flexDirection: 'column', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+    <div style={{ position: 'absolute', inset: 0, zIndex: Z.overlay, background: 'var(--paper)', display: 'flex', flexDirection: 'column', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       {inputRow}
       {rows}
     </div>

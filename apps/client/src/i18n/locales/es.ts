@@ -296,6 +296,7 @@ const es: Partial<Record<MessageKey, string>> = {
   'editorx.preview.location': 'Ubicación',
   'media.noun.audio': 'grabación de audio',
   'media.noun.video': 'grabación de vídeo',
+  'media.noun.film': 'película',
   'media.noun.image': 'foto',
   'media.noun.file': 'archivo',
   'media.noun.recording': 'grabación',
@@ -641,7 +642,6 @@ const es: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'etiqueta',
   'shell.search.field.date': 'fecha',
   'shell.search.field.content': 'contenido',
-  'shell.photo': 'foto',
   'shell.removeLabel': 'Quitar «{name}»',
   'shell.daysAgo#one': 'hace {count} día',
   'shell.daysAgo#other': 'hace {count} días',
@@ -724,6 +724,10 @@ const es: Partial<Record<MessageKey, string>> = {
   'prefs.vault.data': 'Datos',
   'prefs.vault.import': 'Importar desde Day One',
   'prefs.vault.delete': 'Eliminar bóveda',
+  'prefs.relay': 'Servidor relé',
+  'prefs.relay.urlLabel': 'URL del servidor relé',
+  'prefs.relay.invalid': 'Introduce una URL completa con el esquema, p. ej. https://relay.example.com',
+  'prefs.relay.help': 'Apunta la aplicación a otro servidor. Un cofre con sesión iniciada se vuelve a autenticar allí. Déjalo vacío para usar el predeterminado.',
   'prefs.info.section': 'Acerca de',
   'prefs.info.tagline': 'Un lugar privado para recordar.',
   'prefs.info.version': 'Versión',
@@ -899,6 +903,10 @@ const es: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'Graba tu primera entrevista en vídeo.',
   'badges.memory-keeper.name': 'Guardián de recuerdos',
   'badges.memory-keeper.desc': 'Añade una foto, un audio o un vídeo a una entrada.',
+  'media.transcribe.busyFor': 'Transcribiendo… {seconds}s',
+  'media.transcribe.busyCount': 'Transcribiendo respuestas… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'Este es el servidor incluido en tu despliegue, pero guardado como dirección absoluta cuenta como servidor de terceros: tu inicio de sesión no se adjunta y cada solicitud se rechaza.',
+  'assistant.transcribe.bundledFix': 'Usar {path} en su lugar',
 };
 
 export default es;

@@ -5,36 +5,6 @@ import { labelInfo, type CoverPattern } from '../data/sample';
 import { useAppData, type SyncStatus } from '../state/data';
 import { t } from '../i18n';
 
-// ── Striped placeholder (for photos) ────────────────────────
-interface PlaceholderProps {
-  label?: string;
-  h?: number;
-  r?: number;
-  style?: JSX.CSSProperties;
-}
-export function Placeholder({ label, h = 160, r = 14, style = {} }: PlaceholderProps): VNode {
-  return (
-    <div
-      style={{
-        height: h, borderRadius: r, position: 'relative', overflow: 'hidden',
-        background: 'repeating-linear-gradient(135deg, var(--ph-a) 0 11px, var(--ph-b) 11px 22px)',
-        border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        ...style,
-      }}
-    >
-      <span
-        style={{
-          fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase',
-          color: 'var(--ink-3)', background: 'var(--paper)', padding: '3px 9px', borderRadius: 6,
-          border: '1px solid var(--line)',
-        }}
-      >
-        {label ?? t('shell.photo')}
-      </span>
-    </div>
-  );
-}
-
 // ── Button ──────────────────────────────────────────────────
 type BtnKind = 'primary' | 'ghost' | 'soft' | 'quiet' | 'danger';
 type BtnSize = 'sm' | 'md' | 'lg';
@@ -171,7 +141,7 @@ export function SyncBadge({ compact, dirty = false }: { compact?: boolean; dirty
 // ── Connection indicator ────────────────────────────────────
 // A traffic-light for the relay link, meant to live inline inside a screen header
 // (not floating). green = connected · red = offline (auto-retrying) · amber = connecting.
-export function connColor(s: SyncStatus): string {
+function connColor(s: SyncStatus): string {
   switch (s) {
     case 'online':
       return '#3fa45b';

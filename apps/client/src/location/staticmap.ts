@@ -23,12 +23,26 @@ export interface StaticMapResult {
   zoom: number;
 }
 
+// A tile server that accepts the connection but never responds would otherwise
+// stall renderStaticMap forever — and the insert dialog with it.
+const TILE_TIMEOUT_MS = 15_000;
+
 function loadTile(z: number, x: number, y: number): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
+    const timer = setTimeout(() => {
+      img.src = ''; // abort the fetch
+      resolve(null);
+    }, TILE_TIMEOUT_MS);
     img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null); // one missing tile shouldn't abort the map
+    img.onload = () => {
+      clearTimeout(timer);
+      resolve(img);
+    };
+    img.onerror = () => {
+      clearTimeout(timer);
+      resolve(null); // one missing tile shouldn't abort the map
+    };
     img.src = TILE_URL(z, x, y);
   });
 }

@@ -296,6 +296,7 @@ const hi: Partial<Record<MessageKey, string>> = {
   'editorx.preview.location': 'स्थान',
   'media.noun.audio': 'ऑडियो रिकॉर्डिंग',
   'media.noun.video': 'वीडियो रिकॉर्डिंग',
+  'media.noun.film': 'फ़िल्म',
   'media.noun.image': 'फ़ोटो',
   'media.noun.file': 'फ़ाइल',
   'media.noun.recording': 'रिकॉर्डिंग',
@@ -631,7 +632,6 @@ const hi: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'लेबल',
   'shell.search.field.date': 'दिनांक',
   'shell.search.field.content': 'सामग्री',
-  'shell.photo': 'फ़ोटो',
   'shell.removeLabel': '"{name}" हटाएँ',
   'shell.daysAgo#one': '{count} दिन पहले',
   'shell.daysAgo#other': '{count} दिन पहले',
@@ -714,6 +714,10 @@ const hi: Partial<Record<MessageKey, string>> = {
   'prefs.vault.data': 'डेटा',
   'prefs.vault.import': 'Day One से आयात करें',
   'prefs.vault.delete': 'तिजोरी हटाएँ',
+  'prefs.relay': 'रिले सर्वर',
+  'prefs.relay.urlLabel': 'रिले सर्वर URL',
+  'prefs.relay.invalid': 'स्कीम सहित पूरा URL दर्ज करें, जैसे https://relay.example.com',
+  'prefs.relay.help': 'ऐप को दूसरे सर्वर से जोड़ता है। साइन-इन तिजोरी वहाँ फिर से प्रमाणित होती है। डिफ़ॉल्ट के लिए खाली छोड़ें।',
   'prefs.info.section': 'परिचय',
   'prefs.info.tagline': 'याद रखने के लिए एक निजी जगह।',
   'prefs.info.version': 'संस्करण',
@@ -889,6 +893,10 @@ const hi: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'अपना पहला वीडियो साक्षात्कार रिकॉर्ड करें।',
   'badges.memory-keeper.name': 'यादों के रखवाले',
   'badges.memory-keeper.desc': 'किसी प्रविष्टि में फ़ोटो, ऑडियो या वीडियो जोड़ें।',
+  'media.transcribe.busyFor': 'ट्रांसक्राइब हो रहा है… {seconds} से.',
+  'media.transcribe.busyCount': 'उत्तर ट्रांसक्राइब हो रहे हैं… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'यह आपके डिप्लॉयमेंट के साथ आया सर्वर है, लेकिन पूर्ण पते के रूप में सहेजे जाने पर यह तृतीय-पक्ष सर्वर माना जाता है: आपका साइन-इन साथ नहीं भेजा जाता और हर अनुरोध अस्वीकार हो जाता है।',
+  'assistant.transcribe.bundledFix': 'इसके बजाय {path} उपयोग करें',
 };
 
 export default hi;

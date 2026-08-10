@@ -1,6 +1,7 @@
 import type { VNode, ComponentChildren, JSX } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { Icon, type IconName } from '../ui/Icon';
+import { Z } from '../ui/Sheet';
 import { Btn, LabelChip, ConnChip } from '../ui/primitives';
 import { hexA } from '../ui/color';
 import { type Journal } from '../data/sample';
@@ -74,7 +75,7 @@ function EntryRow({ e, onOpen, compact, resolve }: { e: CalEntry; onOpen: (id: s
 
 function Heatmap({ counts }: { counts: number[] }): VNode {
   const cells = counts.map((n) => Math.min(n, 3));
-  const col = ['var(--line)', 'var(--accent-soft)', hexA('#B0563A', 0.45), 'var(--accent)'];
+  const col = ['var(--line)', 'var(--accent-soft)', 'color-mix(in srgb, var(--accent) 45%, transparent)', 'var(--accent)'];
   return (
     <div>
       <div style={{ display: 'grid', gridTemplateRows: 'repeat(7, 1fr)', gridAutoFlow: 'column', gridAutoColumns: '1fr', gap: 3 }}>
@@ -169,6 +170,8 @@ export function CalendarScreen({ desk, onOpenEntry }: { desk: boolean; onOpenEnt
   };
   const goToday = () => { setYear(todayY); setMonth(todayM); setSelected(todayD); };
   const openMonth = (m: number, day = 1) => { setMonth(m); setSelected(day); setView('month'); };
+  // Prev/next steps by month in the month view, by year in the year view.
+  const stepView = (delta: number) => (view === 'year' ? setYear((y) => y + delta) : shiftMonth(delta));
 
   // Group the visible month's entries by day-of-month.
   const byDay = useMemo(() => {
@@ -215,85 +218,20 @@ export function CalendarScreen({ desk, onOpenEntry }: { desk: boolean; onOpenEnt
   const memories = useMemo(() => onThisDay(entries, month, selected, year), [entries, month, selected, year]);
   const heat = useMemo(() => dailyCounts(entries, Date.now(), 17), [entries]);
 
-  const Grid = ({ big }: { big?: boolean }): VNode => (
-    <div style={big ? { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 } : undefined}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: big ? 6 : 2, marginBottom: 6 }}>
-        {Array.from({ length: 7 }).map((_, i) => (
-          // Mon-first column order; weekdayName() takes 0=Sunday.
-          <div key={i} style={{ textAlign: 'center', fontFamily: 'var(--ui)', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: 'var(--ink-3)', textTransform: 'uppercase', padding: '2px 0' }}>{weekdayName((i + 1) % 7, big ? 'short' : 'narrow')}</div>
-        ))}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: big ? 6 : 2, ...(big ? { flex: 1, minHeight: 0, gridAutoRows: 'minmax(0, 1fr)' } : {}) }}>
-        {Array.from({ length: meta.offset }).map((_, i) => <div key={'b' + i} />)}
-        {Array.from({ length: meta.days }).map((_, i) => (
-          <Cell key={i} d={i + 1} today={today} selected={selected} onSelect={setSelected} big={big} dayEntries={byDay.get(i + 1) ?? []} resolve={resolveJournal} />
-        ))}
-      </div>
-    </div>
-  );
-
-  // The shared title + quick-jump cluster. `unit` decides whether prev/next step
-  // by month (month view) or year (year view); timeline has no stepping.
-  const Nav = ({ big }: { big?: boolean }): VNode => {
-    const unit: 'month' | 'year' = view === 'year' ? 'year' : 'month';
-    const step = (delta: number) => (unit === 'year' ? setYear((y) => y + delta) : shiftMonth(delta));
-    const atToday = view === 'year' ? year === todayY : isCurrentMonth;
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, minWidth: 0 }}>
-          {view === 'timeline' ? (
-            <h2 style={{ fontFamily: 'var(--serif)', fontSize: big ? 26 : 24, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>{t('calendar.view.timeline')}</h2>
-          ) : (
-            <>
-              {view === 'month' && <h2 style={{ fontFamily: 'var(--serif)', fontSize: big ? 26 : 24, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>{monthName(month)}</h2>}
-              <YearJump year={year} big={view === 'year'} onPick={(y) => setYear(y)} />
-            </>
-          )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {view === 'timeline' ? (
-            <span style={{ fontFamily: 'var(--ui)', fontSize: 13, color: 'var(--ink-3)' }}>{tp('common.entries', timeline.length)}</span>
-          ) : (
-            <>
-              {!atToday && <Btn kind="quiet" size="sm" onClick={goToday}>{view === 'year' ? t('calendar.thisYear') : t('common.today')}</Btn>}
-              <button onClick={() => step(-1)} aria-label={t('calendar.previous')} style={navBtn}><Icon name="left" size={18} color="var(--ink-2)" dirFlip /></button>
-              <button onClick={() => step(1)} aria-label={t('common.next')} style={navBtn}><Icon name="right" size={18} color="var(--ink-2)" dirFlip /></button>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const Tabs = ({ full }: { full?: boolean }): VNode => (
-    <div style={{ display: 'flex', gap: 2, padding: 3, borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--line)', ...(full ? { width: '100%' } : {}) }}>
-      <ViewTab active={view === 'month'} icon="cal" full={full} onClick={() => setView('month')}>{t('calendar.view.month')}</ViewTab>
-      <ViewTab active={view === 'year'} icon="grid" full={full} onClick={() => setView('year')}>{t('calendar.view.year')}</ViewTab>
-      <ViewTab active={view === 'timeline'} icon="timeline" full={full} onClick={() => setView('timeline')}>{t('calendar.view.timeline')}</ViewTab>
-    </div>
-  );
-
-  const YearOverview = ({ big }: { big?: boolean }): VNode => (
-    <div style={{ display: 'grid', gridTemplateColumns: big ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)', gridTemplateRows: big ? 'repeat(3, 1fr)' : undefined, gap: big ? 12 : 10, ...(big ? { height: '100%' } : {}) }}>
-      {Array.from({ length: 12 }).map((_, m) => (
-        <MiniMonth
-          key={m}
-          year={year}
-          month={m}
-          data={yearData[m]}
-          big={big}
-          isCurrent={year === todayY && m === todayM}
-          onOpenMonth={openMonth}
-        />
-      ))}
-    </div>
-  );
+  // The four view blocks are module-level components (CalGrid/CalNav/CalTabs/
+  // CalYearOverview): defined inline here they'd get a fresh function identity
+  // every render, and Preact remounts on a changed component type — every day
+  // cell rebuilt per click, and the YearJump popover snapping shut on any state
+  // change. Bind their props once per render instead.
+  const navProps = { view, year, month, isCurrentMonth, todayY, timelineCount: timeline.length, onStep: stepView, onGoToday: goToday, onPickYear: setYear };
+  const gridProps = { meta, today, selected, onSelect: setSelected, byDay, resolve: resolveJournal };
+  const yearProps = { year, yearData, todayY, todayM, onOpenMonth: openMonth };
 
   if (desk) {
     return (
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--paper)' }}>
         <div style={{ padding: '24px 28px 16px', borderBottom: '1px solid var(--line)' }}>
-          <div style={{ marginBottom: 16 }}><Nav big /></div>
+          <div style={{ marginBottom: 16 }}><CalNav big {...navProps} /></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
             {view === 'year' ? (
               <>
@@ -315,14 +253,14 @@ export function CalendarScreen({ desk, onOpenEntry }: { desk: boolean; onOpenEnt
               </>
             )}
             <div style={{ flex: 1 }} />
-            <Tabs />
+            <CalTabs view={view} onView={setView} />
           </div>
         </div>
 
         {view === 'month' && (
           <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 28px', minWidth: 0 }}>
-              <div style={{ flex: 1, minHeight: 0 }}><Grid big /></div>
+              <div style={{ flex: 1, minHeight: 0 }}><CalGrid big {...gridProps} /></div>
             </div>
             <div style={{ width: 340, borderInlineStart: '1px solid var(--line)', display: 'flex', flexDirection: 'column', background: 'var(--surface-2)' }}>
               <div style={{ padding: '20px 22px 14px' }}>
@@ -345,7 +283,7 @@ export function CalendarScreen({ desk, onOpenEntry }: { desk: boolean; onOpenEnt
 
         {view === 'year' && (
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: '18px 28px' }}>
-            <YearOverview big />
+            <CalYearOverview big {...yearProps} />
           </div>
         )}
 
@@ -367,8 +305,8 @@ export function CalendarScreen({ desk, onOpenEntry }: { desk: boolean; onOpenEnt
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
           <ConnChip />
         </div>
-        <Nav />
-        <div style={{ margin: '14px 0' }}><Tabs full /></div>
+        <CalNav {...navProps} />
+        <div style={{ margin: '14px 0' }}><CalTabs full view={view} onView={setView} /></div>
 
         {view === 'month' && (
           <>
@@ -378,7 +316,7 @@ export function CalendarScreen({ desk, onOpenEntry }: { desk: boolean; onOpenEnt
               <Stat n={compactCount(words)} label={t('calendar.stat.words')} boxed />
             </div>
             <div style={{ padding: 14, borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--line)' }}>
-              <Grid />
+              <CalGrid {...gridProps} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '22px 2px 12px' }}>
               <h3 style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>{fmtDate(Date.UTC(year, month, selected), { month: 'long', day: 'numeric', timeZone: 'UTC' })}</h3>
@@ -398,7 +336,7 @@ export function CalendarScreen({ desk, onOpenEntry }: { desk: boolean; onOpenEnt
               <Stat n={fmtNumber(yearDays)} label={t('calendar.stat.days')} boxed />
               <Stat n={busiestMonth >= 0 ? monthName(busiestMonth, 'short') : '—'} label={t('calendar.stat.mostActive')} boxed />
             </div>
-            <YearOverview />
+            <CalYearOverview {...yearProps} />
           </>
         )}
 
@@ -408,6 +346,113 @@ export function CalendarScreen({ desk, onOpenEntry }: { desk: boolean; onOpenEnt
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// The month grid: weekday header + day cells. Module-level (not inline in
+// CalendarScreen) so its component identity is stable across renders — Preact
+// remounts the whole subtree when the element type changes.
+function CalGrid({ big, meta, today, selected, onSelect, byDay, resolve }: {
+  big?: boolean;
+  meta: { offset: number; days: number };
+  today: number;
+  selected: number;
+  onSelect: (d: number) => void;
+  byDay: Map<number, CalEntry[]>;
+  resolve: (id: string) => Journal | undefined;
+}): VNode {
+  return (
+    <div style={big ? { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 } : undefined}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: big ? 6 : 2, marginBottom: 6 }}>
+        {Array.from({ length: 7 }).map((_, i) => (
+          // Mon-first column order; weekdayName() takes 0=Sunday.
+          <div key={i} style={{ textAlign: 'center', fontFamily: 'var(--ui)', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: 'var(--ink-3)', textTransform: 'uppercase', padding: '2px 0' }}>{weekdayName((i + 1) % 7, big ? 'short' : 'narrow')}</div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: big ? 6 : 2, ...(big ? { flex: 1, minHeight: 0, gridAutoRows: 'minmax(0, 1fr)' } : {}) }}>
+        {Array.from({ length: meta.offset }).map((_, i) => <div key={'b' + i} />)}
+        {Array.from({ length: meta.days }).map((_, i) => (
+          <Cell key={i} d={i + 1} today={today} selected={selected} onSelect={onSelect} big={big} dayEntries={byDay.get(i + 1) ?? []} resolve={resolve} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// The shared title + quick-jump cluster. Steps by month in the month view and
+// by year in the year view (onStep decides); timeline has no stepping.
+function CalNav({ big, view, year, month, isCurrentMonth, todayY, timelineCount, onStep, onGoToday, onPickYear }: {
+  big?: boolean;
+  view: CalView;
+  year: number;
+  month: number;
+  isCurrentMonth: boolean;
+  todayY: number;
+  timelineCount: number;
+  onStep: (delta: number) => void;
+  onGoToday: () => void;
+  onPickYear: (y: number) => void;
+}): VNode {
+  const atToday = view === 'year' ? year === todayY : isCurrentMonth;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, minWidth: 0 }}>
+        {view === 'timeline' ? (
+          <h2 style={{ fontFamily: 'var(--serif)', fontSize: big ? 26 : 24, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>{t('calendar.view.timeline')}</h2>
+        ) : (
+          <>
+            {view === 'month' && <h2 style={{ fontFamily: 'var(--serif)', fontSize: big ? 26 : 24, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>{monthName(month)}</h2>}
+            <YearJump year={year} big={view === 'year'} onPick={onPickYear} />
+          </>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {view === 'timeline' ? (
+          <span style={{ fontFamily: 'var(--ui)', fontSize: 13, color: 'var(--ink-3)' }}>{tp('common.entries', timelineCount)}</span>
+        ) : (
+          <>
+            {!atToday && <Btn kind="quiet" size="sm" onClick={onGoToday}>{view === 'year' ? t('calendar.thisYear') : t('common.today')}</Btn>}
+            <button onClick={() => onStep(-1)} aria-label={t('calendar.previous')} style={navBtn}><Icon name="left" size={18} color="var(--ink-2)" dirFlip /></button>
+            <button onClick={() => onStep(1)} aria-label={t('common.next')} style={navBtn}><Icon name="right" size={18} color="var(--ink-2)" dirFlip /></button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CalTabs({ full, view, onView }: { full?: boolean; view: CalView; onView: (v: CalView) => void }): VNode {
+  return (
+    <div style={{ display: 'flex', gap: 2, padding: 3, borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--line)', ...(full ? { width: '100%' } : {}) }}>
+      <ViewTab active={view === 'month'} icon="cal" full={full} onClick={() => onView('month')}>{t('calendar.view.month')}</ViewTab>
+      <ViewTab active={view === 'year'} icon="grid" full={full} onClick={() => onView('year')}>{t('calendar.view.year')}</ViewTab>
+      <ViewTab active={view === 'timeline'} icon="timeline" full={full} onClick={() => onView('timeline')}>{t('calendar.view.timeline')}</ViewTab>
+    </div>
+  );
+}
+
+function CalYearOverview({ big, year, yearData, todayY, todayM, onOpenMonth }: {
+  big?: boolean;
+  year: number;
+  yearData: { count: number; days: Map<number, number> }[];
+  todayY: number;
+  todayM: number;
+  onOpenMonth: (m: number, day?: number) => void;
+}): VNode {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: big ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)', gridTemplateRows: big ? 'repeat(3, 1fr)' : undefined, gap: big ? 12 : 10, ...(big ? { height: '100%' } : {}) }}>
+      {Array.from({ length: 12 }).map((_, m) => (
+        <MiniMonth
+          key={m}
+          year={year}
+          month={m}
+          data={yearData[m]}
+          big={big}
+          isCurrent={year === todayY && m === todayM}
+          onOpenMonth={onOpenMonth}
+        />
+      ))}
     </div>
   );
 }
@@ -451,7 +496,7 @@ function MiniMonth({ year, month, data, big, isCurrent, onOpenMonth }: {
               title={c ? tp('calendar.dayCount', c, { date: dateLabel }) : dateLabel}
               style={{
                 ...(big ? {} : { aspectRatio: '1' }), borderRadius: 3, cursor: 'pointer', border: 'none', padding: 0, minHeight: big ? 6 : undefined,
-                background: c ? hexA('#B0563A', intensity) : 'var(--surface-2)',
+                background: c ? `color-mix(in srgb, var(--accent) ${Math.round(intensity * 100)}%, transparent)` : 'var(--surface-2)',
               }}
             />
           );
@@ -564,8 +609,8 @@ function YearJump({ year, big, onPick }: { year: number; big?: boolean; onPick: 
       </button>
       {open && (
         <>
-          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-          <div style={{ position: 'absolute', top: '100%', insetInlineStart: 0, marginTop: 6, zIndex: 41, width: 260, padding: 12, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--line)', boxShadow: '0 10px 30px rgba(0,0,0,.14)' }}>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: Z.popover }} />
+          <div style={{ position: 'absolute', top: '100%', insetInlineStart: 0, marginTop: 6, zIndex: Z.popover + 1, width: 260, padding: 12, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--line)', boxShadow: '0 10px 30px rgba(0,0,0,.14)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <button onClick={() => setPage((p) => p - 12)} aria-label={t('calendar.previous')} style={navBtnSm}><Icon name="left" size={15} color="var(--ink-2)" dirFlip /></button>
               <span style={{ fontFamily: 'var(--ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-2)' }}>{page}–{page + 11}</span>

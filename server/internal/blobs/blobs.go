@@ -28,8 +28,6 @@ var ErrNotFound = errors.New("blob not found")
 type Store interface {
 	Put(ctx context.Context, key string, data []byte) error
 	Get(ctx context.Context, key string) ([]byte, error)
-	// Delete removes one chunk. Deleting a key that was never stored is not an error.
-	Delete(ctx context.Context, key string) error
 	// DeletePrefix removes every object whose key starts with prefix, and
 	// reports how many it removed. This is what makes "delete my vault" true:
 	// cleanup driven off the media_blobs index can only ever reach chunks that
@@ -57,7 +55,6 @@ func (Disabled) Put(context.Context, string, []byte) error { return ErrNotConfig
 func (Disabled) Get(context.Context, string) ([]byte, error) {
 	return nil, ErrNotConfigured
 }
-func (Disabled) Delete(context.Context, string) error { return ErrNotConfigured }
 func (Disabled) DeletePrefix(context.Context, string) (int, error) {
 	return 0, ErrNotConfigured
 }
@@ -87,13 +84,6 @@ func (s *Memory) Get(_ context.Context, key string) ([]byte, error) {
 		return nil, ErrNotFound
 	}
 	return data, nil
-}
-
-func (s *Memory) Delete(_ context.Context, key string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.m, key)
-	return nil
 }
 
 func (s *Memory) DeletePrefix(_ context.Context, prefix string) (int, error) {

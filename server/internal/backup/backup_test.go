@@ -63,7 +63,16 @@ func TestCreateRestoreRoundTrip(t *testing.T) {
 	src := &fakeStore{
 		schema: 2,
 		data: store.RestoreData{
-			Owners: []store.OwnerRow{{OwnerID: "owner-a", OwnerPub: []byte{1, 2, 3}, CreatedAt: ts}},
+			Owners: []store.OwnerRow{
+				// A rejected owner with a pinned signing key: the security columns
+				// (status, approval hint, sign pubkey) must round-trip verbatim —
+				// dropping them once resurrected rejected vaults as approved and
+				// erased the device-binding pin (issue #40).
+				{
+					OwnerID: "owner-a", OwnerPub: []byte{1, 2, 3}, CreatedAt: ts,
+					Status: "rejected", ApprovalHint: "amber-otter-07", OwnerSignPub: []byte{7, 8, 9},
+				},
+			},
 			Devices: []store.DeviceRow{
 				{DeviceID: "dev-1", OwnerID: "owner-a", DevicePub: []byte{4, 5, 6}, CreatedAt: ts},
 			},
@@ -118,6 +127,12 @@ func TestCreateRestoreRoundTrip(t *testing.T) {
 	}
 	if !bytes.Equal(dst.data.Owners[0].OwnerPub, []byte{1, 2, 3}) {
 		t.Fatalf("owner pubkey corrupted: %v", dst.data.Owners[0].OwnerPub)
+	}
+	if got := dst.data.Owners[0]; got.Status != "rejected" || got.ApprovalHint != "amber-otter-07" {
+		t.Fatalf("owner approval state lost: status=%q hint=%q", got.Status, got.ApprovalHint)
+	}
+	if !bytes.Equal(dst.data.Owners[0].OwnerSignPub, []byte{7, 8, 9}) {
+		t.Fatalf("owner sign pubkey lost: %v", dst.data.Owners[0].OwnerSignPub)
 	}
 	if len(dst.data.Entries) != 2 {
 		t.Fatalf("want 2 entries, got %d", len(dst.data.Entries))

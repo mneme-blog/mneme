@@ -50,6 +50,10 @@ jobs:
         run: go test -tags e2e ./e2e/...
         env:
           TEST_DATABASE_URL: postgres://journal:journal_dev@localhost:5432/journal?sslmode=disable
+          # The suite refuses to run against a non-"test"-named database unless
+          # explicitly allowed — it truncates everything. This Postgres is an
+          # ephemeral CI service container, so wiping it is the point.
+          E2E_ALLOW_WIPE: "1"
 
   # The host-side updater agent restarts production stacks, so it gets exercised
   # here against stubbed docker/compose rather than only ever in anger. Covers
@@ -75,6 +79,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: typecheck + build
         run: pnpm --filter client build
+      # The client regression suite (jsdom + pure-logic repro scripts, incl. the
+      # security-critical ones: record-binding, seedlock-methods, link-safety,
+      # ollama-url). The relay-dependent roundtrip scripts and film-e2e.mjs
+      # (real Chrome) stay manual — see docs/CONTRIBUTING.md.
+      - name: regression checks
+        run: pnpm --filter client check
 
   # Publish images for the head of main — the admin dashboard's "Switch to
   # main" development channel. Gated on every other job being green, so a

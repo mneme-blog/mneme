@@ -277,6 +277,7 @@ const zh: Partial<Record<MessageKey, string>> = {
   'editorx.preview.location': '位置',
   'media.noun.audio': '录音',
   'media.noun.video': '视频',
+  'media.noun.film': '影片',
   'media.noun.image': '照片',
   'media.noun.file': '文件',
   'media.noun.recording': '录制内容',
@@ -578,7 +579,6 @@ const zh: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': '标签',
   'shell.search.field.date': '日期',
   'shell.search.field.content': '内容',
-  'shell.photo': '照片',
   'shell.removeLabel': '移除“{name}”',
   'shell.daysAgo#one': '{count} 天前',
   'shell.daysAgo#other': '{count} 天前',
@@ -659,6 +659,10 @@ const zh: Partial<Record<MessageKey, string>> = {
   'prefs.vault.data': '数据',
   'prefs.vault.import': '从 Day One 导入',
   'prefs.vault.delete': '删除保险库',
+  'prefs.relay': '中继服务器',
+  'prefs.relay.urlLabel': '中继服务器 URL',
+  'prefs.relay.invalid': '请输入包含协议的完整 URL，例如 https://relay.example.com',
+  'prefs.relay.help': '将应用指向另一台服务器。已登录的保险库会在那里重新认证。留空则使用默认服务器。',
   'prefs.info.section': '关于',
   'prefs.info.tagline': '一处私密的记忆之地。',
   'prefs.info.version': '版本',
@@ -833,6 +837,10 @@ const zh: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': '录制你的第一次视频访谈。',
   'badges.memory-keeper.name': '记忆守护者',
   'badges.memory-keeper.desc': '在记录中加入照片、音频或视频。',
+  'media.transcribe.busyFor': '转写中… {seconds} 秒',
+  'media.transcribe.busyCount': '正在转写回答… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': '这是你部署自带的服务器，但以绝对地址保存时会被视为第三方服务器：不会附加你的登录凭据，每个请求都会被拒绝。',
+  'assistant.transcribe.bundledFix': '改用 {path}',
 };
 
 export default zh;

@@ -19,8 +19,13 @@ import { DEFAULT_OLLAMA_URL } from './types';
  */
 export type OllamaScope = 'loopback' | 'private' | 'remote' | 'invalid';
 
+// A full dotted-quad literal. The range checks below must only ever run against
+// actual IP literals: DNS labels may be numeric ("10.example.net") or start with
+// hex that looks like an IPv6 prefix ("fdroid.example.com"), and a prefix match
+// against a *name* would hand a remote host the softer "local network" copy.
+const IPV4_LITERAL = /^\d{1,3}(\.\d{1,3}){3}$/;
 const PRIVATE_V4 =
-  /^(10\.|127\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/;
+  /^(10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/;
 
 /** Trim, drop trailing slashes, and reject anything that isn't an http(s) URL. */
 export function normalizeOllamaUrl(raw: string): string | null {
@@ -44,13 +49,17 @@ export function ollamaScope(raw: string): OllamaScope {
   const normalized = normalizeOllamaUrl(raw);
   if (normalized === null) return 'invalid';
   const host = new URL(normalized).hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  const isV4 = IPV4_LITERAL.test(host);
+  // An IPv6 literal always contains ':' after the brackets are stripped; a DNS
+  // name never does.
+  const isV6 = host.includes(':');
 
-  if (host === 'localhost' || host === '::1' || host === '0.0.0.0' || /^127\./.test(host)) {
+  if (host === 'localhost' || host === '::1' || host === '0.0.0.0' || (isV4 && host.startsWith('127.'))) {
     return 'loopback';
   }
-  if (PRIVATE_V4.test(host)) return 'private';
+  if (isV4 && PRIVATE_V4.test(host)) return 'private';
   // IPv6 unique-local (fc00::/7) and link-local (fe80::/10).
-  if (/^f[cd]/.test(host) || host.startsWith('fe80:')) return 'private';
+  if (isV6 && (/^f[cd]/.test(host) || host.startsWith('fe80:'))) return 'private';
   // mDNS names resolve on the LAN only.
   if (host.endsWith('.local') || host.endsWith('.home.arpa') || host.endsWith('.internal')) {
     return 'private';

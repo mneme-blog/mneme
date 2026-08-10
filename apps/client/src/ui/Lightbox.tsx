@@ -7,6 +7,7 @@ import type { MediaAttachment } from '../sync/engine';
 import { t } from '../i18n';
 import { useMediaUrl, fmtBytes, MediaLoadingBar, type MediaResolver } from './Attachments';
 import { Icon } from './Icon';
+import { Z } from './Sheet';
 
 // Prev/next keep their physical left/right positions and glyphs even in RTL —
 // stepping through an image strip is spatial navigation, not reading order.
@@ -68,7 +69,7 @@ export function Lightbox({
       role="dialog"
       aria-label={t('media.lightbox.viewer')}
       onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(16,11,7,.92)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      style={{ position: 'fixed', inset: 0, zIndex: Z.lightbox, background: 'rgba(16,11,7,.92)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     >
       <button
         onClick={onClose}

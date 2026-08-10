@@ -2,6 +2,7 @@ import type { VNode } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { Icon } from './Icon';
 import { Btn } from './primitives';
+import { Sheet, Z } from './Sheet';
 import { t, fmtDate, monthName, weekdayName } from '../i18n';
 
 // The editor's date/time metadata line, made editable: clicking it opens a
@@ -95,86 +96,82 @@ function DateTimeSheet({ value, desk, onClose, onSave }: { value: number; desk: 
   };
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(30,22,16,.34)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: desk ? 'center' : 'flex-end', justifyContent: 'center' }}
+    <Sheet
+      desk={desk}
+      onClose={onClose}
+      zIndex={Z.overlay}
+      width={380}
+      cardStyle={{ padding: desk ? 24 : '18px 22px calc(env(safe-area-inset-bottom, 0px) + 26px)' }}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: desk ? 380 : '100%', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: desk ? 20 : '24px 24px 0 0', border: '1px solid var(--line)', padding: desk ? 24 : '18px 22px calc(env(safe-area-inset-bottom, 0px) + 26px)', boxShadow: '0 20px 60px rgba(30,20,12,.3)' }}
-      >
-        {!desk && <div style={{ width: 38, height: 4, borderRadius: 9, background: 'var(--line)', margin: '0 auto 14px' }} />}
+      <div style={{ fontFamily: 'var(--ui)', fontSize: 11.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--ink-3)' }}>{t('editor.date.heading')}</div>
+      <div style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: '3px 0 16px' }}>
+        {dateLabel(draft)} · {timeLabel(draft)}
+      </div>
 
-        <div style={{ fontFamily: 'var(--ui)', fontSize: 11.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--ink-3)' }}>{t('editor.date.heading')}</div>
-        <div style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)', margin: '3px 0 16px' }}>
-          {dateLabel(draft)} · {timeLabel(draft)}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 500, color: 'var(--ink)' }}>{monthName(view.m)}</span>
+          <span style={{ fontFamily: 'var(--ui)', fontSize: 14, color: 'var(--ink-3)' }}>{view.y}</span>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 500, color: 'var(--ink)' }}>{monthName(view.m)}</span>
-            <span style={{ fontFamily: 'var(--ui)', fontSize: 14, color: 'var(--ink-3)' }}>{view.y}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            {!isCurrentMonth && (
-              <Btn kind="quiet" size="sm" onClick={() => setView({ y: now.getFullYear(), m: now.getMonth() })}>{t('common.today')}</Btn>
-            )}
-            <button onClick={() => nav(-1)} style={navBtn}><Icon name="left" size={17} color="var(--ink-2)" dirFlip /></button>
-            <button onClick={() => nav(1)} style={navBtn}><Icon name="right" size={17} color="var(--ink-2)" dirFlip /></button>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
-          {/* Mon-first columns; getDay() has 0=Sunday, so column i is weekday (i+1)%7. */}
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} style={{ textAlign: 'center', fontFamily: 'var(--ui)', fontSize: 10.5, fontWeight: 700, letterSpacing: 0.5, color: 'var(--ink-3)', textTransform: 'uppercase', padding: '2px 0' }}>{weekdayName((i + 1) % 7, 'narrow')}</div>
-          ))}
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
-          {Array.from({ length: meta.offset }).map((_, i) => <div key={'b' + i} />)}
-          {Array.from({ length: meta.days }).map((_, i) => {
-            const day = i + 1;
-            const isSel = day === selDay;
-            const isToday = day === todayDay;
-            return (
-              <button
-                key={day}
-                onClick={() => pickDay(day)}
-                style={{
-                  aspectRatio: '1', borderRadius: 999, padding: 0, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: isSel ? 'var(--accent)' : 'transparent',
-                  border: isToday && !isSel ? '1.5px solid var(--accent)' : '1.5px solid transparent',
-                  fontFamily: 'var(--ui)', fontSize: 13.5, fontWeight: isSel || isToday ? 700 : 500,
-                  color: isSel ? '#fff' : isToday ? 'var(--accent-ink)' : 'var(--ink)',
-                  transition: 'all .12s',
-                }}
-              >
-                {day}
-              </button>
-            );
-          })}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
-          <span style={{ fontFamily: 'var(--ui)', fontSize: 11.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--ink-3)' }}>{t('editor.date.time')}</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input
-              type="time"
-              value={`${pad(draft.getHours())}:${pad(draft.getMinutes())}`}
-              onInput={(e) => setTime((e.target as HTMLInputElement).value)}
-              style={{ fontFamily: 'var(--mono)', fontSize: 15, padding: '7px 10px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--paper)', color: 'var(--ink)', outline: 'none' }}
-            />
-            <Btn kind="soft" size="sm" onClick={toNow}>{t('editor.date.now')}</Btn>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
-          <Btn kind="ghost" onClick={onClose} style={{ flex: 1 }}>{t('common.cancel')}</Btn>
-          <Btn kind="primary" onClick={() => onSave(draft.getTime())} style={{ flex: 2 }}>{t('editor.date.set')}</Btn>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          {!isCurrentMonth && (
+            <Btn kind="quiet" size="sm" onClick={() => setView({ y: now.getFullYear(), m: now.getMonth() })}>{t('common.today')}</Btn>
+          )}
+          <button onClick={() => nav(-1)} style={navBtn}><Icon name="left" size={17} color="var(--ink-2)" dirFlip /></button>
+          <button onClick={() => nav(1)} style={navBtn}><Icon name="right" size={17} color="var(--ink-2)" dirFlip /></button>
         </div>
       </div>
-    </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
+        {/* Mon-first columns; getDay() has 0=Sunday, so column i is weekday (i+1)%7. */}
+        {Array.from({ length: 7 }).map((_, i) => (
+          <div key={i} style={{ textAlign: 'center', fontFamily: 'var(--ui)', fontSize: 10.5, fontWeight: 700, letterSpacing: 0.5, color: 'var(--ink-3)', textTransform: 'uppercase', padding: '2px 0' }}>{weekdayName((i + 1) % 7, 'narrow')}</div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+        {Array.from({ length: meta.offset }).map((_, i) => <div key={'b' + i} />)}
+        {Array.from({ length: meta.days }).map((_, i) => {
+          const day = i + 1;
+          const isSel = day === selDay;
+          const isToday = day === todayDay;
+          return (
+            <button
+              key={day}
+              onClick={() => pickDay(day)}
+              style={{
+                aspectRatio: '1', borderRadius: 999, padding: 0, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: isSel ? 'var(--accent)' : 'transparent',
+                border: isToday && !isSel ? '1.5px solid var(--accent)' : '1.5px solid transparent',
+                fontFamily: 'var(--ui)', fontSize: 13.5, fontWeight: isSel || isToday ? 700 : 500,
+                color: isSel ? '#fff' : isToday ? 'var(--accent-ink)' : 'var(--ink)',
+                transition: 'all .12s',
+              }}
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+        <span style={{ fontFamily: 'var(--ui)', fontSize: 11.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--ink-3)' }}>{t('editor.date.time')}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            type="time"
+            value={`${pad(draft.getHours())}:${pad(draft.getMinutes())}`}
+            onInput={(e) => setTime((e.target as HTMLInputElement).value)}
+            style={{ fontFamily: 'var(--mono)', fontSize: 15, padding: '7px 10px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--paper)', color: 'var(--ink)', outline: 'none' }}
+          />
+          <Btn kind="soft" size="sm" onClick={toNow}>{t('editor.date.now')}</Btn>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+        <Btn kind="ghost" onClick={onClose} style={{ flex: 1 }}>{t('common.cancel')}</Btn>
+        <Btn kind="primary" onClick={() => onSave(draft.getTime())} style={{ flex: 2 }}>{t('editor.date.set')}</Btn>
+      </div>
+    </Sheet>
   );
 }
 

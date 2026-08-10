@@ -19,10 +19,19 @@ import (
 // The row types below are the on-disk schema of a backup archive. bytea columns are
 // []byte, which encoding/json serialises as base64 — the relay never interprets it.
 
+// OwnerRow must carry every security-relevant owners column: dropping one here
+// silently resets it to the column default on restore. That bit us once —
+// archives written before Status/ApprovalHint/OwnerSignPub existed restored
+// rejected owners as approved and erased the device-binding pin (issue #40).
+// Absent fields in old archives decode to Go zero values; restore maps those to
+// the safe defaults explicitly below.
 type OwnerRow struct {
-	OwnerID   string    `json:"owner_id"`
-	OwnerPub  []byte    `json:"owner_pubkey"`
-	CreatedAt time.Time `json:"created_at"`
+	OwnerID      string    `json:"owner_id"`
+	OwnerPub     []byte    `json:"owner_pubkey"`
+	CreatedAt    time.Time `json:"created_at"`
+	Status       string    `json:"status,omitempty"`
+	ApprovalHint string    `json:"approval_hint,omitempty"`
+	OwnerSignPub []byte    `json:"owner_sign_pubkey,omitempty"`
 }
 
 type DeviceRow struct {
@@ -87,10 +96,10 @@ func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
 // held in memory at once.
 
 func (s *Store) DumpOwners(ctx context.Context, fn func(OwnerRow) error) error {
-	return scan(ctx, s, `SELECT owner_id, owner_pubkey, created_at FROM owners ORDER BY created_at`,
+	return scan(ctx, s, `SELECT owner_id, owner_pubkey, created_at, status, approval_hint, owner_sign_pubkey FROM owners ORDER BY created_at`,
 		func(r pgxRow) error {
 			var o OwnerRow
-			if err := r.Scan(&o.OwnerID, &o.OwnerPub, &o.CreatedAt); err != nil {
+			if err := r.Scan(&o.OwnerID, &o.OwnerPub, &o.CreatedAt, &o.Status, &o.ApprovalHint, &o.OwnerSignPub); err != nil {
 				return err
 			}
 			return fn(o)
@@ -197,9 +206,23 @@ func (s *Store) Restore(ctx context.Context, d *RestoreData) error {
 	}
 
 	for _, o := range d.Owners {
+		// Old archives (pre-status/sign-key) decode with zero values: map an
+		// absent status to 'approved' (matching the migration-0003 grandfathering
+		// of pre-existing owners) and keep an absent sign key NULL (pre-0004
+		// grandfathering path). A present value must round-trip verbatim — a
+		// rejected owner stays rejected across restore.
+		status := o.Status
+		if status == "" {
+			status = "approved"
+		}
+		var signPub any
+		if len(o.OwnerSignPub) > 0 {
+			signPub = o.OwnerSignPub
+		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO owners (owner_id, owner_pubkey, created_at) VALUES ($1, $2, $3)`,
-			o.OwnerID, o.OwnerPub, o.CreatedAt); err != nil {
+			`INSERT INTO owners (owner_id, owner_pubkey, created_at, status, approval_hint, owner_sign_pubkey)
+			 VALUES ($1, $2, $3, $4, $5, $6)`,
+			o.OwnerID, o.OwnerPub, o.CreatedAt, status, o.ApprovalHint, signPub); err != nil {
 			return fmt.Errorf("restore owner %s: %w", o.OwnerID, err)
 		}
 	}

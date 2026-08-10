@@ -12,6 +12,7 @@ import katex from 'katex';
 import { t, type MessageKey } from '../i18n';
 import { Btn } from '../ui/primitives';
 import { Icon } from '../ui/Icon';
+import { Z } from '../ui/Sheet';
 // KaTeX's stylesheet rides in editor.css (a CSS import here would break
 // node-side tsx scripts that import editor modules).
 
@@ -188,7 +189,7 @@ export function MathDialog({ handle, editor }: { handle: MathHandle; editor: Edi
     <div
       role="dialog"
       onClick={close}
-      style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(30,22,16,.45)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}
+      style={{ position: 'fixed', inset: 0, zIndex: Z.dialog, background: 'rgba(30,22,16,.45)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}
     >
       <div
         onClick={(e) => e.stopPropagation()}

@@ -296,6 +296,7 @@ const de: Partial<Record<MessageKey, string>> = {
   'editorx.preview.location': 'Ort',
   'media.noun.audio': 'Audioaufnahme',
   'media.noun.video': 'Videoaufnahme',
+  'media.noun.film': 'Film',
   'media.noun.image': 'Foto',
   'media.noun.file': 'Datei',
   'media.noun.recording': 'Aufnahme',
@@ -641,7 +642,6 @@ const de: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'Label',
   'shell.search.field.date': 'Datum',
   'shell.search.field.content': 'Inhalt',
-  'shell.photo': 'Foto',
   'shell.removeLabel': '„{name}“ entfernen',
   'shell.daysAgo#one': 'vor {count} Tag',
   'shell.daysAgo#other': 'vor {count} Tagen',
@@ -724,6 +724,10 @@ const de: Partial<Record<MessageKey, string>> = {
   'prefs.vault.data': 'Daten',
   'prefs.vault.import': 'Aus Day One importieren',
   'prefs.vault.delete': 'Tresor löschen',
+  'prefs.relay': 'Relay-Server',
+  'prefs.relay.urlLabel': 'Relay-Server-URL',
+  'prefs.relay.invalid': 'Gib eine vollständige URL mit Schema an, z. B. https://relay.example.com',
+  'prefs.relay.help': 'Verbindet die App mit einem anderen Server. Ein angemeldeter Tresor authentifiziert sich dort neu. Leer lassen für den Standard.',
   'prefs.info.section': 'Über',
   'prefs.info.tagline': 'Ein privater Ort zum Erinnern.',
   'prefs.info.version': 'Version',
@@ -899,6 +903,10 @@ const de: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'Nimm dein erstes Video-Interview auf.',
   'badges.memory-keeper.name': 'Erinnerungshüter',
   'badges.memory-keeper.desc': 'Füge einem Eintrag ein Foto, eine Audio- oder Videoaufnahme hinzu.',
+  'media.transcribe.busyFor': 'Transkribiere… {seconds}s',
+  'media.transcribe.busyCount': 'Transkribiere Antworten… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'Das ist der mitgelieferte Server deines Deployments — als absolute Adresse gespeichert gilt er aber als Fremdserver: deine Anmeldung wird nicht mitgeschickt und jede Anfrage abgelehnt.',
+  'assistant.transcribe.bundledFix': 'Stattdessen {path} verwenden',
 };
 
 export default de;

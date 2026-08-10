@@ -17,6 +17,7 @@ import { parseBody, docToText, docMediaIds, docEntryLinks } from '../editor/doc'
 import { docToMarkdown, markdownToDoc } from '../editor/markdown';
 import { buildEntryLinkItems } from '../editor/wikilink';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { Z } from '../ui/Sheet';
 import { buildSlashCommands, createSlashHandle } from '../editor/slash';
 import { SlashMenu } from '../editor/SlashMenu';
 import { createMathHandle, MathDialog } from '../editor/math';
@@ -27,6 +28,7 @@ import { VideoCapture } from '../ui/VideoCapture';
 import { AudioCapture } from '../ui/AudioCapture';
 import { AttachmentList } from '../ui/Attachments';
 import { EntryThumbs, entryImages } from '../ui/EntryThumbs';
+import { listDate, monthKey } from '../ui/entryDates';
 import { Lightbox } from '../ui/Lightbox';
 import { TemplatesSheet } from '../ui/Templates';
 import { EntryDateTime } from '../ui/EntryDateTime';
@@ -36,18 +38,6 @@ import type { VideoInterviewData } from '../editor/videointerviewData';
 import { t, tp, fmtDate } from '../i18n';
 import '../editor/editor.css';
 
-// Compact list date: append the year only when the entry isn't from the current
-// year, so recent entries stay clean while older ones aren't ambiguous.
-function listDate(d: Date): string {
-  return d.getFullYear() === new Date().getFullYear()
-    ? fmtDate(d, { month: 'short', day: 'numeric' })
-    : fmtDate(d, { month: 'short', day: 'numeric', year: 'numeric' });
-}
-// The month/year a list separator groups by — entries are bucketed by their
-// (displayed) entry date.
-function monthKey(d: Date): string {
-  return `${d.getFullYear()}-${d.getMonth()}`;
-}
 const SAVE_DEBOUNCE_MS = 600;
 
 function countWords(text: string): number {
@@ -193,11 +183,11 @@ function EntryEditor({
     () => ({
       handlers: {
         resolveTitle: (id: string) => {
-          const target = entriesRef.current.find((x) => x.id === id && !x.deleted);
+          const target = entriesRef.current.find((x) => x.id === id);
           return target ? target.title || t('common.untitled') : null;
         },
         onOpen: (id: string) => {
-          if (entriesRef.current.some((x) => x.id === id && !x.deleted)) onOpenEntryRef.current(id);
+          if (entriesRef.current.some((x) => x.id === id)) onOpenEntryRef.current(id);
         },
       },
       suggest: {
@@ -212,7 +202,7 @@ function EntryEditor({
   const backlinks = useMemo(() => {
     const out: JournalEntry[] = [];
     for (const e of entries) {
-      if (e.deleted || e.id === entry.id || !e.bodyJson) continue;
+      if (e.id === entry.id || !e.bodyJson) continue;
       try {
         if (docEntryLinks(JSON.parse(e.bodyJson) as JSONContent).includes(entry.id)) out.push(e);
       } catch {
@@ -320,6 +310,66 @@ function EntryEditor({
     setLightbox(index >= 0 ? { items, index } : { items: [att], index: 0 });
   };
 
+  // Fold out-of-editor write-backs into the LIVE document. A film render or a
+  // detached auto-transcription finishes via attachFilm/attachTranscript, which
+  // write the STORED entry — but this editor was seeded once at mount and never
+  // re-reads bodyJson, so the result used to appear only after closing and
+  // reopening the entry. Whenever the stored body changes, copy exactly the
+  // fields those writers own — film, renderedAt, and per-card transcripts,
+  // addressed by sessionId — into the matching live nodes. Nothing else is
+  // touched, so live typing can't be clobbered; transcripts only fill holes
+  // (a hand-edited one in the live doc wins over a late write-back).
+  useEffect(() => {
+    if (!editor) return;
+    let stored: JSONContent;
+    try {
+      stored = parseBody(entry.bodyJson, entry.bodyText);
+    } catch {
+      return;
+    }
+    const bySession = new Map<string, { film: unknown; renderedAt: unknown; transcripts: (string | undefined)[] }>();
+    const walk = (node: JSONContent): void => {
+      if (node.type === 'videoInterview' && typeof node.attrs?.sessionId === 'string' && node.attrs.sessionId) {
+        const cards = Array.isArray(node.attrs.cards) ? (node.attrs.cards as { transcript?: unknown }[]) : [];
+        bySession.set(node.attrs.sessionId, {
+          film: node.attrs.film ?? null,
+          renderedAt: node.attrs.renderedAt ?? null,
+          transcripts: cards.map((c) => (typeof c?.transcript === 'string' && c.transcript ? c.transcript : undefined)),
+        });
+      }
+      node.content?.forEach(walk);
+    };
+    walk(stored);
+    if (bySession.size === 0) return;
+
+    let tr = editor.state.tr;
+    let changed = false;
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name !== 'videoInterview') return;
+      const s = bySession.get(node.attrs.sessionId as string);
+      if (!s) return;
+      const liveFilmId = (node.attrs.film as { id?: unknown } | null)?.id ?? null;
+      const storedFilmId = (s.film as { id?: unknown } | null)?.id ?? null;
+      const filmChanged = storedFilmId !== null && (liveFilmId !== storedFilmId || node.attrs.renderedAt !== s.renderedAt);
+      const liveCards = Array.isArray(node.attrs.cards) ? (node.attrs.cards as Record<string, unknown>[]) : [];
+      let cardsChanged = false;
+      const mergedCards = liveCards.map((c, i) => {
+        const incoming = s.transcripts[i];
+        if (!incoming || (typeof c.transcript === 'string' && c.transcript)) return c;
+        cardsChanged = true;
+        return { ...c, transcript: incoming };
+      });
+      if (!filmChanged && !cardsChanged) return;
+      tr = tr.setNodeMarkup(pos, undefined, {
+        ...node.attrs,
+        ...(filmChanged ? { film: s.film, renderedAt: s.renderedAt } : {}),
+        ...(cardsChanged ? { cards: mergedCards } : {}),
+      });
+      changed = true;
+    });
+    if (changed) editor.view.dispatch(tr);
+  }, [editor, entry.bodyJson]);
+
   // Store the recording, then embed it in the document at the cursor.
   const attach = async (kind: MediaAttachment['kind'], blob: Blob, durationMs: number): Promise<void> => {
     const att = await addMedia(entry.id, kind, blob, { durationMs });
@@ -363,6 +413,10 @@ function EntryEditor({
   useEffect(() => {
     onEditorReady(editor);
     onWords(countWords(body.current.text));
+    // Without the cleanup, the parent keeps a DESTROYED TipTap instance when
+    // the last EntryEditor unmounts (entry deleted → empty state) and the
+    // still-rendered toolbar dispatches commands into it.
+    return () => onEditorReady(null);
   }, [editor]);
 
   // Hand off whenever the parent flips the mode. Rich→markdown serializes the
@@ -444,7 +498,6 @@ function EntryEditor({
   const labelSuggestions = useMemo(() => {
     const counts = new Map<string, number>();
     for (const e of entries) {
-      if (e.deleted) continue;
       for (const l of e.labels) counts.set(l, (counts.get(l) ?? 0) + 1);
     }
     for (const id of Object.keys(LABELS)) if (!counts.has(id)) counts.set(id, 0);
@@ -664,8 +717,8 @@ function EntryMenu({
       </button>
       {open && entry && (
         <>
-          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 65 }} />
-          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', insetInlineEnd: 0, zIndex: 66, minWidth: 196, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 10px 30px rgba(30,20,12,.18)', padding: 5 }}>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: Z.menu }} />
+          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', insetInlineEnd: 0, zIndex: Z.menu + 1, minWidth: 196, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 10px 30px rgba(30,20,12,.18)', padding: 5 }}>
             {onToggleMode && (
               <>
                 <button
@@ -695,9 +748,9 @@ function EntryMenu({
                 setOpen(false);
                 setConfirming(true);
               }}
-              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'start', padding: '9px 11px', borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--ui)', fontSize: 13.5, fontWeight: 600, color: '#E4573D' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'start', padding: '9px 11px', borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--ui)', fontSize: 13.5, fontWeight: 600, color: 'var(--danger)' }}
             >
-              <Icon name="trash" size={15} color="#E4573D" /> {t('editor.deleteEntry')}
+              <Icon name="trash" size={15} color="var(--danger)" /> {t('editor.deleteEntry')}
             </button>
           </div>
         </>
@@ -780,7 +833,7 @@ export function EditorScreen({
       return;
     }
     const next = entries
-      .filter((x) => !x.deleted && x.journalId === journalId && x.id !== entry?.id)
+      .filter((x) => x.journalId === journalId && x.id !== entry?.id)
       .sort((a, b) => b.updatedAt - a.updatedAt)[0];
     if (next) onSelectEntry(next.id);
   };
@@ -829,7 +882,7 @@ export function EditorScreen({
                 return [
                   sep && (
                     <div key={`m-${key}`} style={{ padding: '16px 0 7px', paddingInlineStart: 4, paddingInlineEnd: 13 }}>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: '#786f62', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>
                         {fmtDate(d, { month: 'long', year: 'numeric' })}
                       </span>
                     </div>

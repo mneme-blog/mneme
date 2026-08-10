@@ -87,7 +87,7 @@ export async function renderTitleCard(
     if (lines.length <= 4 || size <= minSize) break;
     size -= 2;
   }
-  if (lines.length > 4) lines = [...lines.slice(0, 4).slice(0, 3), `${lines[3]}…`];
+  if (lines.length > 4) lines = [...lines.slice(0, 3), `${lines[3]}…`];
 
   const lineHeight = Math.round(size * 1.32);
   const blockHeight = lines.length * lineHeight;

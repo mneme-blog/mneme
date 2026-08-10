@@ -296,6 +296,7 @@ const fi: Partial<Record<MessageKey, string>> = {
   'editorx.preview.location': 'Sijainti',
   'media.noun.audio': 'äänitallenne',
   'media.noun.video': 'videotallenne',
+  'media.noun.film': 'elokuva',
   'media.noun.image': 'valokuva',
   'media.noun.file': 'tiedosto',
   'media.noun.recording': 'tallenne',
@@ -636,7 +637,6 @@ const fi: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': 'tunniste',
   'shell.search.field.date': 'päivämäärä',
   'shell.search.field.content': 'sisältö',
-  'shell.photo': 'valokuva',
   'shell.removeLabel': 'Poista ”{name}”',
   'shell.daysAgo#one': '{count} päivä sitten',
   'shell.daysAgo#other': '{count} päivää sitten',
@@ -719,6 +719,10 @@ const fi: Partial<Record<MessageKey, string>> = {
   'prefs.vault.data': 'Data',
   'prefs.vault.import': 'Tuo Day Onesta',
   'prefs.vault.delete': 'Poista holvi',
+  'prefs.relay': 'Välityspalvelin',
+  'prefs.relay.urlLabel': 'Välityspalvelimen URL',
+  'prefs.relay.invalid': 'Anna täydellinen URL skeeman kanssa, esim. https://relay.example.com',
+  'prefs.relay.help': 'Ohjaa sovelluksen toiselle palvelimelle. Kirjautunut holvi tunnistautuu sinne uudelleen. Jätä tyhjäksi käyttääksesi oletusta.',
   'prefs.info.section': 'Tietoja',
   'prefs.info.tagline': 'Yksityinen paikka muistoille.',
   'prefs.info.version': 'Versio',
@@ -894,6 +898,10 @@ const fi: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': 'Nauhoita ensimmäinen videohaastattelusi.',
   'badges.memory-keeper.name': 'Muistojen vartija',
   'badges.memory-keeper.desc': 'Lisää merkintään valokuva, ääntä tai videota.',
+  'media.transcribe.busyFor': 'Litteroidaan… {seconds}s',
+  'media.transcribe.busyCount': 'Litteroidaan vastauksia… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': 'Tämä on asennuksesi mukana tuleva palvelin, mutta absoluuttisena osoitteena tallennettuna se lasketaan kolmannen osapuolen palvelimeksi: kirjautumistasi ei liitetä mukaan ja jokainen pyyntö hylätään.',
+  'assistant.transcribe.bundledFix': 'Käytä sen sijaan {path}',
 };
 
 export default fi;

@@ -277,6 +277,7 @@ const ko: Partial<Record<MessageKey, string>> = {
   'editorx.preview.location': '위치',
   'media.noun.audio': '오디오 녹음',
   'media.noun.video': '동영상 녹화',
+  'media.noun.film': '필름',
   'media.noun.image': '사진',
   'media.noun.file': '파일',
   'media.noun.recording': '녹음',
@@ -578,7 +579,6 @@ const ko: Partial<Record<MessageKey, string>> = {
   'shell.search.field.label': '라벨',
   'shell.search.field.date': '날짜',
   'shell.search.field.content': '내용',
-  'shell.photo': '사진',
   'shell.removeLabel': '"{name}" 제거',
   'shell.daysAgo#one': '{count}일 전',
   'shell.daysAgo#other': '{count}일 전',
@@ -659,6 +659,10 @@ const ko: Partial<Record<MessageKey, string>> = {
   'prefs.vault.data': '데이터',
   'prefs.vault.import': 'Day One에서 가져오기',
   'prefs.vault.delete': '금고 삭제',
+  'prefs.relay': '릴레이 서버',
+  'prefs.relay.urlLabel': '릴레이 서버 URL',
+  'prefs.relay.invalid': '스킴을 포함한 전체 URL을 입력하세요. 예: https://relay.example.com',
+  'prefs.relay.help': '앱이 다른 서버를 사용하도록 합니다. 로그인된 금고는 그 서버에서 다시 인증합니다. 비워 두면 기본값을 사용합니다.',
   'prefs.info.section': '정보',
   'prefs.info.tagline': '기억을 담아두는 나만의 공간.',
   'prefs.info.version': '버전',
@@ -833,6 +837,10 @@ const ko: Partial<Record<MessageKey, string>> = {
   'badges.on-camera.desc': '첫 영상 인터뷰를 녹화하세요.',
   'badges.memory-keeper.name': '추억 지킴이',
   'badges.memory-keeper.desc': '항목에 사진, 오디오 또는 동영상을 추가하세요.',
+  'media.transcribe.busyFor': '전사 중… {seconds}초',
+  'media.transcribe.busyCount': '답변 전사 중… {done}/{total}',
+  'assistant.transcribe.bundledAbsolute': '이것은 배포에 포함된 서버이지만, 절대 주소로 저장하면 타사 서버로 간주됩니다. 로그인이 첨부되지 않아 모든 요청이 거부됩니다.',
+  'assistant.transcribe.bundledFix': '대신 {path} 사용',
 };
 
 export default ko;

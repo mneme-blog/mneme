@@ -3,6 +3,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -121,7 +122,7 @@ func (t TranscribeConfig) Summary() string {
 		quota, rate)
 }
 
-// S3Config is consumed by the (not-yet-wired) media blob coordination — §10 step 5.
+// S3Config is consumed by the media blob coordination (internal/blobs) — §10 step 5.
 type S3Config struct {
 	Endpoint  string
 	AccessKey string
@@ -206,11 +207,22 @@ func envAllowEmpty(key, def string) string {
 	return def
 }
 
+// The env parsers below never fail silently: a value that doesn't parse (or a
+// negative where none makes sense) falls back to the default WITH a warning in
+// the log. Silence here turned `QUOTA_BYTES_PER_OWNER=10GB` into "unlimited"
+// and a mistyped SESSION_TTL into already-expired sessions, with nothing
+// telling the operator.
+
 func envDuration(key string, def time.Duration) time.Duration {
 	if v := os.Getenv(key); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
+			if d < 0 {
+				log.Printf("config: %s=%q is negative — using default %s", key, v, def)
+				return def
+			}
 			return d
 		}
+		log.Printf("config: %s=%q is not a duration (want e.g. \"24h\", \"30m\") — using default %s", key, v, def)
 	}
 	return def
 }
@@ -218,8 +230,13 @@ func envDuration(key string, def time.Duration) time.Duration {
 func envInt(key string, def int) int {
 	if v := os.Getenv(key); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
+			if n < 0 {
+				log.Printf("config: %s=%q is negative — using default %d", key, v, def)
+				return def
+			}
 			return n
 		}
+		log.Printf("config: %s=%q is not an integer — using default %d", key, v, def)
 	}
 	return def
 }
@@ -227,19 +244,30 @@ func envInt(key string, def int) int {
 func envInt64(key string, def int64) int64 {
 	if v := os.Getenv(key); v != "" {
 		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+			if n < 0 {
+				log.Printf("config: %s=%q is negative — using default %d", key, v, def)
+				return def
+			}
 			return n
 		}
+		log.Printf("config: %s=%q is not an integer — using default %d", key, v, def)
 	}
 	return def
 }
 
 func envBool(key string, def bool) bool {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv(key))) {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	switch v {
 	case "":
 		return def
 	case "0", "false", "off", "no":
 		return false
-	default:
+	case "1", "true", "on", "yes":
 		return true
+	default:
+		// Only known spellings flip the switch: "flase" must not silently mean
+		// true (the asymmetric direction for anything security-relevant).
+		log.Printf("config: %s=%q is not a boolean (want true/false) — using default %v", key, v, def)
+		return def
 	}
 }

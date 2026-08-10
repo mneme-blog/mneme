@@ -83,12 +83,12 @@ func vaultLabel(ownerID string) string {
 func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 	vaults, err := s.store.ListVaultStats(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "vault stats failed")
+		writeInternalError(w, r, "vault stats failed", err)
 		return
 	}
 	daily, err := s.store.UsageHistory(r.Context(), 30)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "usage history failed")
+		writeInternalError(w, r, "usage history failed", err)
 		return
 	}
 
@@ -161,7 +161,7 @@ func (s *Server) setOwnerStatus(w http.ResponseWriter, r *http.Request, status s
 	ownerID := r.PathValue("id")
 	found, err := s.store.SetOwnerStatus(r.Context(), ownerID, status)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "status update failed")
+		writeInternalError(w, r, "status update failed", err)
 		return
 	}
 	if !found {
@@ -202,14 +202,13 @@ func (s *Server) handleAdminDeleteVault(w http.ResponseWriter, r *http.Request) 
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	if req.Confirm != "delete" {
-		writeError(w, http.StatusBadRequest, `confirmation required: {"confirm":"delete"}`)
+	if !confirmed(w, req.Confirm, "delete") {
 		return
 	}
 	ownerID := r.PathValue("id")
 	found, err := s.wipeOwner(r.Context(), ownerID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "vault deletion failed")
+		writeInternalError(w, r, "vault deletion failed", err)
 		return
 	}
 	if !found {

@@ -5,8 +5,7 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import pkg from './package.json';
-// @ts-expect-error — plain-JS module, shared with the Caddy snippet generator.
-import { policy as cspPolicy } from './csp.js';
+import { policy as cspPolicy } from './csp.js'; // plain JS; typed via csp.d.ts
 
 // Git-derived build identifier appended to the semver, e.g. "0.0.0+5c2fdd8"
 // ("-dirty" suffix on uncommitted trees). Falls back to the bare semver when
