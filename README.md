@@ -274,14 +274,86 @@ pnpm --filter client exec tsx scripts/integration.ts   # register → auth → e
 
 ---
 
-## Running it for real (self-hosted)
+## Running it for real (self-hosted, one command)
 
 Everything above is the **dev** stack — published ports, `_dev` passwords, plain HTTP — the fastest
 way to *see* Mneme, and emphatically not how to *keep* your journal. For a real deployment the server
 is a single featherweight Go binary (`journald`, a deliberately clueless relay for opaque encrypted
-blobs) fronted by Caddy for HTTPS: a four-container stack (Caddy + relay + Postgres + MinIO) that
-restarts on crash and rolls its own encrypted backups. Several hundred users of an E2EE journal is,
-server-side, basically free — there's nothing to index or render.
+blobs) fronted by Caddy for HTTPS: a stack (Caddy + relay + Postgres + MinIO + a speech-to-text
+server) that restarts on crash and rolls its own encrypted backups. Several hundred users of an E2EE
+journal is, server-side, basically free — there's nothing to index or render.
+
+On any Linux box with Docker — a home server, a NAS, that Raspberry Pi in the closet — that whole
+stack is one line:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/plasticparticle/mneme/main/deploy/install.sh | bash
+```
+
+It opens by telling you what it's about to do, asks whether to go ahead, and then narrates six
+steps — no silent minutes wondering whether it's hung:
+
+1. **Checks this machine** — Docker and its Compose plugin (it offers to install Docker if missing,
+   showing you the command first), a supported CPU architecture, whether ports 80 and 443 are free,
+   and whether there's disk space and memory to spare.
+2. **Fetches Mneme** into a directory you pick (default `~/mneme`, `/opt/mneme` as root). That
+   directory *is* your deployment from then on.
+3. **Writes `.env.prod`** — a fresh database password, media-store credentials, and an admin token,
+   generated locally with `openssl rand`, saved `chmod 600`, never committed and never transmitted.
+   It detects your LAN address and asks you to confirm it, because Caddy issues the HTTPS
+   certificate for exactly those names.
+4. **Downloads the container images** (~1.5 GB the first time).
+5. **Starts the stack** — Caddy, the relay, Postgres, MinIO, and the speech-to-text server.
+6. **Waits until Mneme genuinely answers** over HTTPS, rather than cheerfully declaring victory the
+   moment containers exist.
+
+Then it prints the address, the dashboard and its token (shown once), where backups land, and the
+two things that surprise everyone on first visit — the certificate warning and the speech model
+still downloading.
+
+When something *is* wrong it stops with an explanation rather than a stack trace: what happened, why
+it matters, and the exact command that fixes it. Ports already taken, no Docker group membership,
+a full disk, a stack that starts but doesn't serve — each has its own message, and the last one
+prints the container states and the relay's own log alongside the likely causes.
+
+It is safe to run again: a second run updates the checkout and restarts onto the current images,
+leaves your `.env.prod` alone, and never touches your data.
+
+If piping a script from the internet into a shell makes you twitch — good instinct, and this is your
+own journal we're talking about. [Read it first](./deploy/install.sh); it's one readable file of plain
+bash with no magic in it:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/plasticparticle/mneme/main/deploy/install.sh -o install.sh
+less install.sh          # have a look
+bash install.sh          # then run it
+```
+
+Useful flags (pass them through the pipe with `bash -s --`):
+
+| Flag | What it does |
+|---|---|
+| `--dir PATH` | Install somewhere other than `~/mneme`. |
+| `--site "IP, host.local"` | Set the addresses Caddy answers on, instead of the detected ones. |
+| `--backups PATH` | Where rolling backup archives land (default `~/mneme-backups`). |
+| `--ref TAG` | Install a specific release tag or branch instead of `main`. |
+| `--install-docker` | Install Docker via `get.docker.com` without asking. |
+| `--no-start` | Set everything up but don't start the stack — for a look at `.env.prod` first. |
+| `-y`, `--yes` | Never prompt; take every default (for unattended installs). |
+
+```bash
+# e.g. install a pinned release into /opt, unattended
+curl -fsSL https://raw.githubusercontent.com/plasticparticle/mneme/main/deploy/install.sh \
+  | bash -s -- --dir /opt/mneme --ref v1.0.0 --yes
+```
+
+Two things the installer deliberately does *not* do, because it can't and shouldn't: it never sees a
+recovery phrase (yours is generated in your browser, on first use, and never reaches the server), and
+it grants itself no permanent power over your host — it's an ordinary script that ends when it ends.
+Root is only used if Docker itself has to be installed.
+
+Afterwards, everything is driven by `./deploy/prod.sh` from the install directory
+(`ps`, `logs -f server`, `down`), and the references below take over:
 
 - **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** — the full production runbook: the Docker + Caddy
   stack, HTTPS on a LAN, first start, the `.env.prod` secrets, and the optional operator admin
