@@ -63,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: shellcheck
-        run: shellcheck deploy/updater/mneme-updater.sh deploy/updater/install.sh deploy/prod.sh
+        run: shellcheck deploy/install.sh deploy/updater/mneme-updater.sh deploy/updater/install.sh deploy/prod.sh
       - name: updater regression tests
         run: ./deploy/updater/updater-test.sh
 

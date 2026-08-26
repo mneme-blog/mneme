@@ -24,7 +24,7 @@ incident) points you.
 
 | Doc | What's in it |
 |---|---|
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | Self-hosted **production** deployment: the Docker + Caddy stack, HTTPS on a LAN, first start. |
+| [DEPLOYMENT.md](./DEPLOYMENT.md) | Self-hosted **production** deployment: the one-command installer (`deploy/install.sh`), the Docker + Caddy stack, HTTPS on a LAN, first start. |
 | [PWA.md](./PWA.md) | Installing Mneme as an app — the secure-context rule, and testing install from the dev server on a phone. |
 | [MAINTENANCE.md](./MAINTENANCE.md) | Day-two operations: backups, restore, upgrades, health checks, troubleshooting. |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Dev setup, the quality gates, conventions, and where things live. |

@@ -36,6 +36,65 @@ your `.env.prod` so you can't accidentally run the wrong stack at 2 a.m.
 
 ---
 
+## The fast path: one command
+
+`deploy/install.sh` does everything in "Prerequisites" and "First start" below, in order, on a Linux
+host:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/plasticparticle/mneme/main/deploy/install.sh | bash
+```
+
+It states its plan, asks for confirmation, then works through six narrated steps: check the machine
+(Docker + Compose plugin — offering to install Docker if absent — CPU architecture, ports 80/443,
+disk, memory), clone the repository to `~/mneme` (`/opt/mneme` when run as root), write a
+`.env.prod` with generated secrets and the LAN address it detected, pull the published images, start
+the stack, and poll `https://127.0.0.1/mneme/readyz` until the app genuinely answers through Caddy.
+It finishes with the URL, the admin token (printed once), and the backup directory.
+
+Failures stop the run with a diagnosis rather than a trace — the cause, what it means, and the
+command that fixes it. The readiness failure additionally dumps `prod.sh ps` and the relay's last log
+lines next to the three causes that account for nearly all of them (Postgres still starting, Caddy
+unable to bind or given a `SITE_ADDRESS` this host does not have, a migration error).
+
+Flags — pass them through the pipe with `bash -s --`:
+
+| Flag | Default | What it does |
+|---|---|---|
+| `--dir PATH` | `~/mneme`, `/opt/mneme` as root | Install directory. |
+| `--site "IP, host.local"` | detected LAN IP + `<hostname>.local` | `SITE_ADDRESS` for Caddy. |
+| `--backups PATH` | `~/mneme-backups` | `BACKUP_HOST_DIR`. |
+| `--ref REF` | `main` | Release tag or branch to check out. |
+| `--install-docker` | ask | Install Docker via `get.docker.com` without prompting. |
+| `--no-start` | start | Configure only; review `.env.prod` and start by hand. |
+| `-y`, `--yes` | ask | Non-interactive: accept every default. |
+
+The same values can come from the environment instead (`MNEME_DIR`, `MNEME_SITE_ADDRESS`,
+`MNEME_BACKUP_DIR`, `MNEME_REF`, `MNEME_REPO_URL`), which is what to use from a configuration
+manager.
+
+It is safe to re-run: an existing `.env.prod` is left alone, the checkout is fast-forwarded to `REF`,
+and the stack is restarted onto the current images. It is not an upgrade tool, though — for that see
+[MAINTENANCE.md](./MAINTENANCE.md), which has both the manual `pull`/`up -d` path and the one-click
+dashboard updates.
+
+What it deliberately does not do: touch anything outside the install directory, the backup directory,
+and Docker itself; keep a resident process or a systemd unit of its own (the only unit Mneme installs
+is the optional updater agent, `deploy/updater/install.sh`); or use root for anything but installing
+Docker. And it never handles a recovery phrase — those are generated in the browser on first use.
+
+Prefer to read before running (a reasonable instinct for anything holding your journal):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/plasticparticle/mneme/main/deploy/install.sh -o install.sh
+less install.sh && bash install.sh
+```
+
+The rest of this page is the same deployment done by hand — worth reading either way, since it is
+what you will be operating.
+
+---
+
 ## Prerequisites on the host
 
 Docker Engine + the Compose plugin, enabled at boot, and a clone of this repo.
@@ -46,7 +105,7 @@ curl -fsSL https://get.docker.com | sh
 sudo systemctl enable --now docker
 sudo usermod -aG docker "$USER"   # then log out/in so `docker` works without sudo
 
-git clone <this-repo> mneme && cd mneme
+git clone https://github.com/plasticparticle/mneme.git mneme && cd mneme
 ```
 
 ---
