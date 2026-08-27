@@ -20,6 +20,7 @@ import { BadgeMedallion, badgeName, badgeDesc } from './BadgeCelebration';
 import { APP_VERSION, buildTimeLabel } from '../buildinfo';
 import { hexA } from './color';
 import { fmtNumber, t, useI18n, type MessageKey } from '../i18n';
+import { deepReflectionEnabled, setDeepReflection } from '../ai/reflection';
 import {
   ANSWER_LIMITS,
   VIDEO_QUALITY,
@@ -109,6 +110,41 @@ function VideoSection({ desk }: { desk: boolean }): VNode {
       </div>
       <p style={{ fontFamily: 'var(--ui)', fontSize: 11.5, color: 'var(--ink-3)', margin: '8px 2px 0', lineHeight: 1.5 }}>
         {t('prefs.video.limit.hint')}
+      </p>
+    </div>
+  );
+}
+
+/** Interview settings. The deeper-questions opt-in is device-local like the
+    camera knobs below it (ai/reflection.ts explains why a consent about what
+    leaves THIS device is not synced), so this holds its own state too. The same
+    switch is what the one-time overlay writes on the first AI interview —
+    here it can be reconsidered, with the same explanation attached. */
+function InterviewSection(): VNode {
+  const [deep, setDeep] = useState(deepReflectionEnabled);
+
+  return (
+    <div>
+      <SectionLabel>{t('prefs.interviews.section')}</SectionLabel>
+      <button
+        onClick={() => { setDeepReflection(!deep); setDeep(!deep); }}
+        role="switch"
+        aria-checked={deep}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 14px', borderRadius: 12, background: 'var(--paper)', border: '1px solid var(--line)', cursor: 'pointer', textAlign: 'start' }}
+      >
+        <span style={{ fontFamily: 'var(--ui)', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{t('prefs.interviews.deep')}</span>
+        <span style={{ width: 38, height: 22, borderRadius: 99, flexShrink: 0, background: deep ? 'var(--accent)' : 'var(--line)', position: 'relative', transition: 'background .15s' }}>
+          <span style={{ position: 'absolute', top: 2, insetInlineStart: deep ? 18 : 2, width: 18, height: 18, borderRadius: 99, background: 'var(--surface)', transition: 'inset-inline-start .15s' }} />
+        </span>
+      </button>
+      {/* What it does, then what it costs in data — the same two halves as the
+          consent overlay, because a setting the user meets here first has to
+          carry the disclosure too. */}
+      <p style={{ fontFamily: 'var(--ui)', fontSize: 11.5, color: 'var(--ink-3)', margin: '8px 2px 0', lineHeight: 1.5 }}>
+        {t('prefs.interviews.deepHint')}
+      </p>
+      <p style={{ fontFamily: 'var(--ui)', fontSize: 11.5, color: 'var(--ink-3)', margin: '6px 2px 0', lineHeight: 1.5 }}>
+        {t('prefs.interviews.deepData')}
       </p>
     </div>
   );
@@ -446,6 +482,7 @@ export function PreferencesSheet({ desk, theme, onClose, ownerId, status, onLock
         {onInterviewTypes && <Row icon="list" label={t('prefs.assistant.interviewTypes')} onClick={handOff(onInterviewTypes)} />}
         <Row icon="feather" label={t('prefs.assistant.ai')} onClick={handOff(onAiSettings)} />
       </div>
+      <InterviewSection />
       <VideoSection desk={desk} />
     </div>
   );

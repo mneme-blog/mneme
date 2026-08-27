@@ -322,9 +322,21 @@ before saving** (no agentic tool-calling; the text-streaming `AiProvider.chat` i
 review→save path. Saved entries are tagged with the interview type's **name as a label**, and
 starting an interview feeds the model the recent same-label entries (`ai/interview.ts`
 `buildInterviewHistory`) so repeated runs stay continuous ("history-aware"). Beyond that label, two
-**dynamics** (`ai/reflection.ts`, shared by the written and the video interview) make the questions
-react to the state of the journal itself, both computed over the entries already decrypted in memory
-— no extra request, nothing stored, nothing synced. (1) **The gap**: `journalGap` reports how long
+**opt-in dynamics** (`ai/reflection.ts`, shared by the written and the video interview) make the
+questions react to the state of the journal itself, both computed over the entries already decrypted
+in memory — no extra request, nothing stored, nothing synced. **Off until the user says otherwise**:
+the first AI interview on a device opens a one-time consent overlay (`ui/ReflectionConsent.tsx`)
+that says what the questions do, that selection happens on-device from already-decrypted entries,
+and — switching on the live provider, like `ProviderBadge` — whether that text leaves E2EE for a
+cloud backend or never leaves the device at all; declining is recorded too, so the overlay is shown
+once either way, and Preferences → Assistant → Interviews carries the same switch with the same
+two-part explanation (`InterviewSection` in `ui/Preferences.tsx`). The flag is **device-local**
+localStorage (`mneme.interview.deepReflection`, `'on'|'off'|null`, `deepReflectionChoice()`) rather
+than a synced `AiSettings` field: the consent is *about what leaves this device*, so a laptop with a
+local Ollama must not silently authorize a phone talking to a cloud provider — and `null` (never
+asked) staying distinct from `'off'` is what makes the overlay appear exactly once. The opted-in
+answer rides into the first prompt as an explicit argument (`systemFor(it, on)` /
+`planQuestions(it, on)`), because that prompt is built in the same tick as the overlay's setState. (1) **The gap**: `journalGap` reports how long
 the vault has been quiet (≥ `GAP_MIN_DAYS`, measured on the *later* of `createdAt`/`updatedAt` so a
 re-dated or imported entry doesn't read as silence, clamped to now so a forward-dated one can't go
 negative), and the prompt makes the FIRST question about that stretch — including whether something

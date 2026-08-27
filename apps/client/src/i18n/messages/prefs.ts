@@ -64,6 +64,16 @@ export const prefs = {
   'prefs.assistant.interviewTypes': 'Interview types',
   'prefs.assistant.ai': 'AI assistant',
 
+  // Interviews — the deeper-questions opt-in (ai/reflection.ts). Device-local,
+  // and the same switch the one-time consent overlay writes; the two hint lines
+  // carry the same what-it-does / what-it-costs split as that overlay.
+  'prefs.interviews.section': 'Interviews',
+  'prefs.interviews.deep': 'Deeper questions',
+  'prefs.interviews.deepHint':
+    'Interviews may ask what has been going on since your last entry, and revisit an older hope, plan or worry so you can look at it again.',
+  'prefs.interviews.deepData':
+    'What to ask about is chosen on this device and nothing extra is stored. With a cloud assistant, the entries it reads for this — your most recent one and a few older ones from anywhere in your journal — leave end-to-end encryption for that request.',
+
   'prefs.video.section': 'Video recording',
   'prefs.video.quality': 'Quality',
   'prefs.video.quality.low': 'Small',

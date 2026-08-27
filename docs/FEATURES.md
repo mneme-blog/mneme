@@ -77,8 +77,11 @@ private thoughts help you *and never leave your computer*.
 - **Guided written interviews** — the assistant asks one reflective question at a time, then drafts a
   full entry for you to review and save (titled from the draft, labelled with the interview type).
   Starting one feeds it your recent entries of the same kind, so a recurring "evening reflection"
-  stays continuous. Two things make it react to the state of your journal rather than only to the
-  interview type: if you haven't written for a while, the **first question is about that stretch** —
+  stays continuous. Two **opt-in** dynamics make it react to the state of your journal rather than
+  only to the interview type — off until you turn them on, with a one-time overlay on your first AI
+  interview that explains what they do and what they mean for your entries, and a matching toggle in
+  Preferences → Assistant → Interviews: if you haven't written for a while, the **first question is
+  about that stretch** —
   what has been going on, and whether something was keeping you from writing, asked as an offer and
   deliberately free of guilt, streak talk, or a welcome-back speech; and one question **looks back at
   an older thought** — a hope, a plan, a worry you recorded months ago — and asks how it sits with you
@@ -89,10 +92,11 @@ private thoughts help you *and never leave your computer*.
   countdown, and device-local capture quality (360p/720p/1080p). Recording itself makes **zero AI
   calls and zero network requests** — the model never hears an answer, which is exactly why the
   adaptivity happens before the session rather than during it, and why no audio is ever handed to a
-  browser speech-recognition service. The plan gets the same two dynamics as the written interview:
-  the opening question covers a long gap since your last entry, and one question revisits an older
-  thought. If the model is unreachable or returns junk, a **built-in question set** stands in, so a
-  session never dead-ends — and it too leads with the gap question when the journal has been quiet.
+  browser speech-recognition service. The plan gets the same two opt-in dynamics as the written
+  interview: the opening question covers a long gap since your last entry, and one question revisits
+  an older thought. If the model is unreachable or returns junk, a **built-in question set** stands in, so a
+  session never dead-ends — and it too leads with the gap question when the journal has been quiet
+  and you have opted in.
 - **One-click film rendering** — the answers stitch into a single video with each question cut in as
   a ~2.5 s title card, rendered **entirely on-device** (WebCodecs via mediabunny, with a realtime
   canvas fallback where WebCodecs is missing or video-only). Source clips are kept so an answer can

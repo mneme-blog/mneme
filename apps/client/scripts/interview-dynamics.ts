@@ -1,12 +1,17 @@
 // Regression check for the two interview dynamics (src/ai/reflection.ts): the
-// gap since the journal was last written to, and the older forward-looking
-// entries one question looks back at. Both are pure functions over the
-// decrypted entries plus the prompt text they produce, so this needs no DOM,
-// no relay, and no provider.
+// gap since the journal was last written to, the older forward-looking entries
+// one question looks back at, and the device-local opt-in that gates both.
+// Everything here is a pure function over the decrypted entries plus the prompt
+// text they produce, so this needs no DOM, no relay, and no provider — the
+// preference reads its store lazily, which is what lets the shim below stand in
+// for localStorage.
 // Run: pnpm --filter client exec tsx scripts/interview-dynamics.ts
 import {
   journalGap,
   buildRetrospect,
+  deepReflectionChoice,
+  deepReflectionEnabled,
+  setDeepReflection,
   GAP_MIN_DAYS,
   RETRO_MIN_AGE_DAYS,
 } from '../src/ai/reflection';
@@ -196,6 +201,56 @@ check('…and swaps the opener rather than adding a question', gapped[0] !== nor
 check('the fallback opener asks about the stretch', /while|since/i.test(gapped[0]));
 check('toPlan passes the gap through to the fallback', toPlan('', true).questions[0] === gapped[0]);
 check('a usable plan ignores the gap flag', toPlan(['Q: What happened?', 'Q: Who were you with?', 'Q: What is next?'].join('\n'), true).fallback === false);
+
+// ── the opt-in ────────────────────────────────────────────────────────────
+console.log('\n── the deep-reflection opt-in ──');
+
+// A minimal in-memory Storage. Assigned after the imports have run, which is
+// safe because reflection.ts reads `localStorage` per call, never at import.
+const mem = new Map<string, string>();
+const shim = {
+  getItem: (k: string) => mem.get(k) ?? null,
+  setItem: (k: string, v: string) => void mem.set(k, v),
+  removeItem: (k: string) => void mem.delete(k),
+  clear: () => mem.clear(),
+  key: () => null,
+  get length() {
+    return mem.size;
+  },
+} as unknown as Storage;
+Object.defineProperty(globalThis, 'localStorage', { value: shim, configurable: true, writable: true });
+
+check('an untouched device has made no choice', deepReflectionChoice() === null);
+check('…and the dynamics are off until it does', deepReflectionEnabled() === false);
+
+setDeepReflection(true);
+check('opting in is recorded', deepReflectionChoice() === 'on' && deepReflectionEnabled() === true);
+
+// Declining has to STICK — a decline read back as "never asked" would put the
+// consent overlay in front of the user on every single interview.
+setDeepReflection(false);
+check('declining is a decision, not an absence of one', deepReflectionChoice() === 'off');
+check('…and it keeps the dynamics off', deepReflectionEnabled() === false);
+
+mem.set('mneme.interview.deepReflection', 'yes-please');
+check('an unrecognised stored value falls back to asking again', deepReflectionChoice() === null);
+
+// A device without a usable store (private mode, a worker) must degrade to
+// "off, ask again", never throw on a getter in the interview's start path.
+Object.defineProperty(globalThis, 'localStorage', {
+  get() {
+    throw new Error('blocked');
+  },
+  configurable: true,
+});
+let threw = false;
+try {
+  check('a blocked store reads as unasked', deepReflectionChoice() === null);
+  setDeepReflection(true);
+} catch {
+  threw = true;
+}
+check('…and writing to it does not throw', !threw);
 
 console.log(failures === 0 ? '\nAll interview-dynamics checks passed.' : `\n${failures} check(s) FAILED.`);
 process.exit(failures === 0 ? 0 : 1);

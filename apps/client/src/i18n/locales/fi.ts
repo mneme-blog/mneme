@@ -697,6 +697,14 @@ const fi: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interviewTypes': 'Haastattelutyypit',
   'prefs.assistant.ai': 'Tekoälyavustaja',
 
+  'prefs.interviews.section':
+    'Haastattelut',
+  'prefs.interviews.deep':
+    'Syvemmät kysymykset',
+  'prefs.interviews.deepHint':
+    'Haastattelut voivat kysyä, mitä edellisen merkinnän jälkeen on tapahtunut, ja palata vanhaan toiveeseen, suunnitelmaan tai huoleen.',
+  'prefs.interviews.deepData':
+    'Valinta tapahtuu tässä laitteessa eikä mitään tallenneta lisää. Pilviavustajaa käytettäessä tätä varten luetut merkinnät — viimeisin ja muutama vanhempi mistä tahansa päiväkirjastasi — poistuvat päästä päähän -salauksesta kyseisen pyynnön ajaksi.',
   'prefs.video.section': 'Videotallennus',
   'prefs.video.quality': 'Laatu',
   'prefs.video.quality.low': 'Pieni',
@@ -831,6 +839,32 @@ const fi: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': 'Hylätäänkö tämä haastattelu?',
   'assistant.video.discardBody': 'Tallentamiasi vastauksia ei ole vielä tallennettu, ja ne menetetään.',
   'assistant.video.discard': 'Hylkää',
+  'assistant.reflect.title':
+    'Syvemmät haastattelukysymykset',
+  'assistant.reflect.intro':
+    'Haastattelut voivat ottaa huomioon päiväkirjasi tilan, eivät vain haastattelun tyyppiä. Tämä on pois päältä, kunnes otat sen käyttöön.',
+  'assistant.reflect.gapTitle':
+    'Kun et ole kirjoittanut vähään aikaan',
+  'assistant.reflect.gapBody':
+    'Ensimmäinen kysymys kysyy, mitä edellisen merkinnän jälkeen on tapahtunut — kutsuna, ei koskaan muistutuksena putkista tai kiinni kuromisesta.',
+  'assistant.reflect.olderTitle':
+    'Vanhat ajatukset uudelleen',
+  'assistant.reflect.olderBody':
+    'Yksi kysymys palaa siihen, mitä toivoit, suunnittelit tai pelkäsit aikoinaan, ja kysyy miltä se tuntuu nyt.',
+  'assistant.reflect.dataLabel':
+    'Mitä tämä tarkoittaa merkinnöillesi',
+  'assistant.reflect.dataOnDevice':
+    'Valinta tapahtuu tässä laitteessa jo puretuista merkinnöistä. Mitään ei tallenneta lisää, mitään ei synkronoida, eikä palvelin näe tästä mitään.',
+  'assistant.reflect.dataLocal':
+    'Avustajasi toimii tässä laitteessa, joten sen tätä varten lukemat merkinnät eivät poistu siitä.',
+  'assistant.reflect.dataCloud':
+    'Näitä kysymyksiä varten avustajallesi lähetetään viimeisin merkintäsi ja muutama vanhempi mistä tahansa päiväkirjastasi — ei vain tämän haastattelun merkintöjä. Kuten kaikissa avustajan pyynnöissä, teksti poistuu tällöin päästä päähän -salauksesta valitsemallesi palveluntarjoajalle.',
+  'assistant.reflect.changeLater':
+    'Voit muuttaa tätä milloin tahansa kohdassa Asetukset → Avustaja.',
+  'assistant.reflect.decline':
+    'Pidä kysymykset yksinkertaisina',
+  'assistant.reflect.accept':
+    'Käytä syvempiä kysymyksiä',
   'assistant.video.fallback.gap': 'Edellisestä merkinnästä on jonkin aikaa — mitä sen jälkeen on tapahtunut?',
   'assistant.video.fallback.q1': 'Mitä tänään tapahtui, jonka haluat muistaa?',
   'assistant.video.fallback.q2': 'Mikä oli parasta, ja miksi se kosketti sinua juuri niin?',

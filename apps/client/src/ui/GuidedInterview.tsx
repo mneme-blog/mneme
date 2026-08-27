@@ -28,7 +28,14 @@ import {
   freeformDraftPrompt,
 } from '../ai/prompts';
 import { buildInterviewHistory, HISTORY_BUDGET_CHARS } from '../ai/interview';
-import { buildRetrospect, journalGap, RETRO_BUDGET_CHARS } from '../ai/reflection';
+import {
+  buildRetrospect,
+  deepReflectionChoice,
+  deepReflectionEnabled,
+  journalGap,
+  RETRO_BUDGET_CHARS,
+} from '../ai/reflection';
+import { ReflectionConsent } from './ReflectionConsent';
 import { markdownToDoc, splitMarkdownTitle, docToText } from '../editor/doc';
 import { DocPreview } from '../editor/DocPreview';
 import { toAiError, type AiMessage } from '../ai/types';
@@ -75,6 +82,11 @@ export function GuidedInterviewSheet({
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // The deeper questions (ai/reflection.ts) are opt-in per device: `deep` is the
+  // recorded answer, `consentFor` holds the type the user picked while the
+  // one-time overlay asks for it.
+  const [deep, setDeep] = useState(deepReflectionEnabled);
+  const [consentFor, setConsentFor] = useState<InterviewType | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -85,7 +97,8 @@ export function GuidedInterviewSheet({
   // How long the journal has been quiet, when that is long enough to be worth
   // opening with (ai/reflection.ts). Derived from the entries already decrypted
   // in memory — no extra request, and the tone rules that keep the question
-  // free of guilt live in the prompt.
+  // free of guilt live in the prompt. Computed regardless and gated at the use
+  // site, so opting in mid-session needs no recompute.
   const gap = useMemo(() => journalGap(entries), [entries]);
   // Size the mobile sheet to the visible area so the input stays above the
   // keyboard (see useVisualViewport) instead of being pushed off-screen.
@@ -174,9 +187,13 @@ export function GuidedInterviewSheet({
   // see the entries change underneath it. Local backends get half the budget,
   // the same split the history has always used: an 8k context has to hold the
   // transcript too.
-  const systemFor = (it: InterviewType): string => {
+  // `on` is passed explicitly rather than read from `deep`, because the first
+  // turn runs in the same tick as the consent overlay's setState — the state
+  // has not settled yet, and the answer the user just gave must apply now.
+  const systemFor = (it: InterviewType, on: boolean = deep): string => {
     const budget = (n: number): number => (provider.local ? Math.round(n / 2) : n);
     const history = buildInterviewHistory(entries, it.name, budget(HISTORY_BUDGET_CHARS));
+    if (!on) return interviewSystemPrompt(it, history.text);
     return interviewSystemPrompt(it, history.text, {
       gap,
       // Entries already in the history block are excluded so one entry can't
@@ -185,10 +202,22 @@ export function GuidedInterviewSheet({
     });
   };
 
-  const startInterview = (it: InterviewType): void => {
+  const beginInterview = (it: InterviewType, on: boolean): void => {
+    setConsentFor(null);
     setType(it);
     setPhase('interview');
-    void askTurn(systemFor(it), [SEED]);
+    void askTurn(systemFor(it, on), [SEED]);
+  };
+
+  // The deeper questions widen what an interview sends out of E2EE under a
+  // cloud backend, so the first AI interview on this device asks before it
+  // starts. Freeform drafts never reach here — they use no dynamics.
+  const startInterview = (it: InterviewType): void => {
+    if (deepReflectionChoice() === null) {
+      setConsentFor(it);
+      return;
+    }
+    beginInterview(it, deep);
   };
 
   const sendAnswer = (): void => {
@@ -411,8 +440,19 @@ export function GuidedInterviewSheet({
     : type?.name || t('assistant.interview.fallbackTitle');
 
   return (
-    <AssistantPanel desk={desk} icon="mic" title={title} provider={provider} onClose={onClose} vp={vp} panelRef={panelRef}>
-      {phase === 'pick' ? pickBody : phase === 'interview' ? interviewBody : phase === 'brief' ? briefBody : reviewBody}
-    </AssistantPanel>
+    <>
+      <AssistantPanel desk={desk} icon="mic" title={title} provider={provider} onClose={onClose} vp={vp} panelRef={panelRef}>
+        {phase === 'pick' ? pickBody : phase === 'interview' ? interviewBody : phase === 'brief' ? briefBody : reviewBody}
+      </AssistantPanel>
+      {consentFor && (
+        <ReflectionConsent
+          provider={provider}
+          onDecide={(on) => {
+            setDeep(on);
+            beginInterview(consentFor, on);
+          }}
+        />
+      )}
+    </>
   );
 }

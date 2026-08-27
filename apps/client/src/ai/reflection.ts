@@ -16,6 +16,12 @@
 //
 // Both are inputs to prompts, so a miss is cheap — a slightly less interesting
 // question, never a wrong entry or a lost one.
+//
+// Both are also OPT-IN (see the preference at the bottom of this file): under a
+// cloud backend they widen what an interview sends out of E2EE, from "previous
+// entries with this label" to "the last entry, and older ones from anywhere in
+// the vault". That is the user's call to make, with the consequence in front of
+// them (ui/ReflectionConsent.tsx), not a default they discover afterwards.
 import type { JournalEntry } from '../sync/engine';
 import { entryHeading, entryText } from './flatten';
 
@@ -224,4 +230,56 @@ export function buildRetrospect(
   const spread = Array.from({ length: wanted }, (_, i) => byAge[Math.floor((i * byAge.length) / wanted)]);
   const { text, count } = assemble(spread, budgetChars);
   return count > 0 ? { text, count, cued: false } : EMPTY;
+}
+
+// ── the opt-in ────────────────────────────────────────────────────────────
+//
+// Device-local, like the capture quality, the answer limit, the spoken
+// language and the theme — never synced, never content. Two reasons, and the
+// second is the real one:
+//
+//   1. sync/engine.ts encodes AiSettings as a whole object, so a field would
+//      survive a round-trip — but every synced field is still one more thing an
+//      older build can drop, and this one is a consent flag.
+//   2. What the consent is ABOUT is what leaves this device. A decision taken on
+//      a laptop with a local Ollama should not silently authorize a phone
+//      talking to a cloud provider. Asking once per device is the honest
+//      granularity, and it is the same reasoning the per-use transcription
+//      disclosure follows.
+//
+// `null` — never asked — is deliberately distinct from 'off': it is what makes
+// the consent overlay appear exactly once, on the first AI interview.
+const DEEP_KEY = 'mneme.interview.deepReflection';
+
+export type ReflectionChoice = 'on' | 'off' | null;
+
+/** localStorage, or null where it is unavailable (private-mode quirks, a
+ *  worker, the headless repro scripts) — never a throw from a getter. */
+function store(): Storage | null {
+  try {
+    return typeof localStorage === 'undefined' ? null : localStorage;
+  } catch {
+    return null;
+  }
+}
+
+/** What the user decided on this device, or null if they have not been asked. */
+export function deepReflectionChoice(): ReflectionChoice {
+  const raw = store()?.getItem(DEEP_KEY);
+  return raw === 'on' || raw === 'off' ? raw : null;
+}
+
+/** Whether the interviews may use the two dynamics. Unasked reads as off. */
+export function deepReflectionEnabled(): boolean {
+  return deepReflectionChoice() === 'on';
+}
+
+/** Record the decision. Both answers count as a decision — that is what stops
+ *  the overlay coming back — and the toggle in Preferences rewrites it. */
+export function setDeepReflection(on: boolean): void {
+  try {
+    store()?.setItem(DEEP_KEY, on ? 'on' : 'off');
+  } catch {
+    // A full or blocked store just means we ask again next time.
+  }
 }
