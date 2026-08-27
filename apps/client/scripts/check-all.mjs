@@ -11,6 +11,7 @@ import { spawnSync } from 'node:child_process';
 const SCRIPTS = [
   // security-relevant regressions first — fail fast on what matters most
   'aead-compat', // entry-AEAD ciphertext stays readable across dependency bumps
+  'keys-compat', // seed→identity derivation stays stable across dependency bumps
   'record-codec', // wire-codec field mapping (silent LWW field loss)
   'record-binding', // AAD record binding (audit M2)
   'state-helpers', // provider merge/convergence rules

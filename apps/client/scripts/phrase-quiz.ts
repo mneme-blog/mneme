@@ -6,7 +6,7 @@
 // the pre-extraction copies could render duplicate buttons there), and must
 // be deterministic (a re-render must not reshuffle the choices).
 // Run: pnpm --filter client exec tsx scripts/phrase-quiz.ts
-import { wordlist } from '@scure/bip39/wordlists/english';
+import { wordlist } from '@scure/bip39/wordlists/english.js';
 import { quizOptions, allQuizCorrect } from '../src/ui/phrase';
 
 let failures = 0;
