@@ -10,13 +10,15 @@ Mneme is a calm, paper-coloured notebook for your thoughts. It runs in your brow
 desktop and mobile shells are on the way), keeps the real database on your own device, and syncs
 through a server so clueless it couldn't spy on you if it tried.
 
-And when the blank page wins — as it does for most people, most of the time — Mneme sits you down for
-a **structured interview** instead. A **local AI model** (running on your own machine, so nothing
-leaves it) asks you one reflective question at a time and then drafts a full entry from your answers
-for you to keep or edit. It's the antidote to writer's block and blank-page anxiety, and the quiet
-engine behind actually building a writing habit: you never have to face an empty box or wonder where
-to start. The prompts are yours to shape, and it remembers past entries of the same kind so a
-recurring reflection stays continuous.
+And when the blank page wins — as it does for most people, most of the time — Mneme stops asking you
+to write and starts asking you **questions**. A **local AI model** (running on your own machine, so
+nothing leaves it) interviews you one reflective question at a time and then drafts a full entry from
+your answers for you to keep or edit. You can answer by typing, or **on camera** — and a video
+interview stitches itself into a single film, each question cut in as a title card, rendered entirely
+on your own device. It's the antidote to writer's block and blank-page anxiety, and the quiet engine
+behind actually building a writing habit: you never have to face an empty box or wonder where to
+start. The prompts are yours to shape, and it remembers past entries of the same kind so a recurring
+reflection stays continuous. [Jump to the interview →](#when-the-blank-page-wins-mneme-interviews-you)
 
 ---
 
@@ -84,6 +86,79 @@ if you want to win a pub quiz). Fittingly, she did not offer a password reset ei
 
 ---
 
+## When the blank page wins: Mneme interviews you
+
+This is the feature we would show you first if we could only show you one.
+
+Most journals fail at the same moment: you open the app, the box is empty, and you have nothing to
+say. Mneme's answer is to stop asking you to write and start asking you questions — and then to do
+the writing for you.
+
+### The written interview
+
+Pick an interview type — *Daily check-in*, *Evening reflection*, *Gratitude*, *Weekly review*,
+*Project retro*, *Exam prep*, one of the fifteen built-ins or one you wrote yourself — and the
+assistant asks **one question at a time**, conversationally. When you're done it **synthesises a
+complete entry from your answers**, gives it a title, and hands it to you to read, edit, and save.
+Nothing is written to your journal until you say so.
+
+Two things make it stick rather than being a novelty:
+
+- **It has a memory.** Starting an interview feeds the model your recent entries of the same kind, so
+  the tenth *evening reflection* knows what the ninth said. Recurring reflections stay continuous
+  instead of restarting from zero each time.
+- **The interview types are yours.** Built-in ones are fully editable, you can write your own, and
+  they sync to your other devices as encrypted blobs — the server can't tell an interview type from
+  an entry.
+
+In a hurry? **Freeform draft** takes a one-line brief ("the drive back from my parents', mixed
+feelings") and writes the entry from that instead.
+
+### The video interview — talk to your journal, on camera
+
+The same interview types, answered out loud, in front of your camera.
+
+Mneme plans the whole question list up front (around six questions, and you can **rewrite, reorder,
+delete, or add to them before a single frame is recorded**), then runs the session one question at a
+time: record, retake, skip, go back. A countdown bar drains along the bottom of the preview so you
+always know how much of the current answer you have left — your per-question limit and capture
+quality are yours to set.
+
+Then the part that turns it into a keepsake:
+
+> **One click stitches your answers into a single film**, with each question cut in as a title card.
+
+The film renders **entirely on your device** — WebCodecs where it exists, a realtime canvas fallback
+where it doesn't — and lands back in the entry as an ordinary video you can play, keep, or export
+with the rest of your journal. Your source clips are kept, so you can retake one answer and
+re-render; when you want the space back, "Delete the source clips" is one button.
+
+Four design decisions are worth knowing, because they are what make this unusual rather than just
+neat:
+
+- **The model never hears your answers.** Browser speech recognition ships your audio to Google or
+  Apple, which is a non-starter here — so the adaptivity moves *before* the session, into planning
+  the questions. During recording there are **zero AI calls and zero network requests**. It's your
+  camera, your device, and nothing else.
+- **It works with no AI at all.** If the model is unreachable, unconfigured, or returns nonsense, a
+  built-in question set steps in. A recording session never dead-ends on a bad model response.
+- **You can have the answers transcribed** — flip on auto-transcribe before you start (or hit
+  "Transcribe answers" months later), tell it what language you're speaking, and what you *said*
+  becomes searchable text, readable by "Ask my journal" and by future-you. Transcripts are ordinary
+  content: editable by hand, and they survive deleting the source clips.
+- **All of it is end-to-end encrypted, like everything else.** The questions, the transcripts, the
+  film, the clips. The relay sees opaque blobs under random ids and cannot tell a video interview
+  from a shopping list.
+
+Both interviews live behind the same door: the assistant is **off by default**, and the recommended
+model is a **local one running on your own machine**, in which case planning the questions and
+drafting the entry never leave it. [The AI section](#the-ai-assistant-optional-off-by-default-and-private-by-design)
+spells out exactly what goes where under which setting — including transcription, which is the one
+step that hands a recording to a server (your own, in the self-hosted stack) and always says so
+first.
+
+---
+
 ## What you can do with it
 
 Mneme is a full journaling environment, not a text box. Everything below is **built and working
@@ -108,7 +183,10 @@ today** (in the browser app). This is the highlight reel; the exhaustive, up-to-
 ### Media (all end-to-end encrypted, chunked, and synced)
 - **Photos and image galleries** — drop images in, they group into galleries and open in a
   keyboard-navigable lightbox.
-- **Video and audio recording** straight from the editor (via your camera/microphone).
+- **Video and audio recording** straight from the editor (via your camera/microphone) — plus the
+  full [guided video interview](#the-video-interview--talk-to-your-journal-on-camera) and its
+  one-click film.
+- **Transcription** of any recording in your journal, so what you said becomes searchable text.
 - **File attachments** of any kind.
 - **Location & travel maps** — pin a place or a from→to journey. The map is rendered **once** into a
   frozen image at insert time, so opening the entry later makes *no* further calls to any map
@@ -124,6 +202,9 @@ today** (in the browser app). This is the highlight reel; the exhaustive, up-to-
   never leaves your device).
 
 ### Make it yours
+- **Twelve languages** — the whole interface is localized into English, German, French, Spanish,
+  Italian, Dutch, Finnish, Chinese, Japanese, Korean, Hindi, and Arabic (with the full right-to-left
+  layout). Dates, numbers, and plurals follow the language you pick, not your operating system's.
 - **Six theme skins** (Paper, Modern, Terminal, Forest, Blossom, Lavender), each with a light and
   dark variant, times six accent tints. Light / dark / system, all stored locally and never synced.
 - **Responsive** — a three-pane desktop layout above 920px, a mobile shell with bottom navigation
@@ -144,9 +225,11 @@ Mneme has an AI assistant that can both **read** and **write** in your journal:
   written.
 - **Writing help** in the editor — Continue, Summarize, or Suggest-a-title for the entry you're on,
   always with a confirm-before-it-inserts step.
-- **Guided interviews** — the assistant asks you one reflective question at a time, then drafts a
-  full entry for you to review and save. It even remembers previous entries of the same kind, so a
-  recurring "daily reflection" stays continuous. (There's also a one-line "freeform draft" mode.)
+- **Guided interviews, written or on camera** — the headline feature, described in full
+  [above](#when-the-blank-page-wins-mneme-interviews-you): the assistant asks one question at a
+  time and drafts the entry from your answers, or films you answering and stitches the takes into a
+  single film with title cards. Interview types are built-in *and* yours to write, and each
+  interview remembers previous entries of the same kind.
 - **Transcribing recordings** — any video or audio in your journal can be turned into text, so what
   you said becomes searchable and readable by the assistant. The self-hosted stack ships its own
   speech-to-text server, so this needs no cloud account and no configuration; Preferences →
@@ -195,9 +278,10 @@ sees your keys, never sees your phrase.
   often and how much you write, and your reminder times — never *what* you wrote. We don't pretend
   otherwise; the full list is in [`docs/SECURITY.md`](./docs/SECURITY.md).
 - **At rest.** By default nothing is persisted but your entries (locally) — you re-enter the phrase
-  on a cold start. Optionally ("stay signed in on this device"), your seed is sealed under an
-  **Argon2id** passphrase, with a 15-minute inactivity auto-lock and a manual "Lock journal"
-  control.
+  on a cold start. Optionally ("stay signed in on this device"), your seed is sealed on the device
+  under either an **Argon2id passphrase** or a **FIDO2 / WebAuthn security key** (a YubiKey or a
+  platform passkey), with a 15-minute inactivity auto-lock and a manual "Lock journal" control. It
+  is strictly a device-unlock convenience — your recovery phrase remains the only account anchor.
 
 The deep, frank version — including the known weaknesses and accepted trade-offs — lives in
 [`docs/SECURITY.md`](./docs/SECURITY.md). It does not flatter the project.
@@ -394,8 +478,9 @@ with [`docs/README.md`](./docs/README.md):
 
 It's pre-1.0 and we're honest about it. The four screens, the Go relay, and the encryption are
 built, and the client is genuinely wired to the relay: real BIP39 onboarding, client-side
-encryption, encrypted push/pull sync, a durable local database, a real editor, encrypted media, AI
-assistant, templates, search, and phrase rotation all work end-to-end today, in the browser.
+encryption, encrypted push/pull sync, a durable local database, a real editor, encrypted media, the
+written and video interviews with on-device film rendering, transcription, the AI assistant,
+templates, search, and phrase rotation all work end-to-end today, in the browser.
 
 Still ahead: a full-text search index (blocked on a custom wa-sqlite build), a reminders UI + local
 scheduled notifications, broader export, and the native **Tauri** desktop and mobile shells with

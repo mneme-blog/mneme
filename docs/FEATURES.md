@@ -41,6 +41,10 @@ A real editor, not a glorified `<textarea>`.
 - **Video & audio recording** straight from the editor via your camera and microphone. No upload to
   anyone's "cloud studio," no terms of service granting a perpetual worldwide licence to your face.
 - **File attachments** of any kind.
+- **Transcription** of any video or audio in your journal — retroactive, per recording or per
+  interview answer. Transcripts are content, not metadata: they live inside the encrypted entry body,
+  they are editable by hand, they feed search and "Ask my journal", and they survive deleting the
+  recording they came from. See the assistant section below for where the audio goes.
 - **Location & travel maps** — pin a single place or a from→to journey, with an optional travel photo.
   The map is rendered **once** into a frozen image at insert time, so opening the entry later makes
   *zero* further calls to any map service. (The one, clearly-labelled, opt-in-per-insert exception is
@@ -70,10 +74,40 @@ private thoughts help you *and never leave your computer*.
 - **Ask my journal** — question-and-answer grounded in your own entries.
 - **Editor writing help** — Continue, Summarize, or Suggest-a-title for the current entry, always with
   a confirm-before-it-inserts step.
-- **Guided interviews** — the assistant asks one reflective question at a time, then drafts a full
-  entry for you to review and save. It remembers previous entries of the same kind, so a recurring
-  "daily reflection" stays continuous. There's also a one-line **freeform draft** mode.
-- **Interview types** — built-in and user-created, synced like templates.
+- **Guided written interviews** — the assistant asks one reflective question at a time, then drafts a
+  full entry for you to review and save (titled from the draft, labelled with the interview type).
+  Starting one feeds it your recent entries of the same kind, so a recurring "evening reflection"
+  stays continuous. There's also a one-line **freeform draft** mode.
+- **Guided video interviews** — the same interview types, answered on camera. The whole question list
+  is planned in one call up front and shown in an **editable plan step** (target six questions, eight
+  max); the session then runs question by question with retake, skip, and back, a per-question
+  countdown, and device-local capture quality (360p/720p/1080p). Recording itself makes **zero AI
+  calls and zero network requests** — the model never hears an answer, which is exactly why the
+  adaptivity happens before the session rather than during it, and why no audio is ever handed to a
+  browser speech-recognition service. If the model is unreachable or returns junk, a **built-in
+  question set** stands in, so a session never dead-ends.
+- **One-click film rendering** — the answers stitch into a single video with each question cut in as
+  a ~2.5 s title card, rendered **entirely on-device** (WebCodecs via mediabunny, with a realtime
+  canvas fallback where WebCodecs is missing or video-only). Source clips are kept so an answer can
+  be retaken and the film re-rendered; "Delete the source clips" reclaims the space when you're done.
+- **Auto-transcribe answers** — optional, chosen in the plan step, with a spoken-language picker
+  (asked for, never guessed from your UI language — Whisper treats language as a constraint, and told
+  the wrong one it returns fluent nonsense). Answers can equally be transcribed later, from any
+  device.
+- **Transcription** — recordings are turned into text by a speech-to-text server speaking the
+  OpenAI `/v1/audio/transcriptions` shape. **The self-hosted stack bundles one** (Speaches, proxied
+  same-origin), so this needs no cloud account and no configuration; you can point it at your own
+  loopback server instead. The bundled endpoint is not left open to whoever can reach the site —
+  every transcription is authorized by the relay first, which sees only the session token and the
+  declared size, never the audio — and per-vault daily allowances are the operator's to set. Before a
+  recording leaves your device for anywhere but localhost, a dialog names the exact destination.
+  Preferences → Assistant → Transcription has a **Check server** button and a one-click model
+  download.
+- **Interview types** — fifteen built-ins spanning daily journaling (Daily check-in, Morning
+  intention, Evening reflection, Gratitude, Mood & energy, Weekly review), work (Work standup, 1:1
+  prep, Project retro), and study/lab (Study recap, Lecture reflection, Exam prep, Experiment
+  debrief, Research progress, Troubleshooting log) — plus your own. All editable and deletable, all
+  synced like templates as encrypted blobs the server can't tell apart from entries.
 
 You *can* point it at a cloud model instead (bring your own Anthropic API key). It's more capable, and
 the trade-off is stated plainly on the settings screen: for each request, the context entries are
