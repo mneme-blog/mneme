@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/plasticparticle/mneme/server/internal/store"
+	"github.com/mneme-blog/mneme/server/internal/store"
 )
 
 // The admin surface shows only what the relay already stores as accepted

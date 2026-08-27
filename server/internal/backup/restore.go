@@ -11,8 +11,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/plasticparticle/mneme/server/internal/blobs"
-	"github.com/plasticparticle/mneme/server/internal/store"
+	"github.com/mneme-blog/mneme/server/internal/blobs"
+	"github.com/mneme-blog/mneme/server/internal/store"
 )
 
 // Bounds on what a single archive member may claim. Restore is the one place the

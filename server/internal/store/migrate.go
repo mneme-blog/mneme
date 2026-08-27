@@ -6,7 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/plasticparticle/mneme/server/migrations"
+	"github.com/mneme-blog/mneme/server/migrations"
 )
 
 // Migrate applies any not-yet-applied SQL migrations in version order. Forward-only:

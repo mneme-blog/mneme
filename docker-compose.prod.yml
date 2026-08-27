@@ -47,7 +47,7 @@ services:
     # `build:` stays alongside it: `./deploy/prod.sh up -d --build` still builds
     # from the working tree and tags the result as this image name, so a source
     # deployment works exactly as before. The updater always passes --no-build.
-    image: ${MNEME_SERVER_IMAGE:-ghcr.io/plasticparticle/mneme-server:latest}
+    image: ${MNEME_SERVER_IMAGE:-ghcr.io/mneme-blog/mneme-server:latest}
     build:
       context: .
       dockerfile: server/Dockerfile
@@ -197,7 +197,7 @@ services:
   web:
     # Same story as `server` above: released image by default, still buildable
     # from source with `--build`.
-    image: ${MNEME_WEB_IMAGE:-ghcr.io/plasticparticle/mneme-web:latest}
+    image: ${MNEME_WEB_IMAGE:-ghcr.io/mneme-blog/mneme-web:latest}
     build:
       context: .
       dockerfile: deploy/web/Dockerfile

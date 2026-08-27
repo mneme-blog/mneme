@@ -6,7 +6,7 @@
 
 [Unit]
 Description=Apply a Mneme update
-Documentation=https://github.com/plasticparticle/mneme/blob/main/docs/MAINTENANCE.md
+Documentation=https://github.com/mneme-blog/mneme/blob/main/docs/MAINTENANCE.md
 After=docker.service
 Requires=docker.service
 

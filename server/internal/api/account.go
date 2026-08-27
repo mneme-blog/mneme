@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/plasticparticle/mneme/server/internal/blobs"
+	"github.com/mneme-blog/mneme/server/internal/blobs"
 )
 
 // DELETE /v1/account — wipe the authenticated owner entirely: entry blobs, media

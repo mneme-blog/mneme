@@ -42,7 +42,7 @@ your `.env.prod` so you can't accidentally run the wrong stack at 2 a.m.
 host:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/plasticparticle/mneme/main/deploy/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/mneme-blog/mneme/main/deploy/install.sh | bash
 ```
 
 It states its plan, asks for confirmation, then works through six narrated steps: check the machine
@@ -86,7 +86,7 @@ Docker. And it never handles a recovery phrase — those are generated in the br
 Prefer to read before running (a reasonable instinct for anything holding your journal):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/plasticparticle/mneme/main/deploy/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/mneme-blog/mneme/main/deploy/install.sh -o install.sh
 less install.sh && bash install.sh
 ```
 
@@ -105,7 +105,7 @@ curl -fsSL https://get.docker.com | sh
 sudo systemctl enable --now docker
 sudo usermod -aG docker "$USER"   # then log out/in so `docker` works without sudo
 
-git clone https://github.com/plasticparticle/mneme.git mneme && cd mneme
+git clone https://github.com/mneme-blog/mneme.git mneme && cd mneme
 ```
 
 ---

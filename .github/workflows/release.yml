@@ -1,6 +1,6 @@
 # Cut a release: on a pushed vX.Y.Z tag, build + publish the relay image and
 # create the GitHub Release. The Release is what the admin dashboard's update
-# check reads (GET /repos/plasticparticle/mneme/releases/latest), so the
+# check reads (GET /repos/mneme-blog/mneme/releases/latest), so the
 # "newer version available" banner only lights up once a tag has been released.
 #
 #   git tag v0.3.0 && git push origin v0.3.0
@@ -151,8 +151,8 @@ jobs:
           build-args: |
             VERSION=${{ env.TAG }}
           tags: |
-            ghcr.io/plasticparticle/mneme-server:${{ env.TAG }}
-            ghcr.io/plasticparticle/mneme-server:latest
+            ghcr.io/mneme-blog/mneme-server:${{ env.TAG }}
+            ghcr.io/mneme-blog/mneme-server:latest
 
       # The web image (client bundle + Caddy) is published too, because the
       # one-click updater moves the stack by PULLING images. Without a released
@@ -165,8 +165,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/plasticparticle/mneme-web:${{ env.TAG }}
-            ghcr.io/plasticparticle/mneme-web:latest
+            ghcr.io/mneme-blog/mneme-web:${{ env.TAG }}
+            ghcr.io/mneme-blog/mneme-web:latest
 
       # The schema manifest: which migration head this release lands on, and how
       # far back it can be rolled back without restoring a backup. A relay reads

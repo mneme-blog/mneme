@@ -303,7 +303,7 @@ func TestAdminVersionEndpoint(t *testing.T) {
 // mirrored feed said — including at addresses only the relay's network can reach.
 func TestReleaseAssetHost(t *testing.T) {
 	ok := []string{
-		"https://github.com/plasticparticle/mneme/releases/download/v1.0.0/mneme-release.json",
+		"https://github.com/mneme-blog/mneme/releases/download/v1.0.0/mneme-release.json",
 		"https://objects.githubusercontent.com/x",
 		"https://release-assets.githubusercontent.com/github-production-release-asset/1/2",
 		"https://API.GITHUB.COM/repos/x/releases/assets/1",

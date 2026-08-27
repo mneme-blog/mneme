@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/plasticparticle/mneme/server/internal/deploy"
-	"github.com/plasticparticle/mneme/server/migrations"
+	"github.com/mneme-blog/mneme/server/internal/deploy"
+	"github.com/mneme-blog/mneme/server/migrations"
 )
 
 // One-click updates, admin-gated like the rest of /admin.

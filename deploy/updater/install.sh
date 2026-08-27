@@ -68,7 +68,7 @@ cat >"$CONF" <<EOF
 # "update to <validated tag>" or "roll back".
 REPO_DIR=$REPO_DIR
 SPOOL_DIR=$SPOOL_DIR
-REGISTRY=ghcr.io/plasticparticle
+REGISTRY=ghcr.io/mneme-blog
 HEALTH_TIMEOUT=240
 # End-to-end probe after the containers report healthy. Empty to skip.
 SITE_PROBE_URL=$SITE_PROBE_URL

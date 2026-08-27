@@ -15,7 +15,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/plasticparticle/mneme/server/internal/config"
+	"github.com/mneme-blog/mneme/server/internal/config"
 )
 
 // ErrNotConfigured is returned when no object store is configured (S3_ENDPOINT unset).

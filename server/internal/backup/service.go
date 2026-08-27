@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plasticparticle/mneme/server/internal/blobs"
-	"github.com/plasticparticle/mneme/server/internal/store"
+	"github.com/mneme-blog/mneme/server/internal/blobs"
+	"github.com/mneme-blog/mneme/server/internal/store"
 )
 
 // filePrefix/fileSuffix bracket an archive name; the timestamp between them is the

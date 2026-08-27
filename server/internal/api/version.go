@@ -26,11 +26,11 @@ import (
 // property.
 
 // releasesURL is the GitHub API endpoint for the newest release of this repo.
-const releasesURL = "https://api.github.com/repos/plasticparticle/mneme/releases/latest"
+const releasesURL = "https://api.github.com/repos/mneme-blog/mneme/releases/latest"
 
 // mainHeadURL is the GitHub API endpoint for the head commit of the main
 // branch. Its short sha names the CI-published image tag main-<sha7>.
-const mainHeadURL = "https://api.github.com/repos/plasticparticle/mneme/commits/main"
+const mainHeadURL = "https://api.github.com/repos/mneme-blog/mneme/commits/main"
 
 // schemaAssetName is the release asset the release workflow attaches, describing
 // the schema that release migrates to and how far back it can be rolled back.

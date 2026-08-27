@@ -129,7 +129,7 @@ project. Scaffolded so far:
   workflow publishes it as the release's `mneme-release.json` asset via `journald schema-info`, and
   the relay reads it to say **before** an update whether undoing it is an image swap (`fast`) or needs
   the pre-update archive replayed into a rebuilt database (`deep`, destructive — its own tick-box).
-  Prod compose is now **image-based** (`ghcr.io/plasticparticle/mneme-{server,web}`, `build:` kept
+  Prod compose is now **image-based** (`ghcr.io/mneme-blog/mneme-{server,web}`, `build:` kept
   alongside so `--build` still works) and the release workflow publishes the **web** image too, since
   pulling only the relay would leave a split-version deployment. Caveat that is easy to miss: a
   server-side rollback does not undo **client-side** migrations — device OPFS DBs are forward-only too.

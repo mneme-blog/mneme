@@ -247,7 +247,7 @@ Manual equivalent, if the agent isn't installed or you'd rather drive it yoursel
 
 ```bash
 # fast: pin the old tag and restart
-printf 'MNEME_VERSION=v0.2.1\nMNEME_SERVER_IMAGE=ghcr.io/plasticparticle/mneme-server:v0.2.1\nMNEME_WEB_IMAGE=ghcr.io/plasticparticle/mneme-web:v0.2.1\n' > deploy/version.env
+printf 'MNEME_VERSION=v0.2.1\nMNEME_SERVER_IMAGE=ghcr.io/mneme-blog/mneme-server:v0.2.1\nMNEME_WEB_IMAGE=ghcr.io/mneme-blog/mneme-web:v0.2.1\n' > deploy/version.env
 ./deploy/prod.sh pull && ./deploy/prod.sh up -d --no-build
 
 # deep: rebuild the database at the old schema, then restore

@@ -29,7 +29,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/plasticparticle/mneme/server/internal/store"
+	"github.com/mneme-blog/mneme/server/internal/store"
 )
 
 // Format is the archive layout version. Bump it on any incompatible change to the

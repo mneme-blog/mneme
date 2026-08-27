@@ -12,8 +12,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/plasticparticle/mneme/server/internal/blobs"
-	"github.com/plasticparticle/mneme/server/internal/store"
+	"github.com/mneme-blog/mneme/server/internal/blobs"
+	"github.com/mneme-blog/mneme/server/internal/store"
 )
 
 // Create writes a backup archive to w. It first serialises each bookkeeping table

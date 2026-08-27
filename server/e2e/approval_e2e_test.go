@@ -15,10 +15,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plasticparticle/mneme/server/internal/api"
-	"github.com/plasticparticle/mneme/server/internal/blobs"
-	"github.com/plasticparticle/mneme/server/internal/config"
-	"github.com/plasticparticle/mneme/server/internal/store"
+	"github.com/mneme-blog/mneme/server/internal/api"
+	"github.com/mneme-blog/mneme/server/internal/blobs"
+	"github.com/mneme-blog/mneme/server/internal/config"
+	"github.com/mneme-blog/mneme/server/internal/store"
 )
 
 func TestApprovalFlow(t *testing.T) {

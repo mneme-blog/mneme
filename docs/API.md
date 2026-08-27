@@ -344,7 +344,7 @@ or applies anything itself; when one-click updates are enabled, applying is a ho
   "latest": "v0.3.0",
   "update_available": true,
   "ahead_of_latest": false,
-  "html_url": "https://github.com/plasticparticle/mneme/releases/tag/v0.3.0",
+  "html_url": "https://github.com/mneme-blog/mneme/releases/tag/v0.3.0",
   "name": "v0.3.0",
   "published_at": "2026-07-01T12:00:00Z",
   "notes": "…release body (truncated)…",
@@ -354,7 +354,7 @@ or applies anything itself; when one-click updates are enabled, applying is a ho
   "latest_min_safe_schema": 0,
   "rollback_after_update": "fast",
   "main_tag": "main-1a2b3c4",
-  "main_html_url": "https://github.com/plasticparticle/mneme/commit/…",
+  "main_html_url": "https://github.com/mneme-blog/mneme/commit/…",
   "main_committed_at": "2026-07-06T08:00:00Z",
   "main_update_available": true
 }

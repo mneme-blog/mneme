@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/plasticparticle/mneme/server/internal/blobs"
-	"github.com/plasticparticle/mneme/server/internal/store"
+	"github.com/mneme-blog/mneme/server/internal/blobs"
+	"github.com/mneme-blog/mneme/server/internal/store"
 )
 
 // Media transfer is server-relayed (§12 resolved; see internal/blobs): the client

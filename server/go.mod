@@ -1,4 +1,4 @@
-module github.com/plasticparticle/mneme/server
+module github.com/mneme-blog/mneme/server
 
 go 1.25.0
 

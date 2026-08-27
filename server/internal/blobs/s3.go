@@ -12,7 +12,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
-	"github.com/plasticparticle/mneme/server/internal/config"
+	"github.com/mneme-blog/mneme/server/internal/config"
 )
 
 // s3Store relays opaque chunks to any S3-compatible store (MinIO/Garage/AWS).

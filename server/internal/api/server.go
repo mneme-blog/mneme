@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/plasticparticle/mneme/server/internal/backup"
-	"github.com/plasticparticle/mneme/server/internal/blobs"
-	"github.com/plasticparticle/mneme/server/internal/config"
-	"github.com/plasticparticle/mneme/server/internal/deploy"
-	"github.com/plasticparticle/mneme/server/internal/store"
-	"github.com/plasticparticle/mneme/server/migrations"
+	"github.com/mneme-blog/mneme/server/internal/backup"
+	"github.com/mneme-blog/mneme/server/internal/blobs"
+	"github.com/mneme-blog/mneme/server/internal/config"
+	"github.com/mneme-blog/mneme/server/internal/deploy"
+	"github.com/mneme-blog/mneme/server/internal/store"
+	"github.com/mneme-blog/mneme/server/migrations"
 )
 
 type Server struct {

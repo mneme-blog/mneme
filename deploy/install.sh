@@ -2,7 +2,7 @@
 #
 # Guided installer for a self-hosted Mneme deployment.
 #
-#   curl -fsSL https://raw.githubusercontent.com/plasticparticle/mneme/main/deploy/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/mneme-blog/mneme/main/deploy/install.sh | bash
 #
 # It walks through six steps — check the machine, fetch the source, write
 # configuration, download images, start the stack, wait until it is really
@@ -18,7 +18,7 @@
 
 set -Eeuo pipefail
 
-REPO_URL=${MNEME_REPO_URL:-https://github.com/plasticparticle/mneme.git}
+REPO_URL=${MNEME_REPO_URL:-https://github.com/mneme-blog/mneme.git}
 REF=${MNEME_REF:-main}
 DIR=${MNEME_DIR:-}
 SITE=${MNEME_SITE_ADDRESS:-}
@@ -103,7 +103,7 @@ some containers are running, which you can stop with
     cd ${DIR:-<install dir>} && ./deploy/prod.sh down
 
 Please report it, with the last few lines above:
-    https://github.com/plasticparticle/mneme/issues" | indent)" >&2
+    https://github.com/mneme-blog/mneme/issues" | indent)" >&2
   exit 1
 }
 trap 'on_error $LINENO' ERR
@@ -112,7 +112,7 @@ usage() {
   cat <<'EOF'
 Guided installer for a self-hosted Mneme deployment.
 
-  curl -fsSL https://raw.githubusercontent.com/plasticparticle/mneme/main/deploy/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/mneme-blog/mneme/main/deploy/install.sh | bash
 
 Options (pass them through the pipe with `bash -s -- --flag`):
   --dir PATH        where to install          (default: ~/mneme, /opt/mneme as root)
@@ -227,7 +227,7 @@ step "Checking this machine" "Everything Mneme needs is standard; this is just m
   "You are on $(uname -s). The Mneme stack itself runs anywhere Docker does, so it
 works on macOS or Windows via Docker Desktop — it just needs setting up by hand." \
   "Follow docs/DEPLOYMENT.md instead:
-    https://github.com/plasticparticle/mneme/blob/main/docs/DEPLOYMENT.md"
+    https://github.com/mneme-blog/mneme/blob/main/docs/DEPLOYMENT.md"
 
 case $(uname -m) in
   x86_64 | amd64 | aarch64 | arm64) ok "Architecture $(uname -m) — published images cover it" ;;
@@ -550,7 +550,7 @@ access from this machine, a proxy or firewall blocking ghcr.io or Docker Hub,
 or a full disk part-way through." \
     "Check connectivity and space, then run this installer again — completed
 downloads are cached, so it resumes rather than starting over:
-    docker pull ghcr.io/plasticparticle/mneme-server:latest
+    docker pull ghcr.io/mneme-blog/mneme-server:latest
     df -h $DIR"
 fi
 ok "Images downloaded"

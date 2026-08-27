@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plasticparticle/mneme/server/internal/config"
+	"github.com/mneme-blog/mneme/server/internal/config"
 )
 
 func testConfig() config.Config {

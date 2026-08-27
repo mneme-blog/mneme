@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/plasticparticle/mneme/server/internal/backup"
+	"github.com/mneme-blog/mneme/server/internal/backup"
 )
 
 // Operator backup surface (admin-gated, like the rest of /admin). A backup archive

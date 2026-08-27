@@ -37,7 +37,7 @@ REPO_DIR=${REPO_DIR:?REPO_DIR is not set (the checkout holding docker-compose.pr
 SPOOL_DIR=${SPOOL_DIR:?SPOOL_DIR is not set (the directory shared with the relay)}
 # The only registry this agent will ever pull from. Not configurable from the
 # request — that is the point.
-REGISTRY=${REGISTRY:-ghcr.io/plasticparticle}
+REGISTRY=${REGISTRY:-ghcr.io/mneme-blog}
 SERVER_REPO=${SERVER_REPO:-$REGISTRY/mneme-server}
 WEB_REPO=${WEB_REPO:-$REGISTRY/mneme-web}
 # How long the new version gets to report healthy before it is judged failed.

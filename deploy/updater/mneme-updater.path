@@ -7,7 +7,7 @@
 
 [Unit]
 Description=Watch for Mneme update requests
-Documentation=https://github.com/plasticparticle/mneme/blob/main/docs/MAINTENANCE.md
+Documentation=https://github.com/mneme-blog/mneme/blob/main/docs/MAINTENANCE.md
 
 [Path]
 # Must match UPDATE_SPOOL_HOST_DIR in .env.prod. install.sh writes both.

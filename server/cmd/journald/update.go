@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/plasticparticle/mneme/server/internal/config"
-	"github.com/plasticparticle/mneme/server/migrations"
+	"github.com/mneme-blog/mneme/server/internal/config"
+	"github.com/mneme-blog/mneme/server/migrations"
 )
 
 // Two small subcommands that exist for the update pipeline.

@@ -24,12 +24,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/plasticparticle/mneme/server/internal/api"
-	"github.com/plasticparticle/mneme/server/internal/backup"
-	"github.com/plasticparticle/mneme/server/internal/blobs"
-	"github.com/plasticparticle/mneme/server/internal/config"
-	"github.com/plasticparticle/mneme/server/internal/reminders"
-	"github.com/plasticparticle/mneme/server/internal/store"
+	"github.com/mneme-blog/mneme/server/internal/api"
+	"github.com/mneme-blog/mneme/server/internal/backup"
+	"github.com/mneme-blog/mneme/server/internal/blobs"
+	"github.com/mneme-blog/mneme/server/internal/config"
+	"github.com/mneme-blog/mneme/server/internal/reminders"
+	"github.com/mneme-blog/mneme/server/internal/store"
 )
 
 // version is the relay's build identifier, stamped at build time via

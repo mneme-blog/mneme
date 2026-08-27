@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plasticparticle/mneme/server/internal/blobs"
-	"github.com/plasticparticle/mneme/server/internal/store"
+	"github.com/mneme-blog/mneme/server/internal/blobs"
+	"github.com/mneme-blog/mneme/server/internal/store"
 )
 
 // fakeStore is an in-memory stand-in for *store.Store implementing both the Source

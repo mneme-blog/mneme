@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/plasticparticle/mneme/server/internal/deploy"
+	"github.com/mneme-blog/mneme/server/internal/deploy"
 )
 
 func updateServer(t *testing.T, spoolDir string) *Server {

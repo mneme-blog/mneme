@@ -287,7 +287,7 @@ On any Linux box with Docker — a home server, a NAS, that Raspberry Pi in the 
 stack is one line:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/plasticparticle/mneme/main/deploy/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/mneme-blog/mneme/main/deploy/install.sh | bash
 ```
 
 It opens by telling you what it's about to do, asks whether to go ahead, and then narrates six
@@ -324,7 +324,7 @@ own journal we're talking about. [Read it first](./deploy/install.sh); it's one 
 bash with no magic in it:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/plasticparticle/mneme/main/deploy/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/mneme-blog/mneme/main/deploy/install.sh -o install.sh
 less install.sh          # have a look
 bash install.sh          # then run it
 ```
@@ -343,7 +343,7 @@ Useful flags (pass them through the pipe with `bash -s --`):
 
 ```bash
 # e.g. install a pinned release into /opt, unattended
-curl -fsSL https://raw.githubusercontent.com/plasticparticle/mneme/main/deploy/install.sh \
+curl -fsSL https://raw.githubusercontent.com/mneme-blog/mneme/main/deploy/install.sh \
   | bash -s -- --dir /opt/mneme --ref v1.0.0 --yes
 ```
 

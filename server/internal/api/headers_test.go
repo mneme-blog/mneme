@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/plasticparticle/mneme/server/internal/config"
+	"github.com/mneme-blog/mneme/server/internal/config"
 )
 
 // The dashboard's policy is generated from the page itself, which is only sound

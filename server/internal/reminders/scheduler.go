@@ -8,7 +8,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/plasticparticle/mneme/server/internal/store"
+	"github.com/mneme-blog/mneme/server/internal/store"
 )
 
 // Dispatcher delivers a fired reminder. Reminders are generic ("a journal nudge");

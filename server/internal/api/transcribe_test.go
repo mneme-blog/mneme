@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plasticparticle/mneme/server/internal/config"
+	"github.com/mneme-blog/mneme/server/internal/config"
 )
 
 // authorize calls the handler directly with an already-authenticated principal.
