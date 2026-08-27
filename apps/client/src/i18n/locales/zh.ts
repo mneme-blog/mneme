@@ -637,6 +637,14 @@ const zh: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interviewTypes': '访谈类型',
   'prefs.assistant.ai': 'AI 助手',
 
+  'prefs.interviews.section':
+    '访谈',
+  'prefs.interviews.deep':
+    '更深入的问题',
+  'prefs.interviews.deepHint':
+    '访谈可以询问你上一篇记录之后发生了什么，并重新提起你更早的期待、计划或担忧。',
+  'prefs.interviews.deepData':
+    '选择在本机完成，不会额外存储任何内容。使用云端助手时，为此读取的记录——最近的一篇以及日记中任意时期的几篇较早记录——会在该请求期间离开端到端加密。',
   'prefs.video.section': '视频录制',
   'prefs.video.quality': '画质',
   'prefs.video.quality.low': '小',
@@ -770,6 +778,33 @@ const zh: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': '放弃此访谈？',
   'assistant.video.discardBody': '你录制的回答尚未保存，将会丢失。',
   'assistant.video.discard': '放弃',
+  'assistant.reflect.title':
+    '更深入的访谈问题',
+  'assistant.reflect.intro':
+    '访谈可以参考你日记的实际状态，而不只是访谈类型。默认关闭，由你决定是否开启。',
+  'assistant.reflect.gapTitle':
+    '当你有一阵子没写了',
+  'assistant.reflect.gapBody':
+    '第一个问题会问你上一篇记录之后发生了什么——这是一个邀请，绝不会催促你保持连续或补上进度。',
+  'assistant.reflect.olderTitle':
+    '重新回看更早的想法',
+  'assistant.reflect.olderBody':
+    '其中一个问题会回到你很久以前的期待、计划或担忧，问你现在怎么看它。',
+  'assistant.reflect.dataLabel':
+    '这对你的记录意味着什么',
+  'assistant.reflect.dataOnDevice':
+    '问什么完全在本机决定，使用的是已经解密的记录。不会额外存储任何东西，不会同步，服务器也看不到。',
+  'assistant.reflect.dataLocal':
+    '你的助手在本机运行，因此它为此读取的记录不会离开这台设备。',
+  'assistant.reflect.dataCloud':
+    '为了提出这些问题，你的助手会收到你最近的一篇记录，以及日记中任意时期的几篇较早记录——不只是本访谈的记录。与其他助手请求一样，这些文本会为此离开端到端加密，发送给你配置的服务商。',
+  'assistant.reflect.changeLater':
+    '你随时可以在「偏好设置 → 助手」中更改。',
+  'assistant.reflect.decline':
+    '保持简单的问题',
+  'assistant.reflect.accept':
+    '使用更深入的问题',
+  'assistant.video.fallback.gap': '距离你上一篇记录已经有一段时间了——这段时间发生了什么？',
   'assistant.video.fallback.q1': '今天发生了什么是你想记住的？',
   'assistant.video.fallback.q2': '最好的部分是什么，为什么它让你有这样的感受？',
   'assistant.video.fallback.q3': '什么让你觉得艰难，或者没有如你所愿？',

@@ -29,6 +29,14 @@ import { makeProvider } from '../ai/provider';
 import { videoInterviewPlanPrompt, videoInterviewPlanUserMessage } from '../ai/prompts';
 import { toPlan, PLAN_TARGET, PLAN_MAX } from '../ai/plan';
 import { buildInterviewHistory, HISTORY_BUDGET_CHARS } from '../ai/interview';
+import {
+  buildRetrospect,
+  deepReflectionChoice,
+  deepReflectionEnabled,
+  journalGap,
+  RETRO_BUDGET_CHARS,
+} from '../ai/reflection';
+import { ReflectionConsent } from './ReflectionConsent';
 import { buildVideoInterviewDoc, type VideoInterviewCard } from '../editor/videointerviewData';
 import { docToText } from '../editor/doc';
 import { newMediaId } from '../sync/ids';
@@ -113,6 +121,11 @@ export function VideoInterviewSheet({
   const [savedCount, setSavedCount] = useState(0);
   const [error, setError] = useState('');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  // The deeper questions (ai/reflection.ts) are opt-in per device: `deep` is the
+  // recorded answer, `consentFor` holds the type the user picked while the
+  // one-time overlay asks for it.
+  const [deep, setDeep] = useState(deepReflectionEnabled);
+  const [consentFor, setConsentFor] = useState<InterviewType | null>(null);
 
   // Takes are indexed to match `questions`; a hole is a skipped question.
   const takes = useRef<(Take | null)[]>([]);
@@ -126,6 +139,11 @@ export function VideoInterviewSheet({
 
   const provider = useMemo(() => (aiSettings?.enabled ? makeProvider(aiSettings) : null), [aiSettings]);
   const alive = useMemo(() => interviewTypes.filter((it) => !it.deleted), [interviewTypes]);
+  // How long the journal has been quiet (ai/reflection.ts). Only used once the
+  // user has opted into the deeper questions; it then shapes the planned
+  // questions below and survives an unreachable provider, since the fallback set
+  // swaps its "what happened today" opener for the gap question.
+  const gap = useMemo(() => journalGap(entries), [entries]);
   const vp = useVisualViewport();
   const limit = useMemo(() => answerLimitSeconds(), []);
   // Names in the reader's own language, sorted the way that language sorts —
@@ -156,7 +174,7 @@ export function VideoInterviewSheet({
   useEffect(() => {
     if (!initial || startedRef.current || !provider) return;
     startedRef.current = true;
-    void planQuestions(initial);
+    pickForInterview(initial);
   });
 
   if (!provider || !aiSettings) return null;
@@ -166,20 +184,44 @@ export function VideoInterviewSheet({
   // ── plan phase ──────────────────────────────────────────────
   // One call, then nothing. A failure is not fatal: the fallback set means the
   // session still works with the provider unreachable.
-  const planQuestions = async (it: InterviewType): Promise<void> => {
+  // The deeper questions widen what the plan call sends out of E2EE under a
+  // cloud backend, so the first AI interview on this device asks before it
+  // starts. `on` then rides into planQuestions explicitly: the plan is built in
+  // the same tick as the overlay's setState, before `deep` has settled.
+  const pickForInterview = (it: InterviewType): void => {
+    if (deepReflectionChoice() === null) {
+      setConsentFor(it);
+      return;
+    }
+    void planQuestions(it, deep);
+  };
+
+  const planQuestions = async (it: InterviewType, on: boolean = deep): Promise<void> => {
+    setConsentFor(null);
     setType(it);
     setPhase('planning');
     setError('');
     const ac = new AbortController();
     abortRef.current = ac;
-    const history = buildInterviewHistory(
-      entries,
-      it.name,
-      provider.local ? Math.round(HISTORY_BUDGET_CHARS / 2) : HISTORY_BUDGET_CHARS,
-    );
+    const budget = (n: number): number => (provider.local ? Math.round(n / 2) : n);
+    const history = buildInterviewHistory(entries, it.name, budget(HISTORY_BUDGET_CHARS));
+    // Older entries worth looking back at — minus the ones the history block
+    // already carries, so one entry can't fill two sections of the prompt.
+    const dynamics = on
+      ? {
+          gap,
+          retrospect: buildRetrospect(entries, {
+            excludeIds: history.ids,
+            budgetChars: budget(RETRO_BUDGET_CHARS),
+          }),
+        }
+      : {};
+    // The gap question is the one dynamic that still works with the model
+    // unreachable — but only for a user who asked for it.
+    const gapFallback = on && gap !== null;
     try {
       const raw = await provider.chat({
-        system: videoInterviewPlanPrompt(it, history.text, PLAN_TARGET),
+        system: videoInterviewPlanPrompt(it, history.text, PLAN_TARGET, dynamics),
         messages: [{ role: 'user', content: videoInterviewPlanUserMessage(PLAN_TARGET) }],
         // Generous: a verbose model truncated mid-question at 600 in testing,
         // and a truncated last line is silently dropped by the parser.
@@ -187,12 +229,12 @@ export function VideoInterviewSheet({
         signal: ac.signal,
       });
       if (ac.signal.aborted) return;
-      const plan = toPlan(raw);
+      const plan = toPlan(raw, gapFallback);
       setQuestions(plan.questions);
       setPlanFallback(plan.fallback);
     } catch (e) {
       if (toAiError(e).hint === 'aborted') return;
-      const plan = toPlan('');
+      const plan = toPlan('', gapFallback);
       setQuestions(plan.questions);
       setPlanFallback(true);
     }
@@ -433,7 +475,7 @@ export function VideoInterviewSheet({
               {alive.map((it) => (
                 <button
                   key={it.id}
-                  onClick={() => void planQuestions(it)}
+                  onClick={() => pickForInterview(it)}
                   style={{ textAlign: 'start', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 13, padding: '11px 13px', cursor: 'pointer' }}
                 >
                   <span style={{ display: 'block', fontFamily: 'var(--ui)', fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>{it.name}</span>
@@ -661,6 +703,16 @@ export function VideoInterviewSheet({
         >
           {t('assistant.video.discardBody')}
         </ConfirmDialog>
+      )}
+
+      {consentFor && (
+        <ReflectionConsent
+          provider={provider}
+          onDecide={(on) => {
+            setDeep(on);
+            void planQuestions(consentFor, on);
+          }}
+        />
       )}
     </div>
   );

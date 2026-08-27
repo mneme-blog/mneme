@@ -467,6 +467,55 @@ async function main(): Promise<void> {
   console.log('ok: audiomix (downmix, 44.1→48 kHz resample, silence, fit, chunk)');
 
   editor.destroy();
+
+  // ── the one-time consent overlay renders and records a decision ──
+  // A throw in here would block the FIRST AI interview on every device, which
+  // is exactly the path least likely to be exercised in day-to-day use.
+  const { render, h } = await import('preact');
+  const { ReflectionConsent } = await import('../src/ui/ReflectionConsent');
+  const { deepReflectionChoice } = await import('../src/ai/reflection');
+  type AiProvider = import('../src/ai/types').AiProvider;
+  const fakeProvider = (local: boolean): AiProvider => ({
+    id: local ? 'ollama' : 'anthropic',
+    label: local ? 'Ollama' : 'Anthropic',
+    local,
+    chat: async () => '',
+    verify: async () => {},
+  });
+
+  const host = document.getElementById('mount') as HTMLElement;
+  localStorage.removeItem('mneme.interview.deepReflection');
+  const decided: boolean[] = [];
+  render(h(ReflectionConsent, { provider: fakeProvider(false), onDecide: (on: boolean) => decided.push(on) }), host);
+  await new Promise((r) => setTimeout(r, 0));
+  const dialog = document.querySelector('[role="dialog"]');
+  assert(dialog, 'the consent overlay renders');
+  const cloudText = dialog.textContent ?? '';
+  assert(cloudText.includes('Deeper interview questions'), 'it names what is being asked about');
+  assert(cloudText.includes('leaves end-to-end encryption'), 'a cloud backend gets the export disclosure');
+  assert(!cloudText.includes('never leave it'), 'and not the on-device reassurance');
+
+  // The buttons are the only way out — a decision either way, then recorded.
+  const buttons = [...dialog.querySelectorAll('button')];
+  const accept = buttons.find((b) => b.textContent?.includes('Use deeper questions'));
+  assert(accept, 'the opt-in button is there');
+  accept.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 0));
+  assert(decided.length === 1 && decided[0] === true, 'accepting reports the decision to the caller');
+  assert(deepReflectionChoice() === 'on', 'accepting is persisted before the interview starts');
+  render(null, host);
+
+  // Under a local backend the same dialog must NOT claim text leaves the device.
+  localStorage.removeItem('mneme.interview.deepReflection');
+  render(h(ReflectionConsent, { provider: fakeProvider(true), onDecide: () => {} }), host);
+  await new Promise((r) => setTimeout(r, 0));
+  const localText = document.querySelector('[role="dialog"]')?.textContent ?? '';
+  assert(localText.includes('never leave it'), 'a local backend says the entries stay put');
+  assert(!localText.includes('leaves end-to-end encryption'), 'and drops the cloud export line');
+  render(null, host);
+  localStorage.removeItem('mneme.interview.deepReflection');
+  console.log('ok: reflection consent overlay (renders, per-backend copy, records the choice)');
+
   console.log('\nall video-interview checks passed');
 }
 

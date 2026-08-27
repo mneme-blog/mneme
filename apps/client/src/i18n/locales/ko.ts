@@ -637,6 +637,14 @@ const ko: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interviewTypes': '인터뷰 유형',
   'prefs.assistant.ai': 'AI 어시스턴트',
 
+  'prefs.interviews.section':
+    '인터뷰',
+  'prefs.interviews.deep':
+    '더 깊은 질문',
+  'prefs.interviews.deepHint':
+    '인터뷰가 마지막 기록 이후의 일을 묻고, 예전의 바람이나 계획, 걱정을 다시 꺼낼 수 있습니다.',
+  'prefs.interviews.deepData':
+    '선택은 이 기기에서 이뤄지며 추가로 저장되는 것은 없습니다. 클라우드 어시스턴트를 쓰면 이를 위해 읽는 기록(가장 최근 것과 일기 곳곳의 오래된 몇 개)이 해당 요청 동안 종단 간 암호화를 벗어납니다.',
   'prefs.video.section': '동영상 녹화',
   'prefs.video.quality': '화질',
   'prefs.video.quality.low': '작게',
@@ -770,6 +778,33 @@ const ko: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': '이 인터뷰를 버릴까요?',
   'assistant.video.discardBody': '녹화한 답변이 아직 저장되지 않았으며 사라집니다.',
   'assistant.video.discard': '버리기',
+  'assistant.reflect.title':
+    '더 깊이 들어가는 인터뷰 질문',
+  'assistant.reflect.intro':
+    '인터뷰가 인터뷰 종류뿐 아니라 일기의 상태도 반영할 수 있습니다. 직접 켜기 전까지는 꺼져 있습니다.',
+  'assistant.reflect.gapTitle':
+    '한동안 쓰지 않았을 때',
+  'assistant.reflect.gapBody':
+    '첫 질문은 마지막 기록 이후 어떤 일이 있었는지 묻습니다. 권유일 뿐, 연속 기록이나 밀린 기록을 재촉하지 않습니다.',
+  'assistant.reflect.olderTitle':
+    '예전 생각 다시 보기',
+  'assistant.reflect.olderBody':
+    '한 질문이 오래전에 바라거나 계획하거나 걱정했던 것을 다시 꺼내어, 지금은 어떻게 느끼는지 묻습니다.',
+  'assistant.reflect.dataLabel':
+    '내 기록에 어떤 의미인지',
+  'assistant.reflect.dataOnDevice':
+    '무엇을 물을지는 이 기기에서, 이미 복호화된 기록으로 정해집니다. 추가로 저장되는 것도 동기화되는 것도 없고, 서버는 아무것도 보지 못합니다.',
+  'assistant.reflect.dataLocal':
+    '어시스턴트가 이 기기에서 실행되므로, 이를 위해 읽는 기록은 기기를 벗어나지 않습니다.',
+  'assistant.reflect.dataCloud':
+    '이 질문을 만들기 위해 어시스턴트에는 가장 최근 기록과 일기 곳곳의 오래된 기록 몇 개가 전송됩니다. 이 인터뷰의 기록만이 아닙니다. 다른 어시스턴트 요청과 마찬가지로 그 텍스트는 종단 간 암호화를 벗어나 설정한 제공자에게 전달됩니다.',
+  'assistant.reflect.changeLater':
+    '이 설정은 환경설정 → 어시스턴트에서 언제든지 바꿀 수 있습니다.',
+  'assistant.reflect.decline':
+    '질문을 단순하게 유지',
+  'assistant.reflect.accept':
+    '더 깊은 질문 사용',
+  'assistant.video.fallback.gap': '마지막 기록 이후 시간이 좀 지났네요. 그동안 어떤 일이 있었나요?',
   'assistant.video.fallback.q1': '오늘 기억하고 싶은 일은 무엇이었나요?',
   'assistant.video.fallback.q2': '가장 좋았던 부분은 무엇이었고, 왜 그렇게 느꼈나요?',
   'assistant.video.fallback.q3': '힘들었던 일이나 바라던 대로 되지 않은 일이 있었나요?',

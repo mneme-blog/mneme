@@ -25,6 +25,7 @@ const SCRIPTS = [
   'dayone-import',
   'dayone-import-persist',
   'i18n-dump',
+  'interview-dynamics', // gap + older-thought interview dynamics
   'interview-title',
   'labbook-repro',
   'location-repro',

@@ -688,6 +688,14 @@ const nl: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interviewTypes': 'Interviewtypes',
   'prefs.assistant.ai': 'AI-assistent',
 
+  'prefs.interviews.section':
+    'Interviews',
+  'prefs.interviews.deep':
+    'Diepere vragen',
+  'prefs.interviews.deepHint':
+    'Interviews mogen vragen wat er sinds je laatste notitie speelde en een oudere hoop, een plan of een zorg opnieuw aansnijden.',
+  'prefs.interviews.deepData':
+    'De selectie gebeurt op dit apparaat en er wordt niets extra bewaard. Met een cloud-assistent verlaten de notities die hiervoor gelezen worden — je meest recente en een paar oudere uit je hele dagboek — voor die aanvraag de eind-tot-eind-versleuteling.',
   'prefs.video.section': 'Video-opname',
   'prefs.video.quality': 'Kwaliteit',
   'prefs.video.quality.low': 'Klein',
@@ -822,6 +830,33 @@ const nl: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': 'Dit interview weggooien?',
   'assistant.video.discardBody': 'Je opgenomen antwoorden zijn nog niet opgeslagen en gaan verloren.',
   'assistant.video.discard': 'Weggooien',
+  'assistant.reflect.title':
+    'Diepere interviewvragen',
+  'assistant.reflect.intro':
+    'Interviews kunnen rekening houden met de staat van je dagboek, niet alleen met het soort interview. Dit staat uit tot je het aanzet.',
+  'assistant.reflect.gapTitle':
+    'Als je een tijd niet geschreven hebt',
+  'assistant.reflect.gapBody':
+    'De eerste vraag gaat over wat er sinds je laatste notitie speelde — als uitnodiging, nooit als aansporing over reeksen of inhalen.',
+  'assistant.reflect.olderTitle':
+    'Oudere gedachten, opnieuw bekeken',
+  'assistant.reflect.olderBody':
+    'Eén vraag pakt iets op waar je een tijd geleden op hoopte, wat je van plan was of waar je bang voor was, en vraagt hoe dat nu voelt.',
+  'assistant.reflect.dataLabel':
+    'Wat dit betekent voor je notities',
+  'assistant.reflect.dataOnDevice':
+    'De keuze gebeurt hier, op dit apparaat, uit notities die al ontsleuteld zijn. Er wordt niets extra bewaard, niets gesynchroniseerd, en de server ziet er niets van.',
+  'assistant.reflect.dataLocal':
+    'Je assistent draait op dit apparaat, dus de notities die hij hiervoor leest verlaten het nooit.',
+  'assistant.reflect.dataCloud':
+    'Om deze vragen te stellen krijgt je assistent je meest recente notitie en een paar oudere uit je hele dagboek — niet alleen die van dit interview. Zoals bij elke assistent-aanvraag verlaat die tekst daarvoor de eind-tot-eind-versleuteling richting de aanbieder die je hebt ingesteld.',
+  'assistant.reflect.changeLater':
+    'Je kunt dit altijd wijzigen bij Voorkeuren → Assistent.',
+  'assistant.reflect.decline':
+    'Vragen eenvoudig houden',
+  'assistant.reflect.accept':
+    'Diepere vragen gebruiken',
+  'assistant.video.fallback.gap': 'Het is een tijdje geleden sinds je laatste notitie — wat is er sindsdien gebeurd?',
   'assistant.video.fallback.q1': 'Wat is er vandaag gebeurd dat je wilt onthouden?',
   'assistant.video.fallback.q2': 'Wat was het mooiste moment, en waarom raakte dat je zo?',
   'assistant.video.fallback.q3': 'Wat was moeilijk, of ging niet zoals je had gehoopt?',

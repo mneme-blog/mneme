@@ -702,6 +702,14 @@ const es: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interviewTypes': 'Tipos de entrevista',
   'prefs.assistant.ai': 'Asistente de IA',
 
+  'prefs.interviews.section':
+    'Entrevistas',
+  'prefs.interviews.deep':
+    'Preguntas más profundas',
+  'prefs.interviews.deepHint':
+    'Las entrevistas pueden preguntar qué ha pasado desde tu última entrada y retomar una esperanza, un plan o una preocupación de hace tiempo.',
+  'prefs.interviews.deepData':
+    'La selección ocurre en este dispositivo y no se guarda nada más. Con un asistente en la nube, las entradas que lee para esto —la más reciente y algunas antiguas de cualquier parte de tu diario— salen del cifrado de extremo a extremo durante esa petición.',
   'prefs.video.section': 'Grabación de vídeo',
   'prefs.video.quality': 'Calidad',
   'prefs.video.quality.low': 'Pequeña',
@@ -836,6 +844,33 @@ const es: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': '¿Descartar esta entrevista?',
   'assistant.video.discardBody': 'Tus respuestas grabadas aún no se han guardado y se perderán.',
   'assistant.video.discard': 'Descartar',
+  'assistant.reflect.title':
+    'Preguntas de entrevista más profundas',
+  'assistant.reflect.intro':
+    'Las entrevistas pueden tener en cuenta el estado de tu diario, no solo el tipo de entrevista. Está desactivado hasta que lo actives.',
+  'assistant.reflect.gapTitle':
+    'Cuando llevas tiempo sin escribir',
+  'assistant.reflect.gapBody':
+    'La primera pregunta te pregunta qué ha pasado desde tu última entrada: es una invitación, nunca un recordatorio de rachas ni de ponerte al día.',
+  'assistant.reflect.olderTitle':
+    'Pensamientos antiguos, revisitados',
+  'assistant.reflect.olderBody':
+    'Una pregunta retoma algo que esperabas, planeabas o temías hace tiempo y te pregunta cómo lo ves ahora.',
+  'assistant.reflect.dataLabel':
+    'Qué significa esto para tus entradas',
+  'assistant.reflect.dataOnDevice':
+    'La selección ocurre aquí, en este dispositivo, a partir de entradas ya descifradas. No se guarda nada más, nada se sincroniza y el servidor no ve nada de esto.',
+  'assistant.reflect.dataLocal':
+    'Tu asistente funciona en este dispositivo, así que las entradas que lee para esto nunca salen de él.',
+  'assistant.reflect.dataCloud':
+    'Para hacer estas preguntas, tu asistente recibe tu entrada más reciente y algunas más antiguas de cualquier parte de tu diario, no solo las de esta entrevista. Como en cualquier petición al asistente, ese texto sale del cifrado de extremo a extremo hacia el proveedor que hayas configurado.',
+  'assistant.reflect.changeLater':
+    'Puedes cambiarlo cuando quieras en Preferencias → Asistente.',
+  'assistant.reflect.decline':
+    'Mantener preguntas sencillas',
+  'assistant.reflect.accept':
+    'Usar preguntas profundas',
+  'assistant.video.fallback.gap': 'Ha pasado un tiempo desde tu última entrada: ¿qué ha pasado desde entonces?',
   'assistant.video.fallback.q1': '¿Qué ha pasado hoy que quieras recordar?',
   'assistant.video.fallback.q2': '¿Qué fue lo mejor y por qué te llegó de esa manera?',
   'assistant.video.fallback.q3': '¿Qué fue difícil o no salió como esperabas?',

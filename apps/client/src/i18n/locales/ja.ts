@@ -692,6 +692,14 @@ const ja: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interviewTypes': 'インタビューの種類',
   'prefs.assistant.ai': 'AI アシスタント',
 
+  'prefs.interviews.section':
+    'インタビュー',
+  'prefs.interviews.deep':
+    '踏み込んだ質問',
+  'prefs.interviews.deepHint':
+    'インタビューが、前回の記録からの出来事を尋ねたり、以前の願いや計画、不安を改めて取り上げたりできるようになります。',
+  'prefs.interviews.deepData':
+    '選択はこの端末で行われ、追加の保存はありません。クラウドのアシスタントを使う場合、そのために読まれる記録（直近の一件と、日記のどこからか選ばれた古い記録いくつか）は、その要求のあいだエンドツーエンド暗号化を離れます。',
   'prefs.video.section': '動画の録画',
   'prefs.video.quality': '画質',
   'prefs.video.quality.low': '小',
@@ -825,6 +833,33 @@ const ja: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': 'このインタビューを破棄しますか？',
   'assistant.video.discardBody': '録画した回答はまだ保存されておらず、失われます。',
   'assistant.video.discard': '破棄',
+  'assistant.reflect.title':
+    '踏み込んだインタビューの質問',
+  'assistant.reflect.intro':
+    'インタビューは、種類だけでなく日記の状態も踏まえて質問できます。オンにするまでは無効です。',
+  'assistant.reflect.gapTitle':
+    'しばらく書いていないとき',
+  'assistant.reflect.gapBody':
+    '最初の質問は、前回の記録からどんなことがあったかを尋ねます。誘いかけであって、連続記録や遅れを責めるものではありません。',
+  'assistant.reflect.olderTitle':
+    '昔の考えを見つめ直す',
+  'assistant.reflect.olderBody':
+    'ひとつの質問が、以前あなたが望んでいたこと、計画していたこと、恐れていたことに立ち返り、今どう感じるかを尋ねます。',
+  'assistant.reflect.dataLabel':
+    'あなたの記録にとっての意味',
+  'assistant.reflect.dataOnDevice':
+    '何を尋ねるかの選択は、この端末上で、すでに復号された記録から行われます。追加で保存されるものはなく、同期もされず、サーバーからは何も見えません。',
+  'assistant.reflect.dataLocal':
+    'アシスタントはこの端末で動くため、そのために読まれる記録が端末を離れることはありません。',
+  'assistant.reflect.dataCloud':
+    'これらの質問のために、アシスタントには直近の記録と、日記のどこからか選ばれた古い記録がいくつか送られます。このインタビューの記録だけではありません。ほかのアシスタント要求と同じく、そのテキストはエンドツーエンド暗号化を離れ、設定した提供元へ送られます。',
+  'assistant.reflect.changeLater':
+    'この設定は「環境設定 → アシスタント」でいつでも変更できます。',
+  'assistant.reflect.decline':
+    'シンプルな質問のままにする',
+  'assistant.reflect.accept':
+    '踏み込んだ質問を使う',
+  'assistant.video.fallback.gap': '前回の記録から少し時間が空きました。その間、どんなことがありましたか？',
   'assistant.video.fallback.q1': '今日、覚えておきたい出来事は何でしたか？',
   'assistant.video.fallback.q2': 'いちばん良かったのはどんなことで、なぜそう感じましたか？',
   'assistant.video.fallback.q3': '大変だったこと、思いどおりにいかなかったことはありますか？',

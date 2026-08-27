@@ -129,6 +129,30 @@ export const assistant = {
   'assistant.interview.nothingWritten': '(nothing written)',
   'assistant.interview.save': 'Save entry',
 
+  // ── deeper interview questions: the one-time opt-in (ui/ReflectionConsent.tsx) ──
+  // A consent screen, so it says what the questions do, what gets selected to
+  // make them work, and where that text ends up — the last line switches on the
+  // live backend, because under a local one nothing leaves the device at all.
+  'assistant.reflect.title': 'Deeper interview questions',
+  'assistant.reflect.intro':
+    'Interviews can take the state of your journal into account, not just the interview type. This is off until you turn it on.',
+  'assistant.reflect.gapTitle': 'When you have not written in a while',
+  'assistant.reflect.gapBody':
+    'The first question asks what has been going on since your last entry — as an invitation, never as a nudge about streaks or catching up.',
+  'assistant.reflect.olderTitle': 'Older thoughts, revisited',
+  'assistant.reflect.olderBody':
+    'One question looks back at something you hoped for, planned or worried about a while ago, and asks how it sits with you now.',
+  'assistant.reflect.dataLabel': 'What this means for your entries',
+  'assistant.reflect.dataOnDevice':
+    'Choosing what to ask about happens here, on this device, from entries that are already decrypted. Nothing extra is stored, nothing is synced, and the server sees none of it.',
+  'assistant.reflect.dataLocal':
+    'Your assistant runs on this device, so the entries it reads for this never leave it.',
+  'assistant.reflect.dataCloud':
+    'To ask these questions, your assistant is sent your most recent entry and a few older ones from anywhere in your journal — not only the ones from this interview. As with every assistant request, that text leaves end-to-end encryption for the provider you configured.',
+  'assistant.reflect.changeLater': 'You can change this any time under Preferences → Assistant.',
+  'assistant.reflect.decline': 'Keep questions simple',
+  'assistant.reflect.accept': 'Use deeper questions',
+
   // ── guided VIDEO interview (same types, answered on camera) ──
   // The model plans every question up front: it cannot hear a recorded answer,
   // so there is nothing to adapt to mid-session (see ai/prompts.ts).
@@ -173,6 +197,10 @@ export const assistant = {
   'assistant.video.discard': 'Discard',
   // Used when the model is unreachable or returns nothing usable — the session
   // must still work without it.
+  // Replaces q1 when the journal has been quiet for a while (ai/reflection.ts):
+  // the one bit of dynamics that still works with the provider unreachable.
+  // Deliberately free of streak/habit language — see gapToneRules in ai/prompts.ts.
+  'assistant.video.fallback.gap': 'It has been a while since your last entry — what has been going on since then?',
   'assistant.video.fallback.q1': 'What happened today that you want to remember?',
   'assistant.video.fallback.q2': 'What was the best part, and why did it land that way?',
   'assistant.video.fallback.q3': 'What was hard, or did not go the way you hoped?',

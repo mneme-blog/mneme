@@ -692,6 +692,14 @@ const ar: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interviewTypes': 'أنواع المقابلات',
   'prefs.assistant.ai': 'مساعد الذكاء الاصطناعي',
 
+  'prefs.interviews.section':
+    'المقابلات',
+  'prefs.interviews.deep':
+    'أسئلة أعمق',
+  'prefs.interviews.deepHint':
+    'يمكن للمقابلات أن تسأل عمّا جرى منذ آخر تدوينة، وأن تعود إلى أمل أو خطة أو قلق قديم.',
+  'prefs.interviews.deepData':
+    'يتم الاختيار على هذا الجهاز ولا يُخزَّن شيء إضافي. مع مساعد سحابي، تغادر التدوينات المقروءة لهذا — أحدث تدوينة وبضع تدوينات أقدم من أي مكان في يومياتك — التشفير من طرف إلى طرف أثناء ذلك الطلب.',
   'prefs.video.section': 'تسجيل الفيديو',
   'prefs.video.quality': 'الجودة',
   'prefs.video.quality.low': 'صغيرة',
@@ -826,6 +834,33 @@ const ar: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': 'هل تريد تجاهل هذه المقابلة؟',
   'assistant.video.discardBody': 'لم يتم حفظ إجاباتك المسجّلة بعد وسوف تُفقد.',
   'assistant.video.discard': 'تجاهل',
+  'assistant.reflect.title':
+    'أسئلة مقابلة أعمق',
+  'assistant.reflect.intro':
+    'يمكن للمقابلات أن تأخذ حالة يومياتك في الحسبان، لا نوع المقابلة وحده. هذا معطّل إلى أن تفعّله.',
+  'assistant.reflect.gapTitle':
+    'حين لا تكتب لفترة',
+  'assistant.reflect.gapBody':
+    'يسأل السؤال الأول عمّا جرى منذ آخر تدوينة — دعوةً، لا تذكيرًا بسلسلة أو بتعويض ما فات.',
+  'assistant.reflect.olderTitle':
+    'العودة إلى أفكار قديمة',
+  'assistant.reflect.olderBody':
+    'يعود أحد الأسئلة إلى شيء كنت ترجوه أو تخطط له أو تخشاه قبل مدة، ويسألك كيف تراه اليوم.',
+  'assistant.reflect.dataLabel':
+    'ماذا يعني هذا لتدويناتك',
+  'assistant.reflect.dataOnDevice':
+    'يجري اختيار ما يُسأل عنه هنا، على هذا الجهاز، من تدوينات مفكوكة التشفير أصلًا. لا يُخزَّن شيء إضافي، ولا يُزامَن شيء، ولا يرى الخادم من ذلك شيئًا.',
+  'assistant.reflect.dataLocal':
+    'مساعدك يعمل على هذا الجهاز، لذا فإن التدوينات التي يقرأها لهذا لا تغادره أبدًا.',
+  'assistant.reflect.dataCloud':
+    'لطرح هذه الأسئلة، تُرسَل إلى مساعدك أحدث تدوينة لديك وبضع تدوينات أقدم من أي مكان في يومياتك — لا تدوينات هذه المقابلة وحدها. وكما في كل طلب للمساعد، يغادر ذلك النص التشفير من طرف إلى طرف إلى المزوّد الذي أعددته.',
+  'assistant.reflect.changeLater':
+    'يمكنك تغيير ذلك في أي وقت من التفضيلات ← المساعد.',
+  'assistant.reflect.decline':
+    'أبقِ الأسئلة بسيطة',
+  'assistant.reflect.accept':
+    'استخدم الأسئلة الأعمق',
+  'assistant.video.fallback.gap': 'مضى وقت منذ آخر تدوينة لك — ما الذي حدث منذ ذلك الحين؟',
   'assistant.video.fallback.q1': 'ما الذي حدث اليوم وتريد أن تتذكره؟',
   'assistant.video.fallback.q2': 'ما أفضل ما في اليوم، ولماذا أثّر فيك بهذه الطريقة؟',
   'assistant.video.fallback.q3': 'ما الذي كان صعبًا أو لم يسر كما كنت تأمل؟',

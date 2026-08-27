@@ -321,7 +321,44 @@ before saving** (no agentic tool-calling; the text-streaming `AiProvider.chat` i
 **Freeform draft** option in the same sheet turns a one-line brief into an entry through the same
 review→save path. Saved entries are tagged with the interview type's **name as a label**, and
 starting an interview feeds the model the recent same-label entries (`ai/interview.ts`
-`buildInterviewHistory`) so repeated runs stay continuous ("history-aware"). Synthesis emits simple
+`buildInterviewHistory`) so repeated runs stay continuous ("history-aware"). Beyond that label, two
+**opt-in dynamics** (`ai/reflection.ts`, shared by the written and the video interview) make the
+questions react to the state of the journal itself, both computed over the entries already decrypted
+in memory — no extra request, nothing stored, nothing synced. **Off until the user says otherwise**:
+the first AI interview on a device opens a one-time consent overlay (`ui/ReflectionConsent.tsx`)
+that says what the questions do, that selection happens on-device from already-decrypted entries,
+and — switching on the live provider, like `ProviderBadge` — whether that text leaves E2EE for a
+cloud backend or never leaves the device at all; declining is recorded too, so the overlay is shown
+once either way, and Preferences → Assistant → Interviews carries the same switch with the same
+two-part explanation (`InterviewSection` in `ui/Preferences.tsx`). The flag is **device-local**
+localStorage (`mneme.interview.deepReflection`, `'on'|'off'|null`, `deepReflectionChoice()`) rather
+than a synced `AiSettings` field: the consent is *about what leaves this device*, so a laptop with a
+local Ollama must not silently authorize a phone talking to a cloud provider — and `null` (never
+asked) staying distinct from `'off'` is what makes the overlay appear exactly once. The opted-in
+answer rides into the first prompt as an explicit argument (`systemFor(it, on)` /
+`planQuestions(it, on)`), because that prompt is built in the same tick as the overlay's setState. (1) **The gap**: `journalGap` reports how long
+the vault has been quiet (≥ `GAP_MIN_DAYS`, measured on the *later* of `createdAt`/`updatedAt` so a
+re-dated or imported entry doesn't read as silence, clamped to now so a forward-dated one can't go
+negative), and the prompt makes the FIRST question about that stretch — including whether something
+was going on that kept the user from writing. The tone rules are the load-bearing part
+(`gapToneRules` in `ai/prompts.ts`): no guilt, no pressure, no streak/habit/catch-up language, and no
+welcome-back congratulation either — a journal that reproaches you for not writing is one you stop
+opening. It is the one dynamic that survives a dead provider: `fallbackQuestions(gap)` swaps the
+built-in "what happened today" opener for the gap question. (2) **Older thoughts**: `buildRetrospect`
+surfaces entries older than `RETRO_MIN_AGE_DAYS` that read as forward-looking — hopes, plans, dreams,
+worries, fears — so exactly ONE question revisits one of them and asks how it sits *now* (explicitly
+not a progress check). Selection is a cue-stem ranking, not an AI call: the model picks the actual
+thought out of what it is shown, which is what it is good at. The cue table carries **every UI
+language at once**, because the app's language is no evidence of the journal's (the same lesson the
+whisper language picker learned), and it is only a ranking hint — a journal in an unlisted language
+falls back to a time-spread sample, `cued:false`, and the prompt then says the entries may hold
+nothing forward-looking and to drop the idea rather than invent one. Entries already in the
+same-label history are excluded (`InterviewHistory.ids`) so one entry can't fill two sections of one
+prompt, and local backends get half the budget like the history does. Regression check:
+`pnpm --filter client exec tsx scripts/interview-dynamics.ts` (no DOM, no relay). Note for
+docs/SECURITY.md §"opt-in AI assistant": under the **cloud** backend this widens what an interview
+sends — no longer only same-label entries, but the last entry and older ones from anywhere in the
+vault. Synthesis emits simple
 Markdown that a new **`editor/doc.ts markdownToDoc`** (headings/lists/quotes/paragraphs, plain-text
 runs) turns into a real entry doc; the prompts ask for a leading `# ` title line, which
 `splitMarkdownTitle` lifts into the entry's **title** on save (replacing the date-time default; a

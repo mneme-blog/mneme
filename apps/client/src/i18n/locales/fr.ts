@@ -690,6 +690,14 @@ const fr: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interviewTypes': 'Types d’entretien',
   'prefs.assistant.ai': 'Assistant IA',
 
+  'prefs.interviews.section':
+    'Entretiens',
+  'prefs.interviews.deep':
+    'Questions plus profondes',
+  'prefs.interviews.deepHint':
+    'Les entretiens peuvent demander ce qui s’est passé depuis votre dernière entrée et revenir sur un espoir, un projet ou une inquiétude plus anciens.',
+  'prefs.interviews.deepData':
+    'La sélection se fait sur cet appareil et rien n’est stocké en plus. Avec un assistant dans le cloud, les entrées lues pour cela — la plus récente et quelques anciennes prises partout dans votre journal — quittent le chiffrement de bout en bout le temps de cette requête.',
   'prefs.video.section': 'Enregistrement vidéo',
   'prefs.video.quality': 'Qualité',
   'prefs.video.quality.low': 'Petite',
@@ -824,6 +832,33 @@ const fr: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': 'Abandonner cet entretien ?',
   'assistant.video.discardBody': 'Vos réponses enregistrées n’ont pas encore été sauvegardées et seront perdues.',
   'assistant.video.discard': 'Abandonner',
+  'assistant.reflect.title':
+    'Questions d’entretien plus profondes',
+  'assistant.reflect.intro':
+    'Les entretiens peuvent tenir compte de l’état de votre journal, et pas seulement du type d’entretien. C’est désactivé tant que vous ne l’activez pas.',
+  'assistant.reflect.gapTitle':
+    'Quand vous n’avez pas écrit depuis un moment',
+  'assistant.reflect.gapBody':
+    'La première question demande ce qui s’est passé depuis votre dernière entrée — comme une invitation, jamais comme un rappel de série ou de retard à rattraper.',
+  'assistant.reflect.olderTitle':
+    'Revenir sur des pensées plus anciennes',
+  'assistant.reflect.olderBody':
+    'Une question revient sur ce que vous espériez, prépariez ou redoutiez il y a un moment, et vous demande où cela en est aujourd’hui.',
+  'assistant.reflect.dataLabel':
+    'Ce que cela implique pour vos entrées',
+  'assistant.reflect.dataOnDevice':
+    'Le choix se fait ici, sur cet appareil, à partir d’entrées déjà déchiffrées. Rien n’est stocké en plus, rien n’est synchronisé, et le serveur n’en voit rien.',
+  'assistant.reflect.dataLocal':
+    'Votre assistant fonctionne sur cet appareil : les entrées qu’il lit pour cela ne le quittent jamais.',
+  'assistant.reflect.dataCloud':
+    'Pour poser ces questions, votre assistant reçoit votre entrée la plus récente et quelques autres, plus anciennes, prises n’importe où dans votre journal — pas seulement celles de cet entretien. Comme pour toute requête de l’assistant, ce texte quitte alors le chiffrement de bout en bout vers le fournisseur que vous avez configuré.',
+  'assistant.reflect.changeLater':
+    'Vous pouvez changer cela à tout moment dans Préférences → Assistant.',
+  'assistant.reflect.decline':
+    'Garder des questions simples',
+  'assistant.reflect.accept':
+    'Utiliser les questions profondes',
+  'assistant.video.fallback.gap': 'Cela fait un moment depuis votre dernière entrée — que s’est-il passé depuis ?',
   'assistant.video.fallback.q1': 'Que s’est-il passé aujourd’hui dont vous voulez vous souvenir ?',
   'assistant.video.fallback.q2': 'Quel a été le meilleur moment, et pourquoi vous a-t-il marqué ainsi ?',
   'assistant.video.fallback.q3': 'Qu’est-ce qui a été difficile, ou ne s’est pas passé comme vous l’espériez ?',

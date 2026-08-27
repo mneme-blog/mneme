@@ -702,6 +702,14 @@ const de: Partial<Record<MessageKey, string>> = {
   'prefs.assistant.interviewTypes': 'Interviewtypen',
   'prefs.assistant.ai': 'KI-Assistent',
 
+  'prefs.interviews.section':
+    'Interviews',
+  'prefs.interviews.deep':
+    'Tiefergehende Fragen',
+  'prefs.interviews.deepHint':
+    'Interviews dürfen fragen, was seit deinem letzten Eintrag los war, und eine ältere Hoffnung, einen Plan oder eine Sorge noch einmal aufgreifen.',
+  'prefs.interviews.deepData':
+    'Die Auswahl passiert auf diesem Gerät, zusätzlich gespeichert wird nichts. Bei einem Cloud-Assistenten verlassen die dafür gelesenen Einträge — dein jüngster und einige ältere aus deinem ganzen Journal — für diese Anfrage die Ende-zu-Ende-Verschlüsselung.',
   'prefs.video.section': 'Videoaufnahme',
   'prefs.video.quality': 'Qualität',
   'prefs.video.quality.low': 'Klein',
@@ -836,6 +844,33 @@ const de: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': 'Dieses Interview verwerfen?',
   'assistant.video.discardBody': 'Deine aufgenommenen Antworten wurden noch nicht gespeichert und gehen verloren.',
   'assistant.video.discard': 'Verwerfen',
+  'assistant.reflect.title':
+    'Tiefergehende Interviewfragen',
+  'assistant.reflect.intro':
+    'Interviews können den Zustand deines Journals einbeziehen, nicht nur die Interviewart. Das ist aus, bis du es einschaltest.',
+  'assistant.reflect.gapTitle':
+    'Wenn du länger nicht geschrieben hast',
+  'assistant.reflect.gapBody':
+    'Die erste Frage erkundigt sich, was seit deinem letzten Eintrag los war — als Angebot, nie als Ermahnung zu Serien oder zum Aufholen.',
+  'assistant.reflect.olderTitle':
+    'Ältere Gedanken, noch einmal betrachtet',
+  'assistant.reflect.olderBody':
+    'Eine Frage greift etwas auf, das du dir vor längerer Zeit erhofft, vorgenommen oder befürchtet hast, und fragt, wie es sich heute anfühlt.',
+  'assistant.reflect.dataLabel':
+    'Was das für deine Einträge bedeutet',
+  'assistant.reflect.dataOnDevice':
+    'Die Auswahl passiert hier, auf diesem Gerät, aus bereits entschlüsselten Einträgen. Nichts wird zusätzlich gespeichert, nichts synchronisiert, und der Server sieht davon nichts.',
+  'assistant.reflect.dataLocal':
+    'Dein Assistent läuft auf diesem Gerät — die Einträge, die er dafür liest, verlassen es nie.',
+  'assistant.reflect.dataCloud':
+    'Für diese Fragen bekommt dein Assistent deinen jüngsten Eintrag und einige ältere aus deinem ganzen Journal — nicht nur die aus diesem Interview. Wie bei jeder Assistent-Anfrage verlässt dieser Text dafür die Ende-zu-Ende-Verschlüsselung und geht an den Anbieter, den du eingerichtet hast.',
+  'assistant.reflect.changeLater':
+    'Du kannst das jederzeit unter Einstellungen → Assistent ändern.',
+  'assistant.reflect.decline':
+    'Fragen einfach halten',
+  'assistant.reflect.accept':
+    'Tiefergehende Fragen nutzen',
+  'assistant.video.fallback.gap': 'Es ist eine Weile her seit deinem letzten Eintrag — was ist seitdem passiert?',
   'assistant.video.fallback.q1': 'Was ist heute passiert, an das du dich erinnern möchtest?',
   'assistant.video.fallback.q2': 'Was war das Beste daran, und warum hat es dich so berührt?',
   'assistant.video.fallback.q3': 'Was war schwierig oder lief nicht so, wie du gehofft hattest?',
