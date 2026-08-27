@@ -679,6 +679,14 @@ before the plaintext client UX is validated.**
 - Reminders fire generic ("Reminder") — `fire_at` is a *consciously accepted* cleartext leak; the
   client decrypts content locally. Don't try to "fix" accepted leaks in §3. (§3)
 - Migrations are versioned and **forward-only**. (§11)
+- The **@noble/@scure stack is on v2** across the board (ciphers/hashes/curves/bip39). v2 dropped
+  extensionless subpath exports, so every specifier carries `.js` (`@noble/hashes/sha2.js` — `sha256`
+  moved out of its own subpath, `@noble/curves/ed25519.js`, `@scure/bip39/wordlists/english.js`); an
+  extensionless import fails the build, not silently. What *would* fail silently is a bump that changed
+  derived bytes — a new install looks healthy while every existing vault resolves to a different owner,
+  with the relay holding blobs whose key no longer exists. Two frozen-vector guards stand against that
+  and both run in CI: `scripts/aead-compat.ts` (content) and `scripts/keys-compat.ts` (identity —
+  seed→dataKey/mediaKey/aiKey/ownerId/signatures). Never re-freeze a vector to make one pass. (§3, §6)
 
 ---
 

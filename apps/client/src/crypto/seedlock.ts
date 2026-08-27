@@ -9,9 +9,9 @@
 //     platform passkey). Not brute-forceable offline — the secret lives in the
 //     authenticator. The ceremony itself lives in platform/webauthn.ts; this
 //     module only takes the raw 32-byte PRF output.
-import { argon2idAsync } from '@noble/hashes/argon2';
-import { hkdf } from '@noble/hashes/hkdf';
-import { sha256 } from '@noble/hashes/sha256';
+import { argon2idAsync } from '@noble/hashes/argon2.js';
+import { hkdf } from '@noble/hashes/hkdf.js';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { encrypt, decrypt } from './aead';
 import { randomBytes, utf8 } from './bytes';
 

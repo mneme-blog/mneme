@@ -3,9 +3,9 @@
 // NOTE: the locked decision (§3) named libsodium-wasm; this implementation uses the
 // audited @noble/@scure stack instead — a deliberate, recorded override. The §6
 // derivation (BIP39 → HKDF-SHA256 → keys; X25519 owner, Ed25519 device) is unchanged.
-import { hkdf } from '@noble/hashes/hkdf';
-import { sha256 } from '@noble/hashes/sha256';
-import { ed25519, x25519 } from '@noble/curves/ed25519';
+import { hkdf } from '@noble/hashes/hkdf.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { ed25519, x25519 } from '@noble/curves/ed25519.js';
 import { utf8 } from './bytes';
 import { toBase64Url } from './base64';
 import { HINT_ADJECTIVES, HINT_NOUNS } from './hintwords';
