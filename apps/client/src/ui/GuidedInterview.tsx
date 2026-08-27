@@ -26,6 +26,7 @@ import {
   interviewSynthesisPrompt,
   interviewSynthesisUserMessage,
   freeformDraftPrompt,
+  type InterviewDynamics,
 } from '../ai/prompts';
 import { buildInterviewHistory, HISTORY_BUDGET_CHARS } from '../ai/interview';
 import {
@@ -88,6 +89,11 @@ export function GuidedInterviewSheet({
   const [deep, setDeep] = useState(deepReflectionEnabled);
   const [consentFor, setConsentFor] = useState<InterviewType | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // What the question phase was last primed with. The synthesis needs to know a
+  // look-back question may be sitting in the transcript: its answer reads as a
+  // non-sequitur in the finished entry unless the write-up reintroduces the
+  // older thought first (ai/prompts.ts interviewSynthesisPrompt).
+  const dynRef = useRef<InterviewDynamics>({});
   const logRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -193,13 +199,18 @@ export function GuidedInterviewSheet({
   const systemFor = (it: InterviewType, on: boolean = deep): string => {
     const budget = (n: number): number => (provider.local ? Math.round(n / 2) : n);
     const history = buildInterviewHistory(entries, it.name, budget(HISTORY_BUDGET_CHARS));
-    if (!on) return interviewSystemPrompt(it, history.text);
-    return interviewSystemPrompt(it, history.text, {
-      gap,
-      // Entries already in the history block are excluded so one entry can't
-      // fill two sections of the same prompt.
-      retrospect: buildRetrospect(entries, { excludeIds: history.ids, budgetChars: budget(RETRO_BUDGET_CHARS) }),
-    });
+    const dynamics: InterviewDynamics = on
+      ? {
+          gap,
+          // Entries already in the history block are excluded so one entry can't
+          // fill two sections of the same prompt.
+          retrospect: buildRetrospect(entries, { excludeIds: history.ids, budgetChars: budget(RETRO_BUDGET_CHARS) }),
+        }
+      : {};
+    // Recorded rather than recomputed at finish time, so the write-up is told
+    // about exactly what the questions were primed with.
+    dynRef.current = dynamics;
+    return interviewSystemPrompt(it, history.text, dynamics);
   };
 
   const beginInterview = (it: InterviewType, on: boolean): void => {
@@ -256,7 +267,7 @@ export function GuidedInterviewSheet({
   const finishInterview = (): void => {
     if (!type) return;
     const qa = messages.slice(1).filter((m) => m.content.trim());
-    void synthesize(interviewSynthesisPrompt(type), [...qa, { role: 'user', content: interviewSynthesisUserMessage() }]);
+    void synthesize(interviewSynthesisPrompt(type, dynRef.current), [...qa, { role: 'user', content: interviewSynthesisUserMessage() }]);
   };
 
   const submitBrief = (): void => {

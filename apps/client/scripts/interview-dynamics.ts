@@ -16,7 +16,7 @@ import {
   RETRO_MIN_AGE_DAYS,
 } from '../src/ai/reflection';
 import { buildInterviewHistory } from '../src/ai/interview';
-import { interviewSystemPrompt, videoInterviewPlanPrompt } from '../src/ai/prompts';
+import { interviewSystemPrompt, interviewSynthesisPrompt, videoInterviewPlanPrompt } from '../src/ai/prompts';
 import { fallbackQuestions, toPlan } from '../src/ai/plan';
 import type { JournalEntry } from '../src/sync/engine';
 
@@ -190,6 +190,33 @@ check('the video plan still demands the Q: line format', plan.includes('Begin ev
 
 const planNoDynamics = videoInterviewPlanPrompt(type, '', 6);
 check('a plan without dynamics is unchanged', !planNoDynamics.includes('stretch since the last entry') && !planNoDynamics.includes('Older thoughts'));
+
+// ── the write-up ──────────────────────────────────────────────────────────
+// The reference for a look-back answer lives in the QUESTION, and the synthesis
+// used to be told to drop the questions — so "it feels much lighter now" landed
+// in the finished entry with nothing to refer to.
+console.log('\n── synthesis ──');
+
+const plainWriteUp = interviewSynthesisPrompt(type);
+const deepWriteUp = interviewSynthesisPrompt(type, { gap, retrospect: retro });
+
+check('every write-up is told to carry a question\'s context into the entry', plainWriteUp.includes('bring that context into the entry'));
+check('…and that doing so is not "mentioning the interview"', plainWriteUp.includes('Naming what a question was about is not mentioning the interview'));
+check('a plain interview gets no look-back section', !plainWriteUp.includes('looked back at something the user wrote down'));
+check('…and nothing about a stretch with no entries', !plainWriteUp.includes('stretch with no entries'));
+
+check('a look-back interview must introduce the earlier thought first', deepWriteUp.includes('Introduce the earlier thought before the present view'));
+check('…dated only as the question framed it', deepWriteUp.includes('Never invent an earlier thought, a date, or a wording the question did not give you'));
+check('…set apart so it reads as a look back, not as today', deepWriteUp.includes('rather than as something from today'));
+check('…and still not a progress report', deepWriteUp.includes('not a report card'));
+check('a gap interview places the entry in time', deepWriteUp.includes('takes in the period since they last wrote'));
+check('…without streak or catching-up language', deepWriteUp.includes('Say nothing about streaks'));
+
+// The old entries stay out of the write-up request: the transcript already
+// carries the reference, and re-sending them would pull old content into the
+// new entry (and re-enlarge what a cloud backend receives).
+check('the write-up does not re-send the older entries', !deepWriteUp.includes('Before the interview'));
+check('…and fences nothing, because it embeds no journal text', !deepWriteUp.includes('<entry:'));
 
 // ── the fallback set ──────────────────────────────────────────────────────
 console.log('\n── fallback questions ──');
