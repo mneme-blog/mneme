@@ -1,4 +1,4 @@
-import { argon2idAsync } from '@noble/hashes/argon2';
+import { argon2idAsync } from '@noble/hashes/argon2.js';
 
 const salt = new Uint8Array(16).fill(7);
 const pw = new TextEncoder().encode('correct horse battery staple');

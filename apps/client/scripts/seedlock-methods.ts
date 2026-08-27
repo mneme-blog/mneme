@@ -22,7 +22,7 @@ import {
 } from '../src/crypto/seedlock';
 import { randomBytes, utf8 } from '../src/crypto/bytes';
 import { encrypt } from '../src/crypto/aead';
-import { argon2idAsync } from '@noble/hashes/argon2';
+import { argon2idAsync } from '@noble/hashes/argon2.js';
 
 function fail(msg: string): never {
   console.error(`FAIL: ${msg}`);

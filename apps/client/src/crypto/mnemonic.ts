@@ -1,6 +1,6 @@
 // BIP39 mnemonic — the recovery phrase that IS the account (CLAUDE.md §6).
 import { generateMnemonic as gen, mnemonicToSeedSync, validateMnemonic as val } from '@scure/bip39';
-import { wordlist } from '@scure/bip39/wordlists/english';
+import { wordlist } from '@scure/bip39/wordlists/english.js';
 
 /** A fresh 12-word phrase (128 bits of entropy). */
 export function generateMnemonic(): string {
