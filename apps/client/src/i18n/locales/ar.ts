@@ -826,6 +826,7 @@ const ar: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': 'هل تريد تجاهل هذه المقابلة؟',
   'assistant.video.discardBody': 'لم يتم حفظ إجاباتك المسجّلة بعد وسوف تُفقد.',
   'assistant.video.discard': 'تجاهل',
+  'assistant.video.fallback.gap': 'مضى وقت منذ آخر تدوينة لك — ما الذي حدث منذ ذلك الحين؟',
   'assistant.video.fallback.q1': 'ما الذي حدث اليوم وتريد أن تتذكره؟',
   'assistant.video.fallback.q2': 'ما أفضل ما في اليوم، ولماذا أثّر فيك بهذه الطريقة؟',
   'assistant.video.fallback.q3': 'ما الذي كان صعبًا أو لم يسر كما كنت تأمل؟',

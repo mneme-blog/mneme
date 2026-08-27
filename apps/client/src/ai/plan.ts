@@ -66,10 +66,19 @@ export function parseQuestionPlan(raw: string): string[] {
   return kept.slice(0, PLAN_MAX);
 }
 
-/** The generic set used when the model is unreachable or returns junk. */
-export function fallbackQuestions(): string[] {
+/**
+ * The generic set used when the model is unreachable or returns junk.
+ *
+ * `gap` is the one piece of dynamics that survives a dead provider: when the
+ * journal has been quiet for a while (ai/reflection.ts), the opening question
+ * asks about that stretch instead of about today — the same question the model
+ * would have planned, minus the tailoring. Same length either way; it replaces
+ * the "what happened today" opener rather than adding to the set.
+ */
+export function fallbackQuestions(gap = false): string[] {
+  const opener = gap ? t('assistant.video.fallback.gap') : t('assistant.video.fallback.q1');
   return [
-    t('assistant.video.fallback.q1'),
+    opener,
     t('assistant.video.fallback.q2'),
     t('assistant.video.fallback.q3'),
     t('assistant.video.fallback.q4'),
@@ -83,9 +92,10 @@ export interface QuestionPlan {
   fallback: boolean;
 }
 
-/** Parse a response into a plan, falling back rather than failing. */
-export function toPlan(raw: string): QuestionPlan {
+/** Parse a response into a plan, falling back rather than failing. `gap` only
+ *  reaches the fallback set — a real plan already accounts for the gap. */
+export function toPlan(raw: string, gap = false): QuestionPlan {
   const questions = parseQuestionPlan(raw);
   if (questions.length >= PLAN_MIN) return { questions, fallback: false };
-  return { questions: fallbackQuestions(), fallback: true };
+  return { questions: fallbackQuestions(gap), fallback: true };
 }

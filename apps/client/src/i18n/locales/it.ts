@@ -842,6 +842,7 @@ const it: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': 'Vuoi scartare questa intervista?',
   'assistant.video.discardBody': 'Le risposte registrate non sono ancora state salvate e andranno perse.',
   'assistant.video.discard': 'Scarta',
+  'assistant.video.fallback.gap': 'È passato un po’ dall’ultima voce — che cosa è successo da allora?',
   'assistant.video.fallback.q1': 'Che cosa è successo oggi che vuoi ricordare?',
   'assistant.video.fallback.q2': 'Qual è stata la parte migliore, e perché ti ha colpito così?',
   'assistant.video.fallback.q3': 'Che cosa è stato difficile, o non è andato come speravi?',

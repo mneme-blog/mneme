@@ -770,6 +770,7 @@ const ko: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': '이 인터뷰를 버릴까요?',
   'assistant.video.discardBody': '녹화한 답변이 아직 저장되지 않았으며 사라집니다.',
   'assistant.video.discard': '버리기',
+  'assistant.video.fallback.gap': '마지막 기록 이후 시간이 좀 지났네요. 그동안 어떤 일이 있었나요?',
   'assistant.video.fallback.q1': '오늘 기억하고 싶은 일은 무엇이었나요?',
   'assistant.video.fallback.q2': '가장 좋았던 부분은 무엇이었고, 왜 그렇게 느꼈나요?',
   'assistant.video.fallback.q3': '힘들었던 일이나 바라던 대로 되지 않은 일이 있었나요?',

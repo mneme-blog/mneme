@@ -501,6 +501,7 @@
   "assistant.video.discardTitle": "Discard this interview?",
   "assistant.video.discardBody": "Your recorded answers have not been saved yet and will be lost.",
   "assistant.video.discard": "Discard",
+  "assistant.video.fallback.gap": "It has been a while since your last entry — what has been going on since then?",
   "assistant.video.fallback.q1": "What happened today that you want to remember?",
   "assistant.video.fallback.q2": "What was the best part, and why did it land that way?",
   "assistant.video.fallback.q3": "What was hard, or did not go the way you hoped?",

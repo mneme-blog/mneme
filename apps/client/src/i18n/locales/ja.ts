@@ -825,6 +825,7 @@ const ja: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': 'このインタビューを破棄しますか？',
   'assistant.video.discardBody': '録画した回答はまだ保存されておらず、失われます。',
   'assistant.video.discard': '破棄',
+  'assistant.video.fallback.gap': '前回の記録から少し時間が空きました。その間、どんなことがありましたか？',
   'assistant.video.fallback.q1': '今日、覚えておきたい出来事は何でしたか？',
   'assistant.video.fallback.q2': 'いちばん良かったのはどんなことで、なぜそう感じましたか？',
   'assistant.video.fallback.q3': '大変だったこと、思いどおりにいかなかったことはありますか？',

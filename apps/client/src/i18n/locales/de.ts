@@ -836,6 +836,7 @@ const de: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': 'Dieses Interview verwerfen?',
   'assistant.video.discardBody': 'Deine aufgenommenen Antworten wurden noch nicht gespeichert und gehen verloren.',
   'assistant.video.discard': 'Verwerfen',
+  'assistant.video.fallback.gap': 'Es ist eine Weile her seit deinem letzten Eintrag — was ist seitdem passiert?',
   'assistant.video.fallback.q1': 'Was ist heute passiert, an das du dich erinnern möchtest?',
   'assistant.video.fallback.q2': 'Was war das Beste daran, und warum hat es dich so berührt?',
   'assistant.video.fallback.q3': 'Was war schwierig oder lief nicht so, wie du gehofft hattest?',

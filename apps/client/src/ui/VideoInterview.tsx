@@ -29,6 +29,7 @@ import { makeProvider } from '../ai/provider';
 import { videoInterviewPlanPrompt, videoInterviewPlanUserMessage } from '../ai/prompts';
 import { toPlan, PLAN_TARGET, PLAN_MAX } from '../ai/plan';
 import { buildInterviewHistory, HISTORY_BUDGET_CHARS } from '../ai/interview';
+import { buildRetrospect, journalGap, RETRO_BUDGET_CHARS } from '../ai/reflection';
 import { buildVideoInterviewDoc, type VideoInterviewCard } from '../editor/videointerviewData';
 import { docToText } from '../editor/doc';
 import { newMediaId } from '../sync/ids';
@@ -126,6 +127,10 @@ export function VideoInterviewSheet({
 
   const provider = useMemo(() => (aiSettings?.enabled ? makeProvider(aiSettings) : null), [aiSettings]);
   const alive = useMemo(() => interviewTypes.filter((it) => !it.deleted), [interviewTypes]);
+  // How long the journal has been quiet (ai/reflection.ts). It shapes the
+  // planned questions below, and survives an unreachable provider: the fallback
+  // set swaps its "what happened today" opener for the gap question.
+  const gap = useMemo(() => journalGap(entries), [entries]);
   const vp = useVisualViewport();
   const limit = useMemo(() => answerLimitSeconds(), []);
   // Names in the reader's own language, sorted the way that language sorts —
@@ -172,14 +177,17 @@ export function VideoInterviewSheet({
     setError('');
     const ac = new AbortController();
     abortRef.current = ac;
-    const history = buildInterviewHistory(
-      entries,
-      it.name,
-      provider.local ? Math.round(HISTORY_BUDGET_CHARS / 2) : HISTORY_BUDGET_CHARS,
-    );
+    const budget = (n: number): number => (provider.local ? Math.round(n / 2) : n);
+    const history = buildInterviewHistory(entries, it.name, budget(HISTORY_BUDGET_CHARS));
+    // Older entries worth looking back at — minus the ones the history block
+    // already carries, so one entry can't fill two sections of the prompt.
+    const retrospect = buildRetrospect(entries, {
+      excludeIds: history.ids,
+      budgetChars: budget(RETRO_BUDGET_CHARS),
+    });
     try {
       const raw = await provider.chat({
-        system: videoInterviewPlanPrompt(it, history.text, PLAN_TARGET),
+        system: videoInterviewPlanPrompt(it, history.text, PLAN_TARGET, { gap, retrospect }),
         messages: [{ role: 'user', content: videoInterviewPlanUserMessage(PLAN_TARGET) }],
         // Generous: a verbose model truncated mid-question at 600 in testing,
         // and a truncated last line is silently dropped by the parser.
@@ -187,12 +195,12 @@ export function VideoInterviewSheet({
         signal: ac.signal,
       });
       if (ac.signal.aborted) return;
-      const plan = toPlan(raw);
+      const plan = toPlan(raw, gap !== null);
       setQuestions(plan.questions);
       setPlanFallback(plan.fallback);
     } catch (e) {
       if (toAiError(e).hint === 'aborted') return;
-      const plan = toPlan('');
+      const plan = toPlan('', gap !== null);
       setQuestions(plan.questions);
       setPlanFallback(true);
     }

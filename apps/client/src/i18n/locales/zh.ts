@@ -770,6 +770,7 @@ const zh: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': '放弃此访谈？',
   'assistant.video.discardBody': '你录制的回答尚未保存，将会丢失。',
   'assistant.video.discard': '放弃',
+  'assistant.video.fallback.gap': '距离你上一篇记录已经有一段时间了——这段时间发生了什么？',
   'assistant.video.fallback.q1': '今天发生了什么是你想记住的？',
   'assistant.video.fallback.q2': '最好的部分是什么，为什么它让你有这样的感受？',
   'assistant.video.fallback.q3': '什么让你觉得艰难，或者没有如你所愿？',

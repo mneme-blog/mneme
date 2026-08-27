@@ -92,6 +92,17 @@ themselves (API key included) sync to the vault's other devices as an encrypted 
 indistinguishable from an entry to the relay, which still cannot use or read the key. The one invariant
 that must never break: **journal plaintext must never be routed through the relay as an AI proxy.**
 
+One consequence worth stating plainly, because it widened: a **guided interview** (written or video)
+no longer sends only the previous entries carrying that interview type's label. Starting one also
+selects, from the whole vault, the most recent entry when the journal has been quiet for a while
+(so the first question can ask about that stretch) and a handful of older entries that read as
+forward-looking (so one question can revisit a hope or a worry) — `ai/reflection.ts`. Selection is
+local, over the entries already decrypted in memory; no extra request is made and nothing new is
+stored or synced. But under the **cloud** backend those excerpts leave E2EE for that request like
+any other context, so an interview now exports a wider, older slice of the journal than the label
+alone would. On the local backend nothing leaves the device either way, and with the assistant off
+none of this runs at all.
+
 **Recording transcription** (`ai/transcribe.ts`) follows the same rules. The "Transcribe" actions on
 video/audio recordings send the **decrypted media bytes** browser → a speech-to-text server (any
 endpoint speaking the OpenAI `/v1/audio/transcriptions` shape) directly — never via the relay
@@ -136,8 +147,8 @@ it *sounds* like it should leak something, and does not.
 
 - **The model never sees or hears an answer.** It is asked once, at the start of a session, to plan a
   list of questions; that request carries the interview type's prompt and — as with the written
-  interview — excerpts of previous entries carrying the same label, under the same opt-in AI terms
-  above. The recorded clips are never sent anywhere for analysis. There is deliberately **no
+  interview — excerpts of previous entries carrying the same label, plus the gap/older-thought
+  excerpts described above, under the same opt-in AI terms. The recorded clips are never sent anywhere for analysis. There is deliberately **no
   speech-to-text**: the browser's `SpeechRecognition` API streams audio to Google/Apple servers, which
   would be a silent, unconsented export of the most intimate content in the app.
 - **Recording is fully offline.** After the plan call the session makes no network requests at all.

@@ -173,6 +173,10 @@ export const assistant = {
   'assistant.video.discard': 'Discard',
   // Used when the model is unreachable or returns nothing usable — the session
   // must still work without it.
+  // Replaces q1 when the journal has been quiet for a while (ai/reflection.ts):
+  // the one bit of dynamics that still works with the provider unreachable.
+  // Deliberately free of streak/habit language — see gapToneRules in ai/prompts.ts.
+  'assistant.video.fallback.gap': 'It has been a while since your last entry — what has been going on since then?',
   'assistant.video.fallback.q1': 'What happened today that you want to remember?',
   'assistant.video.fallback.q2': 'What was the best part, and why did it land that way?',
   'assistant.video.fallback.q3': 'What was hard, or did not go the way you hoped?',

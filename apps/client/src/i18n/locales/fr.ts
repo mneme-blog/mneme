@@ -824,6 +824,7 @@ const fr: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': 'Abandonner cet entretien ?',
   'assistant.video.discardBody': 'Vos réponses enregistrées n’ont pas encore été sauvegardées et seront perdues.',
   'assistant.video.discard': 'Abandonner',
+  'assistant.video.fallback.gap': 'Cela fait un moment depuis votre dernière entrée — que s’est-il passé depuis ?',
   'assistant.video.fallback.q1': 'Que s’est-il passé aujourd’hui dont vous voulez vous souvenir ?',
   'assistant.video.fallback.q2': 'Quel a été le meilleur moment, et pourquoi vous a-t-il marqué ainsi ?',
   'assistant.video.fallback.q3': 'Qu’est-ce qui a été difficile, ou ne s’est pas passé comme vous l’espériez ?',

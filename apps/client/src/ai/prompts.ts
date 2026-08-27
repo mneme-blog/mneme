@@ -11,6 +11,7 @@
 import { currentLocale, t } from '../i18n';
 import { isoDate } from './flatten';
 import { fenced, fenceRules, newFenceToken } from './fence';
+import type { JournalGap, Retrospect } from './reflection';
 
 // Journal text is untrusted input to the model: an entry can hold anything the
 // user pasted, and a Day One import brings in whatever was in the archive. Every
@@ -103,13 +104,79 @@ export function editorUserMessage(action: AiEditorAction): string {
 // Q&A turns) and the synthesis phase (interviewSynthesisPrompt rewrites the whole
 // transcript into one entry). Both run browser → provider, never near the relay.
 
+/**
+ * What the interview knows about this journal beyond the interview type itself
+ * (ai/reflection.ts). Both parts are optional and both are pure prompt input —
+ * a miss costs a less interesting question, nothing more.
+ */
+export interface InterviewDynamics {
+  /** The stretch since the journal was last written to, when it is long enough
+   *  to be worth opening with. Null/absent → the interview says nothing about it. */
+  gap?: JournalGap | null;
+  /** Older entries to look back at, so one question can revisit a hope, plan or
+   *  fear the user recorded a while ago. */
+  retrospect?: Retrospect | null;
+  fenceToken?: string;
+}
+
+/** The tone rules for asking about a stretch of silence. Shared by both
+ *  interview modes because getting this wrong is the whole risk of the feature:
+ *  a journal that reproaches you for not writing is one you stop opening. */
+function gapToneRules(): string[] {
+  return [
+    '- State the gap plainly at most once, and never as a lapse: no guilt, no pressure, no talk of streaks,',
+    '  habits, consistency, catching up or getting back on track. Do not congratulate them for returning either.',
+    '- Leave room for the possibility that something was going on that kept them from writing — ask it as an',
+    '  open offer ("was something going on?"), never as an accusation and never as a demand for a reason.',
+    '- Accept whatever comes back, including a short answer or none at all, and move on to the interview itself.',
+  ];
+}
+
+/** The gap section: what happened in the quiet stretch, and the last entry as
+ *  context so the question can pick up a concrete thread. */
+function gapSection(gap: JournalGap, token: string, lead: string): string {
+  return [
+    '',
+    '## The stretch since the last entry',
+    `Nothing has been written in this journal for ${gap.days} days. The last entry is from ${isoDate(gap.lastAt)}, titled "${gap.lastTitle}".`,
+    lead,
+    ...gapToneRules(),
+    '',
+    'That last entry, for context — do not read it back at them:',
+    '',
+    fenced(token, ENTRY_FENCE, `${gap.lastTitle}\nDate: ${isoDate(gap.lastAt)}\n\n${gap.lastText}`),
+  ].join('\n');
+}
+
+/** The retrospect section: older entries, and the one question that looks back. */
+function retrospectSection(retro: Retrospect, token: string, lead: string): string {
+  return [
+    '',
+    '## Older thoughts to look back on',
+    retro.cued
+      ? 'These are older entries from this journal that read as forward-looking — things the user was hoping for, planning, dreaming of, worrying about or afraid of at the time.'
+      : 'These are older entries from this journal, picked by age rather than by content — they may hold nothing forward-looking at all.',
+    lead,
+    '- Use only a thought that is actually in the text below, and never invent or embellish one. If there is',
+    '  none, drop the idea silently and ask an ordinary question instead — do not mention that you looked.',
+    '- Say roughly when it was written ("back in March you were dreading…") so the distance is part of the question.',
+    '- Ask how it sits with them now, what became of it, what they make of it today. Never turn it into a',
+    '  progress check, a scorecard on whether they achieved it, or advice about what to do next.',
+    '',
+    fenced(token, ENTRY_FENCE, retro.text),
+  ].join('\n');
+}
+
 /** Question phase: the per-type strategy + the generic one-question-at-a-time rules,
- *  with optional history of the same interview type so questions feel continuous. */
+ *  with optional history of the same interview type so questions feel continuous,
+ *  plus the two dynamics from ai/reflection.ts (the gap, and older thoughts). */
 export function interviewSystemPrompt(
   type: { name: string; prompt: string },
   historyText: string,
-  fenceToken: string = newFenceToken(),
+  dynamics: InterviewDynamics = {},
 ): string {
+  const { gap = null, retrospect = null, fenceToken = newFenceToken() } = dynamics;
+  const hasData = Boolean(gap || historyText || retrospect?.text);
   return [
     `You are a warm, attentive journaling companion conducting a "${type.name}" interview inside a private, end-to-end-encrypted journal. Today's date is ${today()}.`,
     '',
@@ -123,13 +190,26 @@ export function interviewSystemPrompt(
     '',
     '## What this interview is about',
     type.prompt,
+    hasData ? '\n## Reading the journal content below\n' + fenceRules(fenceToken, ENTRY_FENCE) : '',
+    gap
+      ? gapSection(
+          gap,
+          fenceToken,
+          'Make your FIRST question about that stretch: what has been going on in the meantime, and — lightly — whether something was keeping them from writing.',
+        )
+      : '',
     historyText
       ? '\n## Earlier entries from this interview type (most recent first)\n' +
         'Use these only to keep continuity — refer back when it feels natural ("last time you mentioned…"). ' +
         'Do not quote them at length.\n\n' +
-        fenceRules(fenceToken, ENTRY_FENCE) +
-        '\n\n' +
         fenced(fenceToken, ENTRY_FENCE, historyText)
+      : '',
+    retrospect?.text
+      ? retrospectSection(
+          retrospect,
+          fenceToken,
+          'Spend exactly ONE of your questions revisiting a single one of those older thoughts.',
+        )
       : '',
   ].join('\n');
 }
@@ -162,13 +242,17 @@ export function interviewSynthesisUserMessage(): string {
 // strategy (type.prompt) is reused verbatim — it describes what to cover, which
 // is true whether the answers are typed or spoken.
 
-/** Plan phase: the whole question list in one response, one question per line. */
+/** Plan phase: the whole question list in one response, one question per line.
+ *  Takes the same dynamics as the written interview — the gap and the older
+ *  thoughts shape which questions get planned rather than how they follow up. */
 export function videoInterviewPlanPrompt(
   type: { name: string; prompt: string },
   historyText: string,
   count: number,
-  fenceToken: string = newFenceToken(),
+  dynamics: InterviewDynamics = {},
 ): string {
+  const { gap = null, retrospect = null, fenceToken = newFenceToken() } = dynamics;
+  const hasData = Boolean(gap || historyText || retrospect?.text);
   return [
     `You are a warm, attentive journaling companion planning a "${type.name}" video interview inside a private, end-to-end-encrypted journal. Today's date is ${today()}.`,
     '',
@@ -192,15 +276,28 @@ export function videoInterviewPlanPrompt(
     '',
     '## What this interview is about',
     type.prompt,
+    hasData ? '\n## Reading the journal content below\n' + fenceRules(fenceToken, ENTRY_FENCE) : '',
+    gap
+      ? gapSection(
+          gap,
+          fenceToken,
+          `Make the FIRST of the ${count} questions about that stretch: what has been going on in the meantime, and — lightly — whether something was keeping them from writing. It counts towards the ${count}, it is not an extra one.`,
+        )
+      : '',
     historyText
       ? '\n## Earlier entries from this interview type (most recent first)\n' +
         'Use these to steer what is worth asking about this time: pick up threads worth revisiting, and avoid ' +
         'asking again about something already covered at length. You may nod to one in a question when it makes ' +
         'the session feel continuous ("you mentioned the move…"), but keep it to a short clause and never quote ' +
         'at length.\n\n' +
-        fenceRules(fenceToken, ENTRY_FENCE) +
-        '\n\n' +
         fenced(fenceToken, ENTRY_FENCE, historyText)
+      : '',
+    retrospect?.text
+      ? retrospectSection(
+          retrospect,
+          fenceToken,
+          `Make exactly ONE of the ${count} questions revisit a single one of those older thoughts — one of the ${count}, not an extra one, and not the first.`,
+        )
       : '',
   ].join('\n');
 }

@@ -28,6 +28,7 @@ import {
   freeformDraftPrompt,
 } from '../ai/prompts';
 import { buildInterviewHistory, HISTORY_BUDGET_CHARS } from '../ai/interview';
+import { buildRetrospect, journalGap, RETRO_BUDGET_CHARS } from '../ai/reflection';
 import { markdownToDoc, splitMarkdownTitle, docToText } from '../editor/doc';
 import { DocPreview } from '../editor/DocPreview';
 import { toAiError, type AiMessage } from '../ai/types';
@@ -81,6 +82,11 @@ export function GuidedInterviewSheet({
 
   const provider = useMemo(() => (aiSettings?.enabled ? makeProvider(aiSettings) : null), [aiSettings]);
   const alive = useMemo(() => interviewTypes.filter((it) => !it.deleted), [interviewTypes]);
+  // How long the journal has been quiet, when that is long enough to be worth
+  // opening with (ai/reflection.ts). Derived from the entries already decrypted
+  // in memory — no extra request, and the tone rules that keep the question
+  // free of guilt live in the prompt.
+  const gap = useMemo(() => journalGap(entries), [entries]);
   // Size the mobile sheet to the visible area so the input stays above the
   // keyboard (see useVisualViewport) instead of being pushed off-screen.
   const vp = useVisualViewport();
@@ -162,19 +168,34 @@ export function GuidedInterviewSheet({
     }
   };
 
+  // The system prompt for one turn: the same-type history plus the two dynamics
+  // (the gap, and older thoughts worth revisiting). Rebuilt per turn rather than
+  // memoized — everything it reads is already in memory, and a long session can
+  // see the entries change underneath it. Local backends get half the budget,
+  // the same split the history has always used: an 8k context has to hold the
+  // transcript too.
+  const systemFor = (it: InterviewType): string => {
+    const budget = (n: number): number => (provider.local ? Math.round(n / 2) : n);
+    const history = buildInterviewHistory(entries, it.name, budget(HISTORY_BUDGET_CHARS));
+    return interviewSystemPrompt(it, history.text, {
+      gap,
+      // Entries already in the history block are excluded so one entry can't
+      // fill two sections of the same prompt.
+      retrospect: buildRetrospect(entries, { excludeIds: history.ids, budgetChars: budget(RETRO_BUDGET_CHARS) }),
+    });
+  };
+
   const startInterview = (it: InterviewType): void => {
     setType(it);
     setPhase('interview');
-    const history = buildInterviewHistory(entries, it.name, provider.local ? Math.round(HISTORY_BUDGET_CHARS / 2) : HISTORY_BUDGET_CHARS);
-    void askTurn(interviewSystemPrompt(it, history.text), [SEED]);
+    void askTurn(systemFor(it), [SEED]);
   };
 
   const sendAnswer = (): void => {
     const a = input.trim();
     if (!a || busy || !type) return;
     setInput('');
-    const history = buildInterviewHistory(entries, type.name, provider.local ? Math.round(HISTORY_BUDGET_CHARS / 2) : HISTORY_BUDGET_CHARS);
-    void askTurn(interviewSystemPrompt(type, history.text), [...messages, { role: 'user', content: a }]);
+    void askTurn(systemFor(type), [...messages, { role: 'user', content: a }]);
   };
 
   // Stream the synthesized entry (Markdown) into `draft` and move to review.

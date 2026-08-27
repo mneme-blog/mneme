@@ -822,6 +822,7 @@ const nl: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': 'Dit interview weggooien?',
   'assistant.video.discardBody': 'Je opgenomen antwoorden zijn nog niet opgeslagen en gaan verloren.',
   'assistant.video.discard': 'Weggooien',
+  'assistant.video.fallback.gap': 'Het is een tijdje geleden sinds je laatste notitie — wat is er sindsdien gebeurd?',
   'assistant.video.fallback.q1': 'Wat is er vandaag gebeurd dat je wilt onthouden?',
   'assistant.video.fallback.q2': 'Wat was het mooiste moment, en waarom raakte dat je zo?',
   'assistant.video.fallback.q3': 'Wat was moeilijk, of ging niet zoals je had gehoopt?',

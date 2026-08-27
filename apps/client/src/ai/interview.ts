@@ -14,6 +14,9 @@ export const HISTORY_BUDGET_CHARS = 6_000;
 export interface InterviewHistory {
   text: string;
   count: number;
+  /** Ids of the entries in the block — the retrospect builder excludes them so
+   *  the same entry isn't shown twice in one prompt (ai/reflection.ts). */
+  ids: string[];
 }
 
 /**
@@ -27,13 +30,15 @@ export function buildInterviewHistory(entries: JournalEntry[], label: string, bu
     .sort((a, b) => b.createdAt - a.createdAt);
 
   const blocks: string[] = [];
+  const ids: string[] = [];
   let used = 0;
   for (const e of past) {
     const text = entryText(e, HISTORY_ENTRY_CAP, '[…]');
     const block = `${entryHeading(e)}\n\n${text}`;
     if (used + block.length > budgetChars) break;
     blocks.push(block);
+    ids.push(e.id);
     used += block.length;
   }
-  return { text: blocks.join('\n---\n\n'), count: blocks.length };
+  return { text: blocks.join('\n---\n\n'), count: blocks.length, ids };
 }

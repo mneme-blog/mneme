@@ -826,6 +826,7 @@ const hi: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': 'यह साक्षात्कार छोड़ दें?',
   'assistant.video.discardBody': 'आपके रिकॉर्ड किए गए उत्तर अभी सहेजे नहीं गए हैं और खो जाएँगे।',
   'assistant.video.discard': 'छोड़ें',
+  'assistant.video.fallback.gap': 'आपकी पिछली प्रविष्टि को कुछ समय हो गया — तब से क्या-क्या हुआ?',
   'assistant.video.fallback.q1': 'आज ऐसा क्या हुआ जिसे आप याद रखना चाहते हैं?',
   'assistant.video.fallback.q2': 'सबसे अच्छा हिस्सा क्या रहा, और वह आपको वैसा क्यों लगा?',
   'assistant.video.fallback.q3': 'क्या कठिन रहा, या आपकी उम्मीद के मुताबिक नहीं हुआ?',

@@ -831,6 +831,7 @@ const fi: Partial<Record<MessageKey, string>> = {
   'assistant.video.discardTitle': 'Hylätäänkö tämä haastattelu?',
   'assistant.video.discardBody': 'Tallentamiasi vastauksia ei ole vielä tallennettu, ja ne menetetään.',
   'assistant.video.discard': 'Hylkää',
+  'assistant.video.fallback.gap': 'Edellisestä merkinnästä on jonkin aikaa — mitä sen jälkeen on tapahtunut?',
   'assistant.video.fallback.q1': 'Mitä tänään tapahtui, jonka haluat muistaa?',
   'assistant.video.fallback.q2': 'Mikä oli parasta, ja miksi se kosketti sinua juuri niin?',
   'assistant.video.fallback.q3': 'Mikä oli vaikeaa tai ei mennyt toivomallasi tavalla?',
