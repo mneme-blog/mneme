@@ -85,7 +85,9 @@ private thoughts help you *and never leave your computer*.
   what has been going on, and whether something was keeping you from writing, asked as an offer and
   deliberately free of guilt, streak talk, or a welcome-back speech; and one question **looks back at
   an older thought** — a hope, a plan, a worry you recorded months ago — and asks how it sits with you
-  now, never whether you achieved it. There's also a one-line **freeform draft** mode.
+  now, never whether you achieved it. The finished entry reintroduces that older thought (what it
+  was, roughly when you wrote it) before your present view of it, so the passage still makes sense
+  when you reread it in a year instead of looking like an answer to a question nobody can see. There's also a one-line **freeform draft** mode.
 - **Guided video interviews** — the same interview types, answered on camera. The whole question list
   is planned in one call up front and shown in an **editable plan step** (target six questions, eight
   max); the session then runs question by question with retake, skip, and back, a per-question

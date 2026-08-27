@@ -214,18 +214,55 @@ export function interviewSystemPrompt(
   ].join('\n');
 }
 
-/** Synthesis phase: rewrite the interview transcript (sent as the prior messages)
- *  into one first-person entry, output as the simple Markdown markdownToDoc parses. */
-export function interviewSynthesisPrompt(type: { name: string }): string {
+/**
+ * Synthesis phase: rewrite the interview transcript (sent as the prior messages)
+ * into one first-person entry, output as the simple Markdown markdownToDoc parses.
+ *
+ * `dynamics` is the same object the question phase was primed with, and only its
+ * PRESENCE is read here — the entry excerpts are deliberately not embedded a
+ * second time. Everything the write-up needs is already in the transcript: the
+ * reference lives in the question the model asked ("back in March you were
+ * dreading the move…"). Re-sending the old entries would invite their content
+ * into the new entry and would widen the cloud payload again for no gain.
+ *
+ * Why it has to be told at all: "use only what the user said" plus "do not
+ * mention the interview" used to read as "keep the answers, drop the questions",
+ * and an answer to a look-back question ("it feels much lighter now") then
+ * landed in the finished entry with nothing to refer to. The rules below say
+ * that carrying a question's context is not mentioning the interview.
+ */
+export function interviewSynthesisPrompt(
+  type: { name: string },
+  dynamics: InterviewDynamics = {},
+): string {
+  const { gap = null, retrospect = null } = dynamics;
   return [
     `You just conducted a "${type.name}" interview inside a private journal. Today's date is ${today()}.`,
     'Turn the conversation into a single journal entry written as if the user wrote it themselves.',
     `- Write in the first person ("I…"), in ${currentLocale().english}.`,
-    '- Use only what the user actually said — never invent events, feelings, or facts.',
+    '- Use only what was actually said in the conversation — never invent events, feelings, or facts.',
     '- Organise it naturally with a few short "## " headings and short paragraphs; use "- " bullets where the user listed things.',
-    '- Keep it warm and genuine, not clinical. Do not address the user as "you" and do not mention the interview or yourself.',
+    '- Keep it warm and genuine, not clinical. Do not address the user as "you", and do not mention the interview, the questions, or yourself.',
+    '- The questions carried context the answers lean on. Wherever an answer only makes sense beside what was asked ("yes, much better now"), bring that context into the entry as the writer\'s own words, so no passage refers to something the entry never introduced. Naming what a question was about is not mentioning the interview — quoting the question is.',
     '- Start with exactly one "# " line: a short, specific title for the entry (a few words, no date). It becomes the entry\'s title.',
     '- Output only the title line and the entry as simple Markdown (## headings, - bullets, > quotes). No preamble, no commentary.',
+    retrospect?.text
+      ? [
+          '',
+          'One question in this interview looked back at something the user wrote down a while ago — a hope, a plan, a worry. If they answered such a question, that part of the entry needs its bearings:',
+          '- Introduce the earlier thought before the present view of it: what it was, and roughly when it was written, exactly as the question framed it. Never invent an earlier thought, a date, or a wording the question did not give you.',
+          '- Then how it sits with them now, in their words. Give it its own short "## " section, or at least a paragraph of its own, so a reader in a year can see it as a look back rather than as something from today.',
+          '- It is a reflection, not a report card: no verdict on whether they got there, no advice, no congratulation.',
+        ].join('\n')
+      : '',
+    gap
+      ? [
+          '',
+          'The interview opened by asking about a stretch with no entries. If the user answered that:',
+          '- Let the entry place itself in time — that it takes in the period since they last wrote — in one plain clause, in their voice.',
+          '- Say nothing about streaks, discipline or catching up, and do not treat the silence as a lapse. If they gave a reason for not writing, it is part of the story like anything else they said.',
+        ].join('\n')
+      : '',
   ].join('\n');
 }
 

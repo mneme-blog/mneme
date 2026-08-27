@@ -354,7 +354,14 @@ whisper language picker learned), and it is only a ranking hint — a journal in
 falls back to a time-spread sample, `cued:false`, and the prompt then says the entries may hold
 nothing forward-looking and to drop the idea rather than invent one. Entries already in the
 same-label history are excluded (`InterviewHistory.ids`) so one entry can't fill two sections of one
-prompt, and local backends get half the budget like the history does. Regression check:
+prompt, and local backends get half the budget like the history does. **The write-up is told about
+them too** (`interviewSynthesisPrompt` takes the same `InterviewDynamics`, presence only — the
+excerpts are not embedded a second time): the reference for a look-back answer lives in the
+*question*, and "use only what the user said" + "do not mention the interview" used to read as
+"keep the answers, drop the questions", so "it feels much lighter now" landed in the finished entry
+with nothing to refer to. The synthesis now has to reintroduce the earlier thought (what it was,
+roughly when, as the question framed it) in its own section before the present view, and a gap
+interview places itself in time — still with no streak or report-card framing. Regression check:
 `pnpm --filter client exec tsx scripts/interview-dynamics.ts` (no DOM, no relay). Note for
 docs/SECURITY.md §"opt-in AI assistant": under the **cloud** backend this widens what an interview
 sends — no longer only same-label entries, but the last entry and older ones from anywhere in the
