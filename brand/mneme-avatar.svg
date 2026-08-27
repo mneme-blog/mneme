@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>Mneme organisation avatar: ring+dot mark on the warm-paper ground</title>
+  <rect width="512" height="512" fill="#f4eee2"/>
+  <g transform="translate(256 256) scale(13.5) translate(-12 -12)">
+    <circle cx="12" cy="12" r="9.2" fill="none" stroke="#b0563a" stroke-width="2.3"/>
+    <circle cx="12" cy="12" r="3.6" fill="#b0563a"/>
+  </g>
+</svg>
