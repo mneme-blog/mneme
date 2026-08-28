@@ -19,7 +19,7 @@ import { DeviceUnlockSheet } from './ui/DeviceUnlock';
 import { ImportDayOneSheet } from './ui/ImportDayOne';
 import { TemplatesSheet } from './ui/Templates';
 import { SearchSheet } from './ui/Search';
-import { PreferencesSheet } from './ui/Preferences';
+import { PreferencesSheet, type TabId as PrefsTab } from './ui/Preferences';
 import { PendingApproval } from './ui/PendingApproval';
 import { DeleteJournalSheet } from './ui/DeleteJournal';
 import { AiSettingsSheet } from './ui/AiSettings';
@@ -239,6 +239,12 @@ export function App(): VNode {
   const [importOpen, setImportOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  // Preferences hands off to full-screen sheets by closing itself, so cancelling
+  // one used to drop the user all the way out to the journal. `prefsReturn` is
+  // the tab to reopen when such a sheet closes; openPrefs() clears it, so a
+  // fresh entry from the sidebar or the mobile nav always starts at the top.
+  const [prefsReturn, setPrefsReturn] = useState<PrefsTab | null>(null);
+  const openPrefs = (): void => { setPrefsReturn(null); setPrefsOpen(true); };
   const [searchOpen, setSearchOpen] = useState(false);
   const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
   const [askOpen, setAskOpen] = useState(false);
@@ -292,6 +298,7 @@ export function App(): VNode {
     setImportOpen(false);
     setTemplatesOpen(false);
     setPrefsOpen(false);
+    setPrefsReturn(null);
     setSearchOpen(false);
     setAiSettingsOpen(false);
     setAskOpen(false);
@@ -416,7 +423,7 @@ export function App(): VNode {
         />
       );
     }
-    return <JournalsScreen desk={desk} journals={journals} onOpen={openJournal} onNew={() => setModal(true)} onEdit={(j) => setEditJournalId(j.id)} onDelete={(j) => setDeleteJournalId(j.id)} onSearch={() => setSearchOpen(true)} onSettings={() => setPrefsOpen(true)} syncing={bootstrapping} />;
+    return <JournalsScreen desk={desk} journals={journals} onOpen={openJournal} onNew={() => setModal(true)} onEdit={(j) => setEditJournalId(j.id)} onDelete={(j) => setDeleteJournalId(j.id)} onSearch={() => setSearchOpen(true)} onSettings={openPrefs} syncing={bootstrapping} />;
   })();
 
   // A picked result closes the palette and opens the entry in the editor.
@@ -472,6 +479,7 @@ export function App(): VNode {
           desk={desk}
           theme={theme}
           onClose={() => setPrefsOpen(false)}
+          initialTab={prefsReturn ?? undefined}
           ownerId={ownerId}
           status={status}
           onLock={lock}
@@ -479,7 +487,8 @@ export function App(): VNode {
           onDeviceUnlock={() => setDeviceUnlockOpen(true)}
           onImport={() => setImportOpen(true)}
           onDeleteVault={() => setDeleteVaultOpen(true)}
-          onAiSettings={() => setAiSettingsOpen(true)}
+          // AI settings is only ever reached from here, so cancel/save comes back.
+          onAiSettings={() => { setPrefsReturn('assistant'); setAiSettingsOpen(true); }}
           // Mobile-only rows — the desktop sidebar hosts these entry points.
           onTemplates={desk ? undefined : () => setTemplatesOpen(true)}
           onAsk={desk ? undefined : aiSettings?.enabled ? () => setAskOpen(true) : null}
@@ -492,7 +501,7 @@ export function App(): VNode {
       {deleteVaultOpen && <DeleteVaultSheet desk={desk} onClose={() => setDeleteVaultOpen(false)} deleteVault={deleteVault} />}
       {deviceUnlockOpen && <DeviceUnlockSheet desk={desk} onClose={() => setDeviceUnlockOpen(false)} method={vaultMethod} apply={setDeviceUnlock} />}
       {importOpen && <ImportDayOneSheet desk={desk} onClose={() => setImportOpen(false)} />}
-      {aiSettingsOpen && <AiSettingsSheet desk={desk} onClose={() => setAiSettingsOpen(false)} />}
+      {aiSettingsOpen && <AiSettingsSheet desk={desk} onClose={() => { setAiSettingsOpen(false); if (prefsReturn) setPrefsOpen(true); }} />}
       {askOpen && <AskJournalSheet desk={desk} onClose={() => setAskOpen(false)} />}
       {interviewOpen && (
         <GuidedInterviewSheet
@@ -523,7 +532,7 @@ export function App(): VNode {
   if (desk) {
     return (
       <div style={{ height: '100%', display: 'flex', background: 'var(--paper)', position: 'relative' }}>
-        <Sidebar flow={flow} setFlow={setFlow} journals={journals} activeJournalId={activeJournalId} onNew={() => newEntry(activeJournalId ?? undefined)} onOpenJournal={openJournal} status={status} ownerId={ownerId} onTemplates={() => setTemplatesOpen(true)} onSearch={() => setSearchOpen(true)} onPreferences={() => setPrefsOpen(true)} onAsk={aiSettings?.enabled ? () => setAskOpen(true) : null} onInterview={aiSettings?.enabled ? () => setInterviewOpen(true) : null} />
+        <Sidebar flow={flow} setFlow={setFlow} journals={journals} activeJournalId={activeJournalId} onNew={() => newEntry(activeJournalId ?? undefined)} onOpenJournal={openJournal} status={status} ownerId={ownerId} onTemplates={() => setTemplatesOpen(true)} onSearch={() => setSearchOpen(true)} onPreferences={openPrefs} onAsk={aiSettings?.enabled ? () => setAskOpen(true) : null} onInterview={aiSettings?.enabled ? () => setInterviewOpen(true) : null} />
         <div style={{ flex: 1, minWidth: 0 }}>{screen}</div>
         {/* Non-modal companions: flex siblings, so the app stays usable beside them. */}
         {appSheets(true)}
@@ -539,7 +548,7 @@ export function App(): VNode {
       {/* Inside a notebook the Journals tab stays lit and compose writes into it. */}
       {/* Settings in the bottom nav goes straight to the preferences sheet —
           it holds the journal/assistant/vault rows the old settings sheet had. */}
-      {showNav && <MobileNav flow={flow === 'journal' ? 'journals' : flow} setFlow={setFlow} onCompose={() => setComposeOpen(true)} onSettings={() => setPrefsOpen(true)} onSearch={() => setSearchOpen(true)} />}
+      {showNav && <MobileNav flow={flow === 'journal' ? 'journals' : flow} setFlow={setFlow} onCompose={() => setComposeOpen(true)} onSettings={openPrefs} onSearch={() => setSearchOpen(true)} />}
       {/* The FAB opens a chooser (empty / interview / template) instead of
           silently minting a blank entry; inside a notebook every path still
           writes into that notebook, like the FAB used to. */}

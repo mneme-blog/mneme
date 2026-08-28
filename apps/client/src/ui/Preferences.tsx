@@ -39,7 +39,7 @@ const MODES: { id: ThemeMode; icon: IconName }[] = [
   { id: 'system', icon: 'monitor' },
 ];
 
-type TabId = 'appearance' | 'assistant' | 'vault' | 'writing' | 'info';
+export type TabId = 'appearance' | 'assistant' | 'vault' | 'writing' | 'info';
 // The `.short` catalog variant is the mobile segmented label — full words
 // don't fit four-across on a phone, so the desktop rail uses the full label
 // and the bottom sheet uses the short one.
@@ -288,10 +288,13 @@ function RelayServerRow(): VNode {
   );
 }
 
-export function PreferencesSheet({ desk, theme, onClose, ownerId, status, onLock, onRotate, onDeviceUnlock, onImport, onDeleteVault, onAiSettings, onTemplates, onAsk, onInterview, onInterviewTypes }: {
+export function PreferencesSheet({ desk, theme, onClose, initialTab, ownerId, status, onLock, onRotate, onDeviceUnlock, onImport, onDeleteVault, onAiSettings, onTemplates, onAsk, onInterview, onInterviewTypes }: {
   desk: boolean;
   theme: ThemeControls;
   onClose: () => void;
+  /** Tab to open on. Set when a sheet reached from here hands the user back
+      (app.tsx `prefsReturn`); undefined = a fresh open, which starts at the top. */
+  initialTab?: TabId;
   ownerId: string | null;
   status: SyncStatus;
   onLock: () => void;
@@ -311,7 +314,7 @@ export function PreferencesSheet({ desk, theme, onClose, ownerId, status, onLock
 }): VNode {
   const { entries, vaultMethod, interviewTypes } = useAppData();
   const i18n = useI18n();
-  const [tab, setTab] = useState<TabId>('appearance');
+  const [tab, setTab] = useState<TabId>(initialTab ?? 'appearance');
   // Vault rows hand off to full-screen sheets — close this overlay first.
   const handOff = (fn: () => void) => () => {
     onClose();
