@@ -64,6 +64,47 @@ say()  { printf '%s\n' "$(printf '%s' "$*" | indent)"; }
 ok()   { printf '    %s%s%s %s\n' "$GRN" "$TICK" "$R" "$*"; }
 note() { printf '    %s%s %s%s\n' "$DIM" "$BULLET" "$*" "$R"; }
 
+# Long-running Docker steps, on one line that never scrolls.
+#
+# Compose redraws its own progress display in place only while it fits the
+# terminal. Pulling this stack is forty-odd layer rows, so on an ordinary
+# window the display gives up and prints a fresh frame per tick instead —
+# hundreds of near-identical lines scrolling past, which reads like something
+# is wrong. So the command's output is captured rather than shown, and a single
+# self-updating line stands in for it. The log is kept and printed only if the
+# step fails, which is the one time the detail is worth having.
+if [[ $TICK == "✓" ]]; then
+  FRAMES=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
+else
+  FRAMES=('|' '/' '-' "\\")
+fi
+SPIN_LOG=""
+SPIN_DETAIL=""   # optional function name; called each tick for a short suffix
+
+spin() { # spin "what it is doing" cmd… — returns the command's exit status
+  local label=$1
+  shift
+  SPIN_LOG=$(mktemp "${TMPDIR:-/tmp}/mneme-install.XXXXXX")
+  "$@" >"$SPIN_LOG" 2>&1 &
+  local pid=$! start=$SECONDS i=0 rc=0 detail="" secs
+  if [[ -t 1 ]]; then
+    while kill -0 "$pid" 2>/dev/null; do
+      if [[ -n $SPIN_DETAIL ]]; then detail=$("$SPIN_DETAIL" 2>/dev/null) || detail=""; fi
+      secs=$((SECONDS - start))
+      printf '\r\033[2K    %s %s%s %s(%dm%02ds)%s' \
+        "${FRAMES[i++ % ${#FRAMES[@]}]}" "$label" "${detail:+  $detail}" \
+        "$DIM" "$((secs / 60))" "$((secs % 60))" "$R"
+      sleep 0.2
+    done
+    printf '\r\033[2K'
+  else
+    # Piped to a file or a log collector: no cursor to move, so say it once.
+    note "$label…"
+  fi
+  wait "$pid" || rc=$?
+  return "$rc"
+}
+
 warn() { # warn "headline" ["explanation" …]
   ISSUES=$((ISSUES + 1))
   printf '\n%s    %s %s%s\n' "$YEL" "$BULLET" "$1" "$R"
@@ -270,7 +311,9 @@ if ! command -v docker >/dev/null; then
         "Install Docker by hand and run this again:
     https://docs.docker.com/engine/install/"
     $SUDO systemctl enable --now docker 2>/dev/null || true
-    [[ $EUID -ne 0 ]] && $SUDO usermod -aG docker "$USER" 2>/dev/null || true
+    if [[ $EUID -ne 0 ]]; then
+      $SUDO usermod -aG docker "$USER" 2>/dev/null || true
+    fi
     ok "Docker installed"
   else
     fail "Docker is required and was not installed." \
@@ -543,9 +586,40 @@ fi
 # ── Step 4: images ──────────────────────────────────────────────────────────
 step "Downloading the container images" "About 1.5 GB the first time, from GitHub's registry and Docker Hub. Later runs only fetch what changed."
 
-if ! ./deploy/prod.sh pull; then
+# How many distinct images the stack needs, so the one progress line can count
+# them off. Best-effort: if compose cannot answer, the line just omits the count.
+PULL_TOTAL=$(./deploy/prod.sh config --images 2>/dev/null | sort -u | grep -c . || true)
+[[ ${PULL_TOTAL:-0} -gt 0 ]] || PULL_TOTAL=""
+
+pull_detail() { # a suffix for the spinner: images finished so far
+  [[ -n $PULL_TOTAL ]] || return 0
+  local done_n
+  done_n=$(grep -c ' Pulled *$' "$SPIN_LOG" 2>/dev/null || true)
+  printf '%d/%d images' "${done_n:-0}" "$PULL_TOTAL"
+}
+
+SPIN_DETAIL=pull_detail
+if ! spin "Downloading images" ./deploy/prod.sh pull; then
+  SPIN_DETAIL=""
+  printf '\n'
+  tail -n 20 "$SPIN_LOG" | indent || true
+  # A registry refusal is not a connectivity problem and the generic advice
+  # sends people looking in the wrong place, so it is named separately.
+  if grep -qE 'denied|unauthorized|not found|manifest unknown' "$SPIN_LOG"; then
+    fail "The image registry refused the download." \
+      "This is not your network: ghcr.io answered, and said no. Either the images
+for this version have not been published yet, or they are private, or the tag
+in deploy/version.env names something that does not exist." \
+      "You can build them from this checkout instead — it takes longer, but needs
+nothing from the registry:
+
+    cd $DIR && ./deploy/prod.sh up -d --build
+
+If you did not expect this, please report it with the lines above:
+    https://github.com/mneme-blog/mneme/issues"
+  fi
   fail "Could not download the container images." \
-    "The output above names the image that failed. Common causes: no internet
+    "The lines above name the image that failed. Common causes: no internet
 access from this machine, a proxy or firewall blocking ghcr.io or Docker Hub,
 or a full disk part-way through." \
     "Check connectivity and space, then run this installer again — completed
@@ -553,7 +627,8 @@ downloads are cached, so it resumes rather than starting over:
     docker pull ghcr.io/mneme-blog/mneme-server:latest
     df -h $DIR"
 fi
-ok "Images downloaded"
+SPIN_DETAIL=""
+ok "Images downloaded${PULL_TOTAL:+ ($PULL_TOTAL images)}"
 
 # ── Step 5: start ───────────────────────────────────────────────────────────
 step "Starting the stack" "Five services: Caddy (HTTPS), the relay, Postgres, MinIO for media, and the speech-to-text server."
