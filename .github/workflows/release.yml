@@ -140,6 +140,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # One-time org setting, not something this workflow can do: a container
+      # package published by Actions is PRIVATE until someone flips it in
+      # Settings → Packages → <package> → Change visibility → Public. While it
+      # is private, `docker pull` from an unauthenticated host answers
+      # "error from registry: unauthorized" — which is what the installer hits,
+      # and it looks exactly like a network problem to whoever is installing.
+      # Check with: curl -s "https://ghcr.io/token?scope=repository:mneme-blog/mneme-server:pull&service=ghcr.io"
+      # then GET the manifest with that token — 403 means private, 404 means the
+      # tag is genuinely missing.
       # The version is stamped into the binary (main.version) via the Dockerfile
       # ARG, so `journald version` and the dashboard report the released tag.
       - uses: docker/build-push-action@v7
