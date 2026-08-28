@@ -393,7 +393,13 @@ Markdown that a new **`editor/doc.ts markdownToDoc`** (headings/lists/quotes/par
 runs) turns into a real entry doc; the prompts ask for a leading `# ` title line, which
 `splitMarkdownTitle` lifts into the entry's **title** on save (replacing the date-time default; a
 draft without one keeps the default — regression check `scripts/interview-title.ts`); prompts live
-in `ai/prompts.ts`. **Interview types** are built-in
+in `ai/prompts.ts`. The **question count is a default the type prompt overrides**: the generic rules
+plan five questions (the video plan asks for `PLAN_TARGET`), but both prompts say that a number or a
+length stated in the type's own prompt ("ask three questions") wins — bounded in the video case by
+`PLAN_MIN`/`PLAN_MAX`, which is all the parser can carry. That lever is the *prompt text* rather than
+a `questionCount` field for the same reason the per-question time limit is device-local: `sync/engine.ts`
+encodes `InterviewType` field by field, so an older build editing the type would strip a new field
+silently. **Interview types** are built-in
 **and** user-created, and sync exactly like templates — a new encrypted record kind (`kind:
 'interviewType'` inside the ciphertext, `sync/engine.ts`) so **no server changes**: same once-per-
 device pristine/builtin seeding (`data/interviews.ts`), supersede-on-sync, dirty-flag outbox, local

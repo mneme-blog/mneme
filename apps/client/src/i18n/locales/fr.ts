@@ -465,7 +465,7 @@ const fr: Partial<Record<MessageKey, string>> = {
   'assistant.types.introPlaceholder': 'Une ligne affichée dans le sélecteur',
   'assistant.types.prompt': 'Consigne — ce que couvre l’entretien',
   'assistant.types.promptPlaceholder':
-    'Décrivez les thèmes à aborder et le ton. L’IA pose déjà une question à la fois et rédige l’entrée ensuite — ceci oriente simplement ce sur quoi elle interroge.',
+    'Décrivez les thèmes à aborder et le ton. L’IA pose déjà une question à la fois et rédige l’entrée ensuite — ceci oriente simplement ce sur quoi elle interroge. Indiquez ici un nombre de questions (« pose trois questions ») et il remplacera les cinq habituelles.',
   'assistant.types.untitled': 'Entretien sans titre',
   'assistant.types.save': 'Enregistrer l’entretien',
   'assistant.types.create': 'Créer l’entretien',

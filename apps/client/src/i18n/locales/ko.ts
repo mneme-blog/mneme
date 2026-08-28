@@ -436,7 +436,7 @@ const ko: Partial<Record<MessageKey, string>> = {
   'assistant.types.intro': '소개',
   'assistant.types.introPlaceholder': '선택 화면에 표시되는 한 줄',
   'assistant.types.prompt': '프롬프트 — 인터뷰가 다루는 내용',
-  'assistant.types.promptPlaceholder': '다룰 주제와 어조를 설명하세요. AI는 이미 한 번에 하나씩 질문하고 이후 항목을 작성합니다 — 이것은 무엇을 물을지를 안내할 뿐입니다.',
+  'assistant.types.promptPlaceholder': '다룰 주제와 어조를 설명하세요. AI는 이미 한 번에 하나씩 질문하고 이후 항목을 작성합니다 — 이것은 무엇을 물을지를 안내할 뿐입니다. 여기에 질문 개수를 적으면("세 개만 질문해") 기본값인 다섯 개를 대신합니다.',
   'assistant.types.untitled': '제목 없는 인터뷰',
   'assistant.types.save': '인터뷰 저장',
   'assistant.types.create': '인터뷰 만들기',

@@ -472,7 +472,7 @@ const es: Partial<Record<MessageKey, string>> = {
   'assistant.types.introPlaceholder': 'Una línea que se muestra en el selector',
   'assistant.types.prompt': 'Indicación: lo que cubre la entrevista',
   'assistant.types.promptPlaceholder':
-    'Describe los temas a cubrir y el tono. La IA ya hace una pregunta a la vez y redacta la entrada después: esto solo orienta sobre qué pregunta.',
+    'Describe los temas a cubrir y el tono. La IA ya hace una pregunta a la vez y redacta la entrada después: esto solo orienta sobre qué pregunta. Indica aquí un número de preguntas («haz tres preguntas») y sustituirá a las cinco habituales.',
   'assistant.types.untitled': 'Entrevista sin título',
   'assistant.types.save': 'Guardar entrevista',
   'assistant.types.create': 'Crear entrevista',
