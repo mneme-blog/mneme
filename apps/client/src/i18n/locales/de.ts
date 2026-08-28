@@ -474,7 +474,7 @@ const de: Partial<Record<MessageKey, string>> = {
   'assistant.types.introPlaceholder': 'Eine Zeile, die in der Auswahl angezeigt wird',
   'assistant.types.prompt': 'Prompt — worum es im Interview geht',
   'assistant.types.promptPlaceholder':
-    'Beschreib die Themen, die behandelt werden sollen, und den Ton. Die KI stellt bereits eine Frage nach der anderen und schreibt den Eintrag anschließend zusammen — dies steuert nur, wonach sie fragt.',
+    'Beschreib die Themen, die behandelt werden sollen, und den Ton. Die KI stellt bereits eine Frage nach der anderen und schreibt den Eintrag anschließend zusammen — dies steuert nur, wonach sie fragt. Nenn hier eine Anzahl Fragen („stell drei Fragen“), und sie ersetzt die üblichen fünf.',
   'assistant.types.untitled': 'Interview ohne Titel',
   'assistant.types.save': 'Interview speichern',
   'assistant.types.create': 'Interview erstellen',

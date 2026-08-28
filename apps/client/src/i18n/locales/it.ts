@@ -478,7 +478,7 @@ const it: Partial<Record<MessageKey, string>> = {
   'assistant.types.introPlaceholder': 'Una riga mostrata nel selettore',
   'assistant.types.prompt': 'Prompt — cosa copre l’intervista',
   'assistant.types.promptPlaceholder':
-    'Descrivi i temi da trattare e il tono. L’IA fa già una domanda alla volta e scrive la voce al termine — questo serve solo a orientare ciò su cui interroga.',
+    'Descrivi i temi da trattare e il tono. L’IA fa già una domanda alla volta e scrive la voce al termine — questo serve solo a orientare ciò su cui interroga. Indica qui un numero di domande («fai tre domande») e sostituirà le cinque abituali.',
   'assistant.types.untitled': 'Intervista senza titolo',
   'assistant.types.save': 'Salva intervista',
   'assistant.types.create': 'Crea intervista',

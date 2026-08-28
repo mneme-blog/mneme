@@ -437,7 +437,7 @@ const zh: Partial<Record<MessageKey, string>> = {
   'assistant.types.intro': '简介',
   'assistant.types.introPlaceholder': '在选择器中显示的一行文字',
   'assistant.types.prompt': '提示——此访谈涵盖的内容',
-  'assistant.types.promptPlaceholder': '描述要涵盖的主题和语气。AI 本就会一次问一个问题，并在之后写出记录——这只是引导它询问的方向。',
+  'assistant.types.promptPlaceholder': '描述要涵盖的主题和语气。AI 本就会一次问一个问题，并在之后写出记录——这只是引导它询问的方向。在这里指明问题数量（“问三个问题”），即可取代通常的五个。',
   'assistant.types.untitled': '无标题访谈',
   'assistant.types.save': '保存访谈',
   'assistant.types.create': '创建访谈',

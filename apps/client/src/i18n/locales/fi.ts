@@ -472,7 +472,7 @@ const fi: Partial<Record<MessageKey, string>> = {
   'assistant.types.introPlaceholder': 'Yksi rivi, joka näytetään valitsimessa',
   'assistant.types.prompt': 'Kehote — mitä haastattelu kattaa',
   'assistant.types.promptPlaceholder':
-    'Kuvaile käsiteltävät teemat ja sävy. Tekoäly kysyy jo yhden kysymyksen kerrallaan ja kirjoittaa merkinnän jälkeenpäin — tämä vain ohjaa sitä, mistä se kysyy.',
+    'Kuvaile käsiteltävät teemat ja sävy. Tekoäly kysyy jo yhden kysymyksen kerrallaan ja kirjoittaa merkinnän jälkeenpäin — tämä vain ohjaa sitä, mistä se kysyy. Kerro tässä kysymysten määrä (”kysy kolme kysymystä”), niin se korvaa tavanomaiset viisi.',
   'assistant.types.untitled': 'Nimetön haastattelu',
   'assistant.types.save': 'Tallenna haastattelu',
   'assistant.types.create': 'Luo haastattelu',

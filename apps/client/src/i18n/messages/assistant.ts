@@ -251,7 +251,7 @@ export const assistant = {
   'assistant.types.introPlaceholder': 'One line shown in the picker',
   'assistant.types.prompt': 'Prompt — what the interview covers',
   'assistant.types.promptPlaceholder':
-    'Describe the themes to cover and the tone. The AI already asks one question at a time and writes the entry up afterward — this just steers what it asks about.',
+    'Describe the themes to cover and the tone. The AI already asks one question at a time and writes the entry up afterward — this just steers what it asks about. Ask for a number of questions here ("ask three questions") and that replaces the usual five.',
   'assistant.types.untitled': 'Untitled interview',
   'assistant.types.save': 'Save interview',
   'assistant.types.create': 'Create interview',

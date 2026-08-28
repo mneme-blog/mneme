@@ -466,7 +466,7 @@ const nl: Partial<Record<MessageKey, string>> = {
   'assistant.types.introPlaceholder': 'Eén regel getoond in de kiezer',
   'assistant.types.prompt': 'Prompt — wat het interview behandelt',
   'assistant.types.promptPlaceholder':
-    'Beschrijf de thema’s die aan bod komen en de toon. De AI stelt al één vraag per keer en schrijft de notitie daarna uit — dit stuurt alleen waar het naar vraagt.',
+    'Beschrijf de thema’s die aan bod komen en de toon. De AI stelt al één vraag per keer en schrijft de notitie daarna uit — dit stuurt alleen waar het naar vraagt. Noem hier een aantal vragen („stel drie vragen”) en dat vervangt de gebruikelijke vijf.',
   'assistant.types.untitled': 'Interview zonder titel',
   'assistant.types.save': 'Interview opslaan',
   'assistant.types.create': 'Interview aanmaken',

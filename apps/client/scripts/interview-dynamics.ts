@@ -16,7 +16,8 @@ import {
   RETRO_MIN_AGE_DAYS,
 } from '../src/ai/reflection';
 import { buildInterviewHistory } from '../src/ai/interview';
-import { interviewSystemPrompt, interviewSynthesisPrompt, videoInterviewPlanPrompt } from '../src/ai/prompts';
+import { interviewSystemPrompt, interviewSynthesisPrompt, videoInterviewPlanPrompt, videoInterviewPlanUserMessage } from '../src/ai/prompts';
+import { PLAN_MAX, PLAN_MIN } from '../src/ai/plan';
 import { fallbackQuestions, toPlan } from '../src/ai/plan';
 import type { JournalEntry } from '../src/sync/engine';
 
@@ -182,11 +183,23 @@ check('an uncued block admits it may hold nothing forward-looking', uncuedPrompt
 check('…and says to drop the idea rather than invent one', uncuedPrompt.includes('drop the idea silently'));
 
 const plan = videoInterviewPlanPrompt(type, '', 6, { gap, retrospect: retro, fenceToken: 'tok' });
-check('the video plan opens on the gap', plan.includes('Make the FIRST of the 6 questions about that stretch'));
-check('the gap question counts towards the planned total', plan.includes('It counts towards the 6'));
-check('exactly one planned question revisits an older thought', plan.includes('Make exactly ONE of the 6 questions revisit'));
+check('the video plan opens on the gap', plan.includes('Make the FIRST of the planned questions about that stretch'));
+check('the gap question counts towards the planned total', plan.includes('It counts towards the total'));
+check('exactly one planned question revisits an older thought', plan.includes('Make exactly ONE of the planned questions revisit'));
 check('the video plan carries the same no-guilt rules', plan.includes('no guilt, no pressure'));
 check('the video plan still demands the Q: line format', plan.includes('Begin every line with "Q: "'));
+
+// The question count is a DEFAULT, not a rule: an interview type whose prompt
+// asks for a different number ("ask me three questions") has to win, because
+// that prompt is the only place the user can say so — the count is deliberately
+// not a synced field on InterviewType.
+check('the written interview defers to a count in the type prompt', /unless the "What this interview is about" section below asks for a number of questions or a length of its own/.test(without));
+check('…and still names 5 as the default', without.includes('Plan on about 5 questions'));
+check('…and keeps the progress marker honest against whichever count applies', without.includes('Keep the marker honest against whichever count applies'));
+check('the video plan defers to a count in the type prompt', plan.includes('unless the "What this interview is about" section asks for a number of its own'));
+check('…bounded by what the plan parser can carry', plan.includes(`never fewer than ${PLAN_MIN}, never more than ${PLAN_MAX}`));
+check('…and no longer pins the output to a fixed line count', !plan.includes('Exactly 6 lines'));
+check('the plan user turn says the count is the type\'s to override', videoInterviewPlanUserMessage(6).includes('unless the interview type asked for a different number'));
 
 const planNoDynamics = videoInterviewPlanPrompt(type, '', 6);
 check('a plan without dynamics is unchanged', !planNoDynamics.includes('stretch since the last entry') && !planNoDynamics.includes('Older thoughts'));

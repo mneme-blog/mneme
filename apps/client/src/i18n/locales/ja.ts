@@ -469,7 +469,7 @@ const ja: Partial<Record<MessageKey, string>> = {
   'assistant.types.introPlaceholder': 'ピッカーに表示される一行',
   'assistant.types.prompt': 'プロンプト — インタビューが扱う内容',
   'assistant.types.promptPlaceholder':
-    '扱うテーマとトーンを説明してください。AI はすでに一度に一つずつ質問し、その後エントリーをまとめます。ここでは何を尋ねるかを方向づけるだけです。',
+    '扱うテーマとトーンを説明してください。AI はすでに一度に一つずつ質問し、その後エントリーをまとめます。ここでは何を尋ねるかを方向づけるだけです。ここで質問の数を指定すれば（「3つ質問して」）、通常の5問に代わります。',
   'assistant.types.untitled': '無題のインタビュー',
   'assistant.types.save': 'インタビューを保存',
   'assistant.types.create': 'インタビューを作成',

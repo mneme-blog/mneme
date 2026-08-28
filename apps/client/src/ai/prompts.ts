@@ -9,6 +9,7 @@
 // prompt tells the model to point at. currentLocale()/t() are import-safe
 // outside Vite (the tsx repro scripts) — they fall back to English there.
 import { currentLocale, t } from '../i18n';
+import { PLAN_MAX, PLAN_MIN } from './plan';
 import { isoDate } from './flatten';
 import { fenced, fenceRules, newFenceToken } from './fence';
 import type { JournalGap, Retrospect } from './reflection';
@@ -20,6 +21,14 @@ import type { JournalGap, Retrospect } from './reflection';
 // (ai/fence.ts). Containment, not a cure — the real backstop is that output is
 // always user-reviewed before it is inserted or saved.
 const ENTRY_FENCE = 'entry';
+
+// How many questions the written interview plans when the type says nothing
+// about length. It is a default, not a rule: an interview type's own prompt is
+// user-authored ("ask me three questions", "keep this to a single question")
+// and overriding the generic instruction is the only lever the user has — the
+// count is deliberately not a field on InterviewType, which sync/engine.ts
+// encodes field by field (an older build editing the type would strip it).
+const DEFAULT_QUESTIONS = 5;
 
 export type AiEditorAction = 'continue' | 'summarize' | 'title';
 
@@ -183,7 +192,8 @@ export function interviewSystemPrompt(
     'How to run the interview:',
     '- Ask exactly ONE question at a time, then wait for the answer. Never bundle several questions together.',
     '- Keep each question short, warm, and specific, and build on what the user just said.',
-    '- Plan on about 5 questions (4–6). So the user always knows where they stand, end every question with a bare progress marker in parentheses, e.g. "(2/5)" for the second of five planned questions. You may revise the plan as answers come in — just keep the marker honest.',
+    `- Plan on about ${DEFAULT_QUESTIONS} questions — unless the "What this interview is about" section below asks for a number of questions or a length of its own, in which case that wins, however short or long it is. Follow it as written; do not drift back towards ${DEFAULT_QUESTIONS}.`,
+    '- So the user always knows where they stand, end every question with a bare progress marker in parentheses, e.g. "(2/5)" for the second of five planned questions. Keep the marker honest against whichever count applies — you may revise the plan as answers come in.',
     "- Don't lecture, summarize, or give advice while interviewing — just ask and briefly acknowledge.",
     `- Conduct the entire interview in ${currentLocale().english} — every question and acknowledgment.`,
     `- Once you have enough for a good entry — at the latest after the planned questions — do NOT ask another question. Instead say plainly that you have everything you need and that the user can press "${t('assistant.interview.finish')}" whenever they're ready.`,
@@ -297,7 +307,7 @@ export function videoInterviewPlanPrompt(
     'You will NOT see or hear their answers, so plan the entire set now — you get no chance to follow up.',
     '',
     'How to plan the questions:',
-    `- Write exactly ${count} questions.`,
+    `- Write exactly ${count} questions — unless the "What this interview is about" section asks for a number of its own, in which case write exactly that many instead (never fewer than ${PLAN_MIN}, never more than ${PLAN_MAX}).`,
     '- Each must be answerable out loud in 30–90 seconds. Nothing that needs a list, a document, or a long think.',
     '- One idea per question: a single sentence ending in one question mark. Never join two questions with "and" or ask a follow-up in the same line.',
     '- No yes/no questions, and no greetings — the question is shown on its own as a title card, not spoken to.',
@@ -307,7 +317,7 @@ export function videoInterviewPlanPrompt(
     `- Write them in ${currentLocale().english}.`,
     '',
     'Output format — this matters:',
-    `- Exactly ${count} lines, one question per line.`,
+    '- One line per question and nothing else, for however many questions you planned.',
     '- Begin every line with "Q: " and nothing else.',
     '- No numbering, no progress markers, no headings, no preamble, no commentary after.',
     '',
@@ -318,7 +328,7 @@ export function videoInterviewPlanPrompt(
       ? gapSection(
           gap,
           fenceToken,
-          `Make the FIRST of the ${count} questions about that stretch: what has been going on in the meantime, and — lightly — whether something was keeping them from writing. It counts towards the ${count}, it is not an extra one.`,
+          'Make the FIRST of the planned questions about that stretch: what has been going on in the meantime, and — lightly — whether something was keeping them from writing. It counts towards the total, it is not an extra one.',
         )
       : '',
     historyText
@@ -333,7 +343,7 @@ export function videoInterviewPlanPrompt(
       ? retrospectSection(
           retrospect,
           fenceToken,
-          `Make exactly ONE of the ${count} questions revisit a single one of those older thoughts — one of the ${count}, not an extra one, and not the first.`,
+          'Make exactly ONE of the planned questions revisit a single one of those older thoughts — one of them, not an extra one, and not the first.',
         )
       : '',
   ].join('\n');
@@ -341,7 +351,7 @@ export function videoInterviewPlanPrompt(
 
 /** The user turn that asks for the plan. */
 export function videoInterviewPlanUserMessage(count: number): string {
-  return `Plan the ${count} questions for this video interview now.`;
+  return `Plan the questions for this video interview now — ${count} of them, unless the interview type asked for a different number.`;
 }
 
 /** Freeform draft: the user gives a one-line brief, the model drafts a whole entry. */
