@@ -1,7 +1,7 @@
 # Mneme docs
 
-The full documentation set. The top-level [`../README.md`](../README.md) is the friendly tour and the
-quick local start; everything here is the detailed reference. Start wherever your curiosity (or your
+The full documentation set. The top-level [`../README.md`](../README.md) is the short orientation —
+what Mneme is and how to get it running in one command; everything here is the detailed reference. Start wherever your curiosity (or your
 incident) points you.
 
 ## For everyone
@@ -33,8 +33,10 @@ incident) points you.
 
 - [`../README.md`](../README.md) — the friendly overview + quick local start.
 - [`../server/README.md`](../server/README.md) — running and testing the Go relay specifically.
-- [`../CLAUDE.md`](../CLAUDE.md) — the **decision document** and source of truth (§1–§12 in German;
-  §0 is an English operating guide). Locked decisions and the build-order roadmap live here.
+- [`../CLAUDE.md`](../CLAUDE.md) — the **decision document** and source of truth (§0 is the operating
+  guide; §1–§12 the binding decisions). Locked decisions and the build-order roadmap live here.
+- [`../SECURITY-AUDITS.md`](../SECURITY-AUDITS.md) — both internal security audit passes, verbatim,
+  newest first, with what each finding turned into.
 
 > If a doc here ever disagrees with `CLAUDE.md` on a *decision*, `CLAUDE.md` wins. These docs describe
 > and explain; `CLAUDE.md` decides.

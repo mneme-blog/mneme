@@ -13,11 +13,12 @@ For day-two operations (backups, restore, upgrades, health checks, troubleshooti
 
 ## What you get
 
-A four-container stack, reachable from your local network only:
+A five-container stack, reachable from your local network only:
 
 ```
 browser ──https──> web (Caddy :443, everything under /mneme)
                      ├── /mneme/v1/*, /healthz, /readyz, /admin* ──> server :8080 (prefix stripped)
+                     ├── /mneme/whisper/*  ──forward_auth──> server, then ──> whisper :8000
                      └── everything else under /mneme/: client SPA (static)
                                               server ──> postgres, minio (internal network only)
 ```
@@ -30,6 +31,9 @@ The pieces:
 - **`server`** — the Go relay `journald`.
 - **`postgres`** — bookkeeping + opaque ciphertext blobs.
 - **`minio`** — encrypted media chunks (S3-compatible).
+- **`whisper`** — the bundled speech-to-text server (Speaches), reachable only through Caddy and only
+  after the relay authorizes the request. A one-shot `whisper-model` companion installs the default
+  model into its cache volume on first `up` (a ~1.6 GB download, retried; nothing else waits on it).
 
 Everything is driven through `./deploy/prod.sh`, a thin wrapper that pins the prod compose file and
 your `.env.prod` so you can't accidentally run the wrong stack at 2 a.m.

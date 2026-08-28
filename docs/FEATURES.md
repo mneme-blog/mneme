@@ -33,6 +33,8 @@ A real editor, not a glorified `<textarea>`.
   *inside* the encrypted body, moving it around leaks precisely nothing to the server.
 - **Labels** with autocomplete, and **multiple notebooks** ("journals") to keep your dream diary and
   your tax anxieties in separate rooms.
+- **Markdown source toggle** — flip any entry between the rich surface and its Markdown source and
+  back without losing so much as a maths formula or an embedded clip.
 
 ## Media (all end-to-end encrypted, chunked, and synced)
 
@@ -63,6 +65,8 @@ A real editor, not a glorified `<textarea>`.
 - **Templates** — built-in starters (Experiment log, Study notes, and friends) *and* your own, fully
   editable and deletable. They sync as encrypted blobs; the server can't tell a template from an entry,
   which is rather the point.
+- **Badges** — quiet, locally-computed milestones for the habit you're building. Nothing about them
+  syncs, and nobody is ranked against you.
 
 ## The AI assistant (optional, off by default, private by design)
 
@@ -183,9 +187,14 @@ server still can't read or use the key. Full analysis in
 - **Backups & disaster recovery** — one gzipped archive of every vault's ciphertext (no keys, no
   plaintext), via the dashboard *or* the `journald backup` / `restore` / `list-backups` CLI. See
   [MAINTENANCE.md](./MAINTENANCE.md).
-- **Update awareness** — the dashboard checks the running build against the latest GitHub release
-  (`/admin/version`) and quietly tells you when a newer one exists. Tagged releases (`v*`) build and
-  publish a Docker image automatically via GitHub Actions.
+- **One-click updates, with a way back** — the dashboard sees when a newer release exists and can
+  apply it (or a per-commit `main` build), and roll one back. The relay never updates itself: it
+  writes a request that a root-owned host agent carries out — pre-update backup, pull, health gate,
+  and **automatic rollback** if the new version never reports healthy. Before you press it, it tells
+  you whether undoing that release is an image swap or needs the archive replayed, because every
+  migration has to declare which it is.
+- **Abuse controls** — per-IP throttling on the unauthenticated endpoints (and on admin-token
+  guesses), an optional per-vault storage quota, and security headers on every relay response.
 
 ---
 

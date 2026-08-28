@@ -610,7 +610,12 @@ Deliberate residuals, so they are choices rather than surprises:
 
 ## 7. Known weaknesses / hardening backlog
 
-In rough priority order:
+◐ **Authenticate the rest of the framing** (highest open item, above the numbered list because the
+numbering below is referenced elsewhere): record bodies now bind their wire id as AAD, so ciphertexts
+cannot be swapped between records — but `deleted` / `lww_clock` are still cleartext, so rollback and
+withholding remain accepted (§6.7). A signed manifest or hash chain is unbuilt.
+
+Then, in rough priority order:
 
 1. 🔧 **Ship a tamper-resistant client** (Tauri, signed) and/or serve the PWA separately from the relay
    with SRI + strict CSP — closes §6.1, the most fundamental gap for browser E2EE.
@@ -640,7 +645,7 @@ Severities reflect impact **within the stated threat model** (the relay operator
 
 | # | Sev | Finding | Status | Tracked in |
 |---|-----|---------|--------|-----------|
-| 1 | High | AEAD does not authenticate `entry_id` / `deleted` / `lww_clock` — a hostile relay can relabel, resurrect, or pin entries (media chunks *do* bind AAD; entry bodies don't) | 🔧 Open | §6.1, [ENCRYPTION.md §3](./ENCRYPTION.md) |
+| 1 | High | AEAD does not authenticate `entry_id` / `deleted` / `lww_clock` — a hostile relay can relabel, resurrect, or pin entries (media chunks *do* bind AAD; entry bodies don't) | ◐ **Partly fixed** — every record body now binds its wire id as AAD (`mneme:record:v1:<entry_id>`), so ciphertexts can't be swapped between records; `deleted` / `lww_clock` remain unauthenticated (rollback/withhold accepted, §6.7) | §6.1, §6.7, [ENCRYPTION.md §3](./ENCRYPTION.md) |
 | 2 | High | No Content-Security-Policy — the design's primary mitigation for in-memory keys is absent | ✅ **Fixed** — strict CSP + security headers ([#41](https://github.com/mneme-blog/mneme/issues/41)) | §6.2, §7.2 |
 | 3 | High | Owner binding at `/v1/register` is unauthenticated (anyone with the owner pubkey can attach a device → write/DoS) | ✅ **Fixed** — registration requires an owner-identity-key signature ([#40](https://github.com/mneme-blog/mneme/issues/40)) | §6.5 |
 | 4 | Med | No auto-lock / key-lifetime limit | ✅ **Fixed** — 15-min inactivity auto-lock + manual lock (§4, §6.11) | §4 |
@@ -667,6 +672,9 @@ findings 10–12 (polish).
 ## 8. Reporting
 
 No private data should ever reach the server in plaintext — if you find a way it can, that's a
-top-severity bug. Until a dedicated channel exists, report security issues privately to the maintaine. 
-Report to [weber.lars+mnemeSecurity@gmail.com](weber.lars+mnemeSecurity@gmail.com)
-rather than opening a public issue.
+top-severity bug. Until a dedicated channel exists, report security issues privately to the maintainer
+at [weber.lars+mnemeSecurity@gmail.com](mailto:weber.lars+mnemeSecurity@gmail.com) rather than opening
+a public issue.
+
+The two internal audit passes and the fate of every finding are recorded verbatim in
+[`../SECURITY-AUDITS.md`](../SECURITY-AUDITS.md).

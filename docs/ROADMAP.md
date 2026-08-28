@@ -20,9 +20,13 @@ Three columns, three honesties:
   **FIDO2 / WebAuthn PRF security-key** seal (v:2), switchable in Preferences → Vault.
 - **15-min inactivity auto-lock** + manual lock; seal survives phrase rotation.
 - **Recovery-phrase rotation** (full re-encrypt under a new identity, then wipe the old owner).
+- **Record-bound ciphertexts** — every record body takes its cleartext wire id as AAD, so the relay
+  cannot serve one record's ciphertext under another's id.
+- **Strict Content-Security-Policy** (one definition, shipped as a Caddy header *and* a build-time
+  `<meta>`) — the design's named XSS mitigation for in-memory keys — plus link-href allowlisting.
 
 ### Local-first storage & sync
-- Durable per-owner **wa-sqlite database on OPFS** (schema v8) as the source of truth; forward-only
+- Durable per-owner **wa-sqlite database on OPFS** (schema v9) as the source of truth; forward-only
   client migrations; dirty-flag offline outboxes for edits, deletes, and media uploads.
 - **Encrypted LWW sync** (push/pull) with device Ed25519 challenge-response auth; offline-tolerant
   30 s sync loop.
@@ -33,24 +37,35 @@ Three columns, three honesties:
   backlinks**.
 - **Media**: video/audio recording, images + galleries + lightbox, file attachments,
   **location / travel maps** (frozen static snapshot).
+- **Markdown source toggle** in the editor (lossless round-trip; custom atoms are fenced, not lost).
 - **Templates** (built-in + user, synced as encrypted oplog records).
 - **Multiple journals** that sync across a vault's devices (metadata inside the ciphertext).
 - Editable per-entry date/time, labels + autocomplete.
 
 ### Finding & organising
 - **Vault-wide search** (⌘/Ctrl+K) — substring, over decrypted in-memory entries.
-- **Calendar** (month/year/timeline + heatmap), **writing stats** (totals/streaks/days).
+- **Calendar** (month/year/timeline + heatmap), **writing stats** (totals/streaks/days), and
+  **gamification badges** — all computed locally over decrypted entries, none of it synced.
 - Entry, journal, and whole-vault deletion, each confirmation-gated and propagated.
 
 ### Localization & presentation
 - **12-language UI** (en, de, es, fr, it, nl, fi, ar, hi, ja, ko, zh) with `Intl` date/number
   formatting, pluralization, and full **RTL** support for Arabic. Device-local, never synced.
 - **Six theme skins × six accents**, light/dark/system.
+- **Installable PWA** — precached app shell, offline-capable, autoUpdate service worker.
 
 ### AI assistant (opt-in, off by default, never through the relay)
 - Two backends behind one interface: **Anthropic** (BYO key) and **Ollama** (fully local).
-- **Ask my journal**, **editor writing help**, **guided interviews** + **freeform draft**,
-  user-editable **interview types**.
+- **Ask my journal**, **editor writing help**, **guided written interviews** + **freeform draft**,
+  fifteen built-in and user-editable **interview types** (synced as encrypted records).
+- **Guided video interviews** — the question list planned in one call, an editable plan step, then a
+  recording session that makes zero AI calls and zero network requests.
+- **One-click film rendering** — answers stitched into one video with title cards, entirely
+  on-device (WebCodecs via mediabunny, realtime-canvas fallback).
+- **Recording transcription** — retroactive, per recording or per interview answer, against the
+  speech-to-text server the stack bundles (relay-authorized, per-vault allowances) or your own
+  loopback one. Transcripts are content inside the encrypted body: searchable, editable, and they
+  outlive the recording.
 - AI settings (API key included) sealed at rest and synced as an encrypted record.
 
 ### Import
@@ -62,12 +77,22 @@ Three columns, three honesties:
   configurable CORS.
 - **Admin dashboard** + `/admin/stats` (pseudonymous per-vault footprints, owner-less daily counters),
   operator **vault deletion**.
+- **Abuse controls**: per-IP token buckets on the unauthenticated and admin-auth endpoints, a
+  per-owner storage quota, and relay-side security headers on every response.
+- **Owner-authorized device registration** (an owner-identity signature proves seed possession) and
+  optional **operator approval** of new vaults (`REQUIRE_APPROVAL`) for a single-tenant/family relay.
+- **Bundled speech-to-text** (Speaches, same-origin via Caddy) behind a relay authorization gate that
+  sees the session token and declared size — never the audio.
 - **Backup + disaster recovery** (`internal/backup`): gzipped ciphertext archives via the admin
   surface *and* the `journald backup` / `restore` / `list-backups` CLI.
 - **Production deployment stack**: `docker-compose.prod.yml` + `deploy/prod.sh` + Caddy (HTTPS on one
-  origin), self-hosted fonts, runtime-configurable relay URL, the `platform/` shell seam.
-- **Release automation + update check**: tagged `v*` releases build/publish a Docker image via GitHub
-  Actions; the admin dashboard compares the running build against the latest release (`/admin/version`).
+  origin), self-hosted fonts, runtime-configurable relay URL, the `platform/` shell seam — installed
+  by the one-command `deploy/install.sh`.
+- **Release automation + one-click updates**: tagged `v*` releases publish server and web images via
+  GitHub Actions; the dashboard applies a release (or a per-commit `main` build) and rolls one back
+  through a root-owned host agent — with a pre-update backup, a health gate, automatic rollback, and
+  a per-migration `safe`/`breaking` schema contract that says up front whether undoing it is an image
+  swap or a destructive replay.
 
 ---
 
@@ -91,13 +116,16 @@ Three columns, three honesties:
 - **Export** (encrypted archive + optional plaintext) and **non-Day-One import**.
 
 ### Security hardening backlog
-(Tracked in full, with severities, in [SECURITY.md](./SECURITY.md).)
-- **Content-Security-Policy** in the client — the design's stated XSS mitigation, still not shipped.
-- **Bind the framing into the AEAD** (authenticate `entry_id` / `deleted` / `lww_clock`) so a hostile
-  relay can't relabel, resurrect, or pin entries.
-- **Harden device registration** (prove seed possession / existing-device approval) + **rate limiting**.
+(Tracked in full, with severities, in [SECURITY.md](./SECURITY.md); the two internal audit passes and
+what each finding turned into are in [`SECURITY-AUDITS.md`](../SECURITY-AUDITS.md) — all findings
+closed.)
+- **Authenticate the rest of the framing** — record bodies now bind their wire id as AAD, so the relay
+  can't serve one record's ciphertext under another's, but `deleted` / `lww_clock` are still cleartext
+  and unauthenticated: rollback, withhold, and reorder remain accepted (a signed manifest or hash
+  chain is unbuilt).
 - **HLC or Lamport `lww_clock`** to stop leaking real wall-clock edit times.
-- **External security audit** before any 1.0 or real-data use.
+- **OS-keychain at-rest seal** — the Tauri half of the at-rest story (see above).
+- **External security audit** before any 1.0 or real-data use. The two audits so far were internal.
 
 ### Server / protocol
 - **`packages/proto`** shared wire-format (JSON for now).

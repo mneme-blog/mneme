@@ -67,7 +67,7 @@ cross the boundary.
 
 ```
 mneme/
-├── CLAUDE.md                  # decision document (source of truth; §1–§12 in German)
+├── CLAUDE.md                  # decision document (source of truth; §0 guide, §1–§12 decisions)
 ├── README.md                  # friendly overview + quick start
 ├── docs/                      # you are here
 │   ├── ARCHITECTURE.md
@@ -291,19 +291,23 @@ snapshot of the load-bearing pieces:
 | Seed at-rest sealing — Argon2id passphrase + FIDO2/WebAuthn PRF, auto-lock | ✅ built |
 | Relay (auth, LWW push/pull, media relay, reminders CRUD, account deletion, CORS) | ✅ built |
 | Client ↔ relay encrypted sync (offline outbox, dirty flags) | ✅ wired |
-| Durable local DB (wa-sqlite on OPFS, per owner, schema v8) | ✅ built |
+| Durable local DB (wa-sqlite on OPFS, per owner, schema v9) | ✅ built |
 | TipTap editor — rich text, tables, code highlighting, math, wikilinks + backlinks | ✅ built |
 | Media — video/audio, images/galleries/lightbox, files, location maps (encrypted, MinIO) | ✅ built |
 | Templates, multiple journals, interview types (encrypted, ride the entry oplog) | ✅ built |
 | Vault-wide search (⌘/Ctrl+K) | ✅ built (substring) |
 | Recovery-phrase rotation + account wipe | ✅ built |
 | AI assistant (Anthropic + Ollama; ask / write / guided interviews; off by default) | ✅ built |
+| Video interviews + on-device film rendering; recording transcription (bundled STT) | ✅ built |
+| Installable PWA (precached shell, offline) | ✅ built |
 | Day One import | ✅ built |
 | Admin dashboard, operator vault deletion, backup + restore (CLI + admin) | ✅ built |
+| One-click updates + rollback (host agent, health gate, schema contract), new-vault approval | ✅ built |
+| CSP + relay security headers, rate limits, per-owner quota, owner-authorized registration | ✅ built |
 | Production deploy stack (Caddy + compose.prod), self-hosted fonts, runtime relay URL | ✅ built |
 | FTS5 full-text index | 🔜 blocked on a custom wa-sqlite wasm build |
 | Tauri desktop + mobile shells (Track A foundation done) + OS-keychain seal | 🔜 in progress |
 | Reminders UI + local scheduled notifications | 🔜 next |
 | Export / non-Day-One import | 🔜 later |
-| CSP, rate limiting, HLC/Lamport clock, AEAD framing binding | 🔜 security backlog |
+| HLC/Lamport clock; authenticating `deleted`/`lww_clock`; external audit | 🔜 security backlog |
 | `packages/proto` shared wire-format | 🔜 later (JSON for now) |

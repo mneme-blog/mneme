@@ -1,45 +1,22 @@
 # Mneme
 
-> A private place to remember — an open-source, local-first, **end-to-end-encrypted** journal.
-> Your thoughts are encrypted on your device before they go anywhere. Nobody else can read them:
-> not the server, not whoever runs the server, not a well-funded company that would dearly love to
-> know what you think about. Including, if you lose your recovery phrase, **you**. More on that
-> delightful little footgun in a moment — it's important, so we put it in a big yellow box.
+> An open-source, local-first, **end-to-end-encrypted** journal. Your thoughts are encrypted on your
+> device before they go anywhere, and the server is too clueless to read them if it tried.
 
-Mneme is a calm, paper-coloured notebook for your thoughts. It runs in your browser today (native
-desktop and mobile shells are on the way), keeps the real database on your own device, and syncs
-through a server so clueless it couldn't spy on you if it tried.
+Mneme is a calm, paper-coloured notebook for the unfiltered version of you — the fears, the
+half-formed ideas, the things you'd never say out loud. That is exactly the data a multi-billion-euro
+company would most like to have, so the design starts from one hard rule: **the server can never read
+your journal.** No accounts to harvest, no plaintext on anyone's disk but yours, no telemetry. Run it
+on a Raspberry Pi in your closet and owe nobody an explanation.
 
-And when the blank page wins — as it does for most people, most of the time — Mneme stops asking you
-to write and starts asking you **questions**. A **local AI model** (running on your own machine, so
-nothing leaves it) interviews you one reflective question at a time and then drafts a full entry from
-your answers for you to keep or edit. You can answer by typing, or **on camera** — and a video
-interview stitches itself into a single film, each question cut in as a title card, rendered entirely
-on your own device. It's the antidote to writer's block and blank-page anxiety, and the quiet engine
-behind actually building a writing habit: you never have to face an empty box or wonder where to
-start. The prompts are yours to shape, and it remembers past entries of the same kind so a recurring
-reflection stays continuous. [Jump to the interview →](#when-the-blank-page-wins-mneme-interviews-you)
+It runs in your browser today (native desktop and mobile shells are on the way), keeps the real
+database on your own device, and syncs through a relay that only ever sees opaque ciphertext.
 
----
-
-## What it looks like
-
-A warm, paper-coloured place to think — on a big screen and in your pocket. (Six theme skins and
-dark mode included; this is the default "Paper" look.)
-
-**The editor.** A zen writing surface with a quiet toolbar and a `/` command palette — headings,
-checklists, tables, code, KaTeX math, galleries, and cross-entry links, every bit of it encrypted
-before it leaves the device:
+And when the blank page wins — as it does for most people, most of the time — a **local AI model**
+sits you down for a structured interview instead: one reflective question at a time, then it drafts
+the whole entry for you to keep or edit. In writing, or on camera. Nothing leaves your machine.
 
 ![The Mneme editor on desktop: a three-pane layout with notebooks, an entry list, and a serif writing surface showing rich text, inline math, and lists.](docs/screenshots/desktop-editor.png)
-
-**The calendar.** A month grid with your entries in place, a day view beside it, and a writing
-heatmap for the season:
-
-![The calendar on desktop: a June month grid with entries on their days, a selected day showing its entry, and a writing heatmap.](docs/screenshots/desktop-calendar.png)
-
-**And on your phone.** The same app, responsive down to a mobile shell with bottom navigation —
-installable as a PWA today, native shells on the way:
 
 <p align="center">
   <img src="docs/screenshots/mobile-journal.png" alt="A notebook on mobile: the Tutorial journal's entry timeline with previews and dates." width="44%">
@@ -49,476 +26,129 @@ installable as a PWA today, native shells on the way:
 
 ---
 
-## Why this exists
-
-Your journal is the most honest thing you own. It's where the unfiltered version of you lives — the
-fears, the half-formed ideas, the things you'd never say out loud. That is *exactly* the data that
-multi-billion-euro companies would most like to have, because nothing sharpens an advertising or
-behavioural profile like a person's inner monologue.
-
-Mneme is a small act of refusal. The premise is **data autonomy**: your private thoughts should be
-yours alone, not raw material for someone else's profit model. So the design starts from a hard
-rule — *the server can never read your journal* — and everything else follows from it. No accounts
-to harvest, no plaintext on anyone's disk but yours, no telemetry, no "we value your privacy" page
-that quietly means the opposite. You can run the whole thing on a Raspberry Pi in your closet and
-owe no one an explanation.
-
-The name comes from **Mneme**, the Greek muse of memory (one of the three original Boeotian muses,
-if you want to win a pub quiz). Fittingly, she did not offer a password reset either.
-
----
-
-> [!WARNING]
-> ## There is no password reset. There is no admin recovery. Lose the phrase, lose the journal.
->
-> Your account **is** a 12-word recovery phrase. There is no email, no password, no "forgot
-> password" link — because there is no server-side secret that *could* unlock your data. Your phrase
-> derives the only keys that can decrypt your journal, and those keys never leave your device.
->
-> **If you lose your 12 words, your journal is gone. Permanently. Cryptographically. Forever.**
-> Not "gone, call support." The person running the server *cannot* help you — they hold only
-> unreadable encrypted blobs. This is not a bug or an oversight. It is the literal mechanism that
-> stops anyone else from reading your diary, working exactly as intended.
->
-> **Write the phrase down. On paper. Put it somewhere safe.** A password manager works too. Treat
-> it like the key to a safe-deposit box that holds your entire inner life, because that is precisely
-> what it is.
-
----
-
-## When the blank page wins: Mneme interviews you
-
-This is the feature we would show you first if we could only show you one.
-
-Most journals fail at the same moment: you open the app, the box is empty, and you have nothing to
-say. Mneme's answer is to stop asking you to write and start asking you questions — and then to do
-the writing for you.
-
-### The written interview
-
-Pick an interview type — *Daily check-in*, *Evening reflection*, *Gratitude*, *Weekly review*,
-*Project retro*, *Exam prep*, one of the fifteen built-ins or one you wrote yourself — and the
-assistant asks **one question at a time**, conversationally. When you're done it **synthesises a
-complete entry from your answers**, gives it a title, and hands it to you to read, edit, and save.
-Nothing is written to your journal until you say so.
-
-Two things make it stick rather than being a novelty:
-
-- **It has a memory.** Starting an interview feeds the model your recent entries of the same kind, so
-  the tenth *evening reflection* knows what the ninth said. Recurring reflections stay continuous
-  instead of restarting from zero each time.
-- **The interview types are yours.** Built-in ones are fully editable, you can write your own, and
-  they sync to your other devices as encrypted blobs — the server can't tell an interview type from
-  an entry.
-
-In a hurry? **Freeform draft** takes a one-line brief ("the drive back from my parents', mixed
-feelings") and writes the entry from that instead.
-
-### The video interview — talk to your journal, on camera
-
-The same interview types, answered out loud, in front of your camera.
-
-Mneme plans the whole question list up front (around six questions, and you can **rewrite, reorder,
-delete, or add to them before a single frame is recorded**), then runs the session one question at a
-time: record, retake, skip, go back. A countdown bar drains along the bottom of the preview so you
-always know how much of the current answer you have left — your per-question limit and capture
-quality are yours to set.
-
-Then the part that turns it into a keepsake:
-
-> **One click stitches your answers into a single film**, with each question cut in as a title card.
-
-The film renders **entirely on your device** — WebCodecs where it exists, a realtime canvas fallback
-where it doesn't — and lands back in the entry as an ordinary video you can play, keep, or export
-with the rest of your journal. Your source clips are kept, so you can retake one answer and
-re-render; when you want the space back, "Delete the source clips" is one button.
-
-Four design decisions are worth knowing, because they are what make this unusual rather than just
-neat:
-
-- **The model never hears your answers.** Browser speech recognition ships your audio to Google or
-  Apple, which is a non-starter here — so the adaptivity moves *before* the session, into planning
-  the questions. During recording there are **zero AI calls and zero network requests**. It's your
-  camera, your device, and nothing else.
-- **It works with no AI at all.** If the model is unreachable, unconfigured, or returns nonsense, a
-  built-in question set steps in. A recording session never dead-ends on a bad model response.
-- **You can have the answers transcribed** — flip on auto-transcribe before you start (or hit
-  "Transcribe answers" months later), tell it what language you're speaking, and what you *said*
-  becomes searchable text, readable by "Ask my journal" and by future-you. Transcripts are ordinary
-  content: editable by hand, and they survive deleting the source clips.
-- **All of it is end-to-end encrypted, like everything else.** The questions, the transcripts, the
-  film, the clips. The relay sees opaque blobs under random ids and cannot tell a video interview
-  from a shopping list.
-
-Both interviews live behind the same door: the assistant is **off by default**, and the recommended
-model is a **local one running on your own machine**, in which case planning the questions and
-drafting the entry never leave it. [The AI section](#the-ai-assistant-optional-off-by-default-and-private-by-design)
-spells out exactly what goes where under which setting — including transcription, which is the one
-step that hands a recording to a server (your own, in the self-hosted stack) and always says so
-first.
-
----
-
-## What you can do with it
-
-Mneme is a full journaling environment, not a text box. Everything below is **built and working
-today** (in the browser app). This is the highlight reel; the exhaustive, up-to-date list lives in
-[`docs/FEATURES.md`](./docs/FEATURES.md).
-
-### Writing
-- **A real rich-text editor** (TipTap/ProseMirror) with a Zen writing surface — serif body text, a
-  quiet toolbar, and a `/` slash palette for inserting anything without reaching for the mouse.
-- **Rich content**: headings, lists, checklists/tasks, blockquotes, **tables** (resizable), and
-  **code blocks with syntax highlighting**.
-- **Math typesetting** — write `$$x^2$$` inline or `$$$ ... $$$` for a display block; formulas render
-  with KaTeX and open in a live-preview LaTeX editor when you click them.
-- **Cross-entry links with backlinks** — type `[[` to link to another entry; each entry shows a
-  "Linked from" list of everything that references it, so your journal becomes a little web of
-  thought.
-- **Editable date & time per entry** — backdate or re-date freely (and since the date rides *inside*
-  the encrypted body, re-dating leaks nothing to the server).
-- **Labels** with autocomplete, and **multiple notebooks** ("journals") to keep different threads
-  apart.
-
-### Media (all end-to-end encrypted, chunked, and synced)
-- **Photos and image galleries** — drop images in, they group into galleries and open in a
-  keyboard-navigable lightbox.
-- **Video and audio recording** straight from the editor (via your camera/microphone) — plus the
-  full [guided video interview](#the-video-interview--talk-to-your-journal-on-camera) and its
-  one-click film.
-- **Transcription** of any recording in your journal, so what you said becomes searchable text.
-- **File attachments** of any kind.
-- **Location & travel maps** — pin a place or a from→to journey. The map is rendered **once** into a
-  frozen image at insert time, so opening the entry later makes *no* further calls to any map
-  service.
-
-### Organising & finding
-- **Vault-wide search** (⌘/Ctrl+K) across titles, bodies, labels, and dates.
-- **A calendar** with month, year, and timeline views plus a writing heatmap.
-- **Writing stats** — totals, streaks, and days journaled, all computed locally.
-- **Templates** — built-in starters (experiment log, study notes, and more) plus your own, fully
-  editable, synced as encrypted blobs.
-- **Import** from existing journaling apps, rebuilt locally as encrypted entries (the import file
-  never leaves your device).
-
-### Make it yours
-- **Twelve languages** — the whole interface is localized into English, German, French, Spanish,
-  Italian, Dutch, Finnish, Chinese, Japanese, Korean, Hindi, and Arabic (with the full right-to-left
-  layout). Dates, numbers, and plurals follow the language you pick, not your operating system's.
-- **Six theme skins** (Paper, Modern, Terminal, Forest, Blossom, Lavender), each with a light and
-  dark variant, times six accent tints. Light / dark / system, all stored locally and never synced.
-- **Responsive** — a three-pane desktop layout above 920px, a mobile shell with bottom navigation
-  below it.
-
-### When things change
-- **Recovery-phrase rotation** if you ever fear your phrase leaked (explained in detail below).
-- **Entry, journal, and whole-vault deletion**, each behind an explicit confirmation, propagated to
-  the server and any other device.
-
----
-
-## The AI assistant (optional, off by default, and private by design)
-
-Mneme has an AI assistant that can both **read** and **write** in your journal:
-
-- **Ask my journal** — ask questions over your own entries and get answers grounded in what you've
-  written.
-- **Writing help** in the editor — Continue, Summarize, or Suggest-a-title for the entry you're on,
-  always with a confirm-before-it-inserts step.
-- **Guided interviews, written or on camera** — the headline feature, described in full
-  [above](#when-the-blank-page-wins-mneme-interviews-you): the assistant asks one question at a
-  time and drafts the entry from your answers, or films you answering and stitches the takes into a
-  single film with title cards. Interview types are built-in *and* yours to write, and each
-  interview remembers previous entries of the same kind.
-- **Transcribing recordings** — any video or audio in your journal can be turned into text, so what
-  you said becomes searchable and readable by the assistant. The self-hosted stack ships its own
-  speech-to-text server, so this needs no cloud account and no configuration; Preferences →
-  Assistant → Transcription has a **Check server** button that says whether it is reachable and has
-  its model ready — and offers to download the model if it doesn't. Before a recording is sent
-  anywhere other than your own device, you get a confirmation naming exactly where it goes.
-  That bundled server is not left open to whoever can reach the site: every transcription is
-  authorized by the relay first (which never sees the audio — only whether your device is signed
-  in), with a per-vault daily allowance the operator configures. Defaults to 50 recordings a day;
-  see `TRANSCRIBE_QUOTA_REQUESTS_PER_DAY` in `.env.prod.example` and the relay's startup log, which
-  prints the policy in force.
-
-Here's the important part. The AI feature is **never** routed through the Mneme server — requests go
-straight from your device to the model. You choose the model, and **the recommended choice is a
-local or on-premise LLM** — something like **Gemma running under [Ollama](https://ollama.com/)** on
-your own machine. With a local model, your most private thoughts are used to help you *and never
-leave your computer*. That is the whole spirit of the project.
-
-You **can** instead point it at a cloud model (bring your own Anthropic API key). It's more capable,
-and it's there if you want it — but be clear-eyed about the trade: for each request, the entries
-used as context are decrypted and sent over HTTPS to that provider. You would be handing your inner
-thoughts to exactly the kind of large company this project exists to keep them away from. The choice
-is yours; the settings screen states the consequence plainly, and the assistant ships **off by
-default**.
-
-(Your API key, if you use one, is itself sealed at rest under a key derived from your recovery
-phrase — only openable while your vault is unlocked.)
-
----
-
-## How the security works (the short version)
-
-The one idea behind everything: **the server is outside your circle of trust.** It is a dumb relay
-that stores encrypted blobs and shuffles them between your devices. It never sees plaintext, never
-sees your keys, never sees your phrase.
-
-- **End-to-end encryption.** Every entry and every media chunk is encrypted on your device with
-  **XChaCha20-Poly1305** before it's sent. The server stores opaque ciphertext and can only compare
-  a single integer to resolve which edit is newer.
-- **The phrase is the account.** A 12-word BIP39 phrase derives all your keys and your `owner_id`.
-  No signup, no email, no password database to breach — there's nothing on the server to steal that
-  would help anyone read your journal.
-- **Local-first.** The real database lives on *your* device (an encrypted-at-the-boundary, durable
-  local store). The cloud is just a courier. Offline? Keep writing — it syncs when it can.
-- **Honest about metadata.** E2EE protects *content*, not *shape*. The server can see roughly how
-  often and how much you write, and your reminder times — never *what* you wrote. We don't pretend
-  otherwise; the full list is in [`docs/SECURITY.md`](./docs/SECURITY.md).
-- **At rest.** By default nothing is persisted but your entries (locally) — you re-enter the phrase
-  on a cold start. Optionally ("stay signed in on this device"), your seed is sealed on the device
-  under either an **Argon2id passphrase** or a **FIDO2 / WebAuthn security key** (a YubiKey or a
-  platform passkey), with a 15-minute inactivity auto-lock and a manual "Lock journal" control. It
-  is strictly a device-unlock convenience — your recovery phrase remains the only account anchor.
-
-The deep, frank version — including the known weaknesses and accepted trade-offs — lives in
-[`docs/SECURITY.md`](./docs/SECURITY.md). It does not flatter the project.
-
-### Recovery-phrase rotation, explained properly
-
-If you fear your 12 words may have leaked, you can **replace your recovery phrase** (Preferences →
-Vault → "Replace recovery phrase"). This is *not* a password change — a phrase can't be edited in
-place, because every key and your very identity are derived from it. Instead, rotation performs a
-**full migration**:
-
-1. A brand-new 12-word phrase is generated.
-2. Your entire vault — every entry and every media object — is **re-encrypted under the new keys**.
-3. It's pushed to the server as a **completely new owner**.
-4. Only once everything is safely stored under the new identity is the **old account wiped**
-   (`DELETE /v1/account`) and the old local database destroyed.
-
-The old account stays fully intact until that final step, so an interrupted rotation never loses
-data, and retrying with the same new phrase is safe. Afterwards, the **leaked phrase unlocks
-nothing but an empty vault**.
-
-> [!IMPORTANT]
-> Rotation protects you *going forward*. It cannot retract copies an attacker may have already
-> copied while the old phrase was valid. And of course: write the **new** phrase down too. The same
-> warning as before applies in full.
-
----
-
 ## Quick start
 
-There are two ways in, and they answer different questions.
-
-**"I want my journal on a machine I own."** → the one-line installer, immediately below. This is the
-real thing: HTTPS, restart-on-crash, rolling backups.
-
-**"I just want to see what it is."** → [the local dev stack](#or-just-kick-the-tyres-locally) further
-down. Two commands, a browser tab, no server.
-
----
-
-### Install it for real — one command
-
-The server is a single featherweight Go binary (`journald`, a deliberately clueless relay for opaque
-encrypted blobs) fronted by Caddy for HTTPS. On any Linux box with Docker — a home server, a NAS,
-that Raspberry Pi in the closet — the whole stack is one line:
+On any Linux box with Docker — home server, NAS, that Raspberry Pi in the closet:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mneme-blog/mneme/main/deploy/install.sh | bash
 ```
 
-That's it. No init script, no config file to write first, nothing to create an account with. When it
-finishes it prints the address to open, the admin dashboard and its token (shown once), where backups
-land, and the two things that surprise everyone on first visit — the certificate warning and the
-speech model still downloading in the background.
+That's the entire installation. It checks the machine, generates its own secrets, pulls the images,
+and starts the full production stack — Caddy with HTTPS, the Go relay, Postgres, MinIO, and a
+speech-to-text server — then waits until Mneme genuinely answers before printing your URL and admin
+token. It's safe to re-run: that updates the deployment and touches neither your config nor your
+data.
 
-It opens by telling you what it's about to do, asks whether to go ahead, and then narrates six steps
-— no silent minutes wondering whether it's hung:
+Piping the internet into a shell should make you twitch, especially for something holding your
+journal. [`deploy/install.sh`](./deploy/install.sh) is one readable file of plain bash — read it
+first, then `bash install.sh`. Flags, the manual path, and day-two operations live in
+[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md).
 
-1. **Checks this machine** — Docker and its Compose plugin (it offers to install Docker if missing,
-   showing you the command first), a supported CPU architecture, whether ports 80 and 443 are free,
-   and whether there's disk space and memory to spare.
-2. **Fetches Mneme** into a directory you pick (default `~/mneme`, `/opt/mneme` as root). That
-   directory *is* your deployment from then on.
-3. **Writes `.env.prod`** — a fresh database password, media-store credentials, and an admin token,
-   generated locally with `openssl rand`, saved `chmod 600`, never committed and never transmitted.
-   It detects your LAN address and asks you to confirm it, because Caddy issues the HTTPS
-   certificate for exactly those names.
-4. **Downloads the container images** (~1.5 GB the first time).
-5. **Starts the stack** — Caddy, the relay, Postgres, MinIO, and the speech-to-text server.
-6. **Waits until Mneme genuinely answers** over HTTPS, rather than cheerfully declaring victory the
-   moment containers exist.
-
-When something *is* wrong it stops with an explanation rather than a stack trace: what happened, why
-it matters, and the exact command that fixes it. Ports already taken, no Docker group membership,
-a full disk, a stack that starts but doesn't serve — each has its own message, and the last one
-prints the container states and the relay's own log alongside the likely causes.
-
-It is safe to run again: a second run updates the checkout and restarts onto the current images,
-leaves your `.env.prod` alone, and never touches your data.
-
-Then open the address it printed, and **"Start a new journal"** generates your 12-word recovery
-phrase — in your browser, never on the server. Write it down before you write anything else. (Yes,
-the big yellow box above meant it.)
-
-#### If piping a script from the internet into a shell makes you twitch
-
-Good instinct, and this is your own journal we're talking about.
-[Read it first](./deploy/install.sh); it's one readable file of plain bash with no magic in it:
+**Only kicking the tyres?** The dev stack needs Node 22+ and pnpm (`corepack` handles it):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mneme-blog/mneme/main/deploy/install.sh -o install.sh
-less install.sh          # have a look
-bash install.sh          # then run it
+corepack enable && pnpm install
+pnpm dev                 # the app on http://localhost:5173
+docker compose up -d     # optional: Postgres + MinIO + relay on :8080, if you want sync
 ```
 
-Two things the installer deliberately does *not* do, because it can't and shouldn't: it never sees a
-recovery phrase (yours is generated in your browser, on first use, and never reaches the server), and
-it grants itself no permanent power over your host — it's an ordinary script that ends when it ends.
-Root is only used if Docker itself has to be installed.
+Published ports, `_dev` passwords, plain HTTP — lovely for a look, spiritually a cardboard box.
+Don't keep your real diary in it.
 
-#### Useful flags
-
-Pass them through the pipe with `bash -s --`:
-
-| Flag | What it does |
-|---|---|
-| `--dir PATH` | Install somewhere other than `~/mneme`. |
-| `--site "IP, host.local"` | Set the addresses Caddy answers on, instead of the detected ones. |
-| `--backups PATH` | Where rolling backup archives land (default `~/mneme-backups`). |
-| `--ref TAG` | Install a specific release tag or branch instead of `main`. |
-| `--install-docker` | Install Docker via `get.docker.com` without asking. |
-| `--no-start` | Set everything up but don't start the stack — for a look at `.env.prod` first. |
-| `-y`, `--yes` | Never prompt; take every default (for unattended installs). |
-
-```bash
-# e.g. install a pinned release into /opt, unattended
-curl -fsSL https://raw.githubusercontent.com/mneme-blog/mneme/main/deploy/install.sh \
-  | bash -s -- --dir /opt/mneme --ref v1.0.0 --yes
-```
-
-Afterwards, everything is driven by `./deploy/prod.sh` from the install directory (`ps`,
-`logs -f server`, `down`), and the references below take over.
+Either way, "Start a new journal" hands you twelve words. Which brings us to the important part.
 
 ---
 
-### Or: just kick the tyres locally
-
-> [!NOTE]
-> This is the **dev** setup — the fastest way to *see* Mneme run. It uses published ports, `_dev`
-> default passwords, and plain HTTP. It is emphatically **not** how you should host your actual
-> journal — that's the installer above. Running your real diary on the dev stack is like storing your
-> valuables in the display safe from the hardware store: technically a safe, spiritually a cardboard
-> box.
-
-You'll need **Node 20+** and **pnpm 10** (the repo pins it; `corepack` handles it).
-
-```bash
-corepack enable      # wake up the package manager (once)
-pnpm install         # install dependencies
-pnpm dev             # run the app
-```
-
-Open **http://localhost:5173** and you're in. "Start a new journal" generates a real 12-word
-recovery phrase (write it down!); "I have a recovery phrase" restores from one you already have (a
-password manager can save and fill it).
-
-That's enough to write — the app works fully offline against its local database. To sync between
-devices, bring up the relay too:
-
-```bash
-docker compose up -d            # Postgres + MinIO + the relay, on :8080
-curl localhost:8080/healthz     # {"status":"ok"}
-```
-
-That one command is the whole setup — there is no init script to run and nothing to configure. It
-also starts the bundled speech-to-text server used by the optional transcription feature, which
-downloads its model (~1.6 GB) in the background on the **first** run only; until that finishes,
-Transcribe says the server has no model yet. Watch it with `docker compose logs -f whisper-model`,
-or ignore it entirely — nothing else waits on it.
-
-The client points at `http://localhost:8080` by default (override with `VITE_RELAY_URL`). The vault
-indicator switches to "synced · encrypted" once the handshake succeeds; if the relay is down, the
-app simply stays local and shows "offline" — your writing is never blocked on the network.
-
-Want to watch the whole crypto + sync round-trip without a browser? With the relay running:
-
-```bash
-pnpm --filter client exec tsx scripts/integration.ts   # register → auth → encrypt → push → pull → decrypt
-```
+> [!WARNING]
+> ## There is no password reset. There is no admin recovery.
+>
+> Your account **is** a 12-word recovery phrase. No email, no password, no "forgot password" link —
+> because there is no server-side secret that *could* unlock your data.
+>
+> **Lose the 12 words and your journal is gone. Permanently. Cryptographically. Forever.** Not "gone,
+> call support." Whoever runs the server holds only unreadable blobs and cannot help you. This isn't
+> an oversight; it's the literal mechanism that stops anyone else reading your diary, working exactly
+> as intended.
+>
+> **Write the phrase down. On paper.** (A password manager works too.) Treat it like the key to a
+> safe-deposit box holding your entire inner life, because that is precisely what it is.
 
 ---
 
-### Where to go next
+## What makes it worth the twelve words
 
-- **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** — the full production runbook: the Docker + Caddy
-  stack, HTTPS on a LAN, first start, the `.env.prod` secrets, and the optional operator admin
-  dashboard.
-- **[docs/MAINTENANCE.md](./docs/MAINTENANCE.md)** — day-two operations: backups, restore, upgrades,
-  health checks, and troubleshooting.
-- **[server/README.md](./server/README.md)** and **[docs/API.md](./docs/API.md)** — the relay's API
-  surface and its own test suite.
+- **E2EE that actually means it.** Every entry and media chunk is sealed with XChaCha20-Poly1305 on
+  your device. The relay compares one integer to resolve conflicts and understands nothing else.
+- **An AI that writes *with* you, privately.** Guided interviews (written or on camera), Ask-my-journal
+  over your own entries, and editor writing help — pointed at a local model like Gemma via
+  [Ollama](https://ollama.com/) by default, never routed through the Mneme server, and **off until you
+  turn it on**.
+- **A real editor.** TipTap with a `/` palette, tables, checklists, syntax-highlighted code, KaTeX
+  math, and `[[wikilinks]]` with backlinks.
+- **Media that stays yours.** Photos and galleries, video and audio recording, file attachments,
+  frozen travel maps, and on-device video-interview films — all chunk-encrypted before upload.
+  Recordings can be transcribed by the speech-to-text server the stack ships with.
+- **Local-first, offline-happy.** The real database lives on your device; the cloud is a courier.
+  Lose the network and keep writing.
+- **Yours to run.** One command, an operator dashboard, rolling encrypted backups, one-click updates
+  with rollback — and AGPL, so a hosted fork stays open.
+- **Made to live in.** Twelve UI languages (Arabic in full RTL), six theme skins × six accents,
+  light/dark/system, installable as a PWA.
 
-Several hundred users of an E2EE journal is, server-side, basically free — there's nothing to index
-or render. And the whole point survives the move to a server: an archive, a database dump, or a full
-MinIO bucket is **useless without a user's 12-word recovery phrase**. You host encrypted blobs
-beautifully and still can't read a word.
+The exhaustive list is [`docs/FEATURES.md`](./docs/FEATURES.md); what's *not* built yet is
+[`docs/ROADMAP.md`](./docs/ROADMAP.md), stated without flattery.
+
+---
+
+## How it works, briefly
+
+```
+your device                          the relay (out of trust)
+┌───────────────────────────┐        ┌───────────────────────┐
+│ 12 words → keys           │        │ Go binary + Postgres  │
+│ local SQLite = the truth  │──ct──▶ │ opaque ciphertext,    │
+│ TipTap · crypto · sync    │◀──ct───│ MinIO media chunks    │
+└───────────────────────────┘        └───────────────────────┘
+```
+
+- **The phrase is the key tree.** BIP39 → HKDF-SHA256 → separate keys for entries, media, identity,
+  and AI settings. Your `owner_id` is derived from it, so there's no signup and nothing on the server
+  worth stealing.
+- **Every ciphertext is `[version][nonce:24][ct+tag]`**, bound to the record it belongs to, so the
+  relay can't serve one entry's body under another's id.
+- **Three layers, one web codebase:** a Preact/TypeScript client (crypto, sync, editor, local DB), a
+  Go relay that stores blobs and never decrypts, and Tauri shells to come.
+- **Honest about metadata.** E2EE protects content, not shape: the relay sees roughly how often and
+  how much you write. We list every accepted leak rather than pretending.
+- **At rest,** nothing is persisted by default — you re-enter the phrase on a cold start. Optionally,
+  seal the seed to the device under an Argon2id passphrase or a FIDO2 security key, with a 15-minute
+  auto-lock.
+
+It's pre-1.0 and there has been **no external security audit** — treat the guarantees as careful
+design intent, not certification.
 
 ---
 
 ## Documentation
 
-The README is the friendly tour. The neutral, detailed references live in [`docs/`](./docs) — start
-with [`docs/README.md`](./docs/README.md):
-
 | Doc | What's in it |
 |---|---|
-| [`docs/FEATURES.md`](./docs/FEATURES.md) | Everything Mneme can do today, in one place. |
-| [`docs/ROADMAP.md`](./docs/ROADMAP.md) | Honest status board: built, planned, and deliberately-not-building. |
-| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Components, key derivation, the sync sequence, the data model — with diagrams. |
-| [`docs/ENCRYPTION.md`](./docs/ENCRYPTION.md) | The cryptography: primitives, key hierarchy, the ciphertext envelope, at-rest seals, rotation. |
-| [`docs/SECURITY.md`](./docs/SECURITY.md) | The E2EE threat model and a frank list of attack vectors and known weaknesses. |
-| [`docs/API.md`](./docs/API.md) | The relay's HTTP API reference, including the admin surface. |
-| [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) | Self-hosted production deployment: the Docker + Caddy stack, HTTPS on a LAN, first start. |
-| [`docs/MAINTENANCE.md`](./docs/MAINTENANCE.md) | Day-two operations: backups, restore, upgrades, health checks, troubleshooting. |
-| [`docs/CONTRIBUTING.md`](./docs/CONTRIBUTING.md) | Setup, the quality gates, conventions, and where things live. |
-| [`server/README.md`](./server/README.md) | Running, configuring, and testing the Go relay specifically. |
-| [`CLAUDE.md`](./CLAUDE.md) | The decision document and source of truth (§0 is the operating guide; §1–§12 the binding decisions). |
-
----
-
-## Current state
-
-It's pre-1.0 and we're honest about it. The four screens, the Go relay, and the encryption are
-built, and the client is genuinely wired to the relay: real BIP39 onboarding, client-side
-encryption, encrypted push/pull sync, a durable local database, a real editor, encrypted media, the
-written and video interviews with on-device film rendering, transcription, the AI assistant,
-templates, search, and phrase rotation all work end-to-end today, in the browser.
-
-Still ahead: a full-text search index (blocked on a custom wa-sqlite build), a reminders UI + local
-scheduled notifications, broader export, and the native **Tauri** desktop and mobile shells with
-OS-keychain storage. There has been **no external security audit** — treat the guarantees as careful
-design intent, not certification, and don't trust it with data you can't afford to lose until it's had
-more eyes. The full status board is in [`docs/ROADMAP.md`](./docs/ROADMAP.md); the binding build order
-is [`CLAUDE.md`](./CLAUDE.md) §10.
+| [`docs/FEATURES.md`](./docs/FEATURES.md) | Everything Mneme can do today. |
+| [`docs/ROADMAP.md`](./docs/ROADMAP.md) | Built, planned, and deliberately-not-building. |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Components, key derivation, sync, data model — with diagrams. |
+| [`docs/ENCRYPTION.md`](./docs/ENCRYPTION.md) | Primitives, key hierarchy, envelopes, at-rest seals, rotation. |
+| [`docs/SECURITY.md`](./docs/SECURITY.md) | Threat model, attack vectors, and known weaknesses. It does not flatter the project. |
+| [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) · [`docs/MAINTENANCE.md`](./docs/MAINTENANCE.md) | Self-hosting, and day-two ops: backups, restore, upgrades. |
+| [`docs/API.md`](./docs/API.md) · [`server/README.md`](./server/README.md) | The relay's HTTP surface, and running it. |
+| [`docs/PWA.md`](./docs/PWA.md) · [`docs/CONTRIBUTING.md`](./docs/CONTRIBUTING.md) | Installing it as an app; dev setup and quality gates. |
+| [`SECURITY-AUDITS.md`](./SECURITY-AUDITS.md) · [`CLAUDE.md`](./CLAUDE.md) | The internal audit record, and the binding decision document. |
 
 ---
 
 ## License
 
-[**GNU Affero General Public License v3.0 or later**](./LICENSE) (AGPL-3.0-or-later).
+[**AGPL-3.0-or-later**](./LICENSE) — use it, self-host it, fork it, but anyone running a modified
+Mneme as a service must offer that source to its users.
 
-Mneme is a network-served application, and the AGPL is a deliberate choice: anyone who runs a
-modified version of the relay as a hosted service must offer that modified source to its users. Use
-it, self-host it, fork it — but improvements to a public deployment stay open. See [`LICENSE`](./LICENSE)
-for the full text.
-
----
-
-*Mneme — named after the Greek muse of memory, who, fittingly, did not offer a password reset
-either.*
+*Named after the Greek muse of memory, who, fittingly, did not offer a password reset either.*
