@@ -51,7 +51,10 @@ else
   TICK="OK"; CROSS="!!"; ARROW=">"; BULLET="-"
 fi
 
-indent() { awk '{ if (length($0)) print "    " $0; else print "" }'; }
+# LC_ALL=C so awk treats the input as bytes: a path or a captured log line that
+# is not valid in the caller's locale would otherwise make gawk print a
+# "Invalid multibyte data" warning into the middle of an error message.
+indent() { LC_ALL=C awk '{ if (length($0)) print "    " $0; else print "" }'; }
 
 step() { # step "Title" "one line saying why this step exists"
   STEP_NO=$((STEP_NO + 1))
