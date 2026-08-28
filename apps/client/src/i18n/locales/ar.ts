@@ -641,7 +641,7 @@ const ar: Partial<Record<MessageKey, string>> = {
   'prefs.tab.appearance.short': 'المظهر',
   'prefs.tab.writing': 'الكتابة',
   'prefs.tab.writing.short': 'الكتابة',
-  'prefs.tab.assistant': 'المساعد',
+  'prefs.tab.assistant': 'المساعد الذكي',
   'prefs.tab.assistant.short': 'المساعد',
   'prefs.tab.vault': 'الخزنة',
   'prefs.tab.vault.short': 'الخزنة',

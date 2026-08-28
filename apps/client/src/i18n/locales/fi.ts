@@ -646,7 +646,7 @@ const fi: Partial<Record<MessageKey, string>> = {
   'prefs.tab.appearance.short': 'Ulkoasu',
   'prefs.tab.writing': 'Kirjoittaminen',
   'prefs.tab.writing.short': 'Kirjoitus',
-  'prefs.tab.assistant': 'Avustaja',
+  'prefs.tab.assistant': 'AI-avustaja',
   'prefs.tab.assistant.short': 'Avustaja',
   'prefs.tab.vault': 'Holvi',
   'prefs.tab.vault.short': 'Holvi',

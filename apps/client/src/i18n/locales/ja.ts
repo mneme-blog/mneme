@@ -641,7 +641,7 @@ const ja: Partial<Record<MessageKey, string>> = {
   'prefs.tab.appearance.short': '外観',
   'prefs.tab.writing': '執筆',
   'prefs.tab.writing.short': '執筆',
-  'prefs.tab.assistant': 'アシスタント',
+  'prefs.tab.assistant': 'AIアシスタント',
   'prefs.tab.assistant.short': '補助',
   'prefs.tab.vault': 'ボールト',
   'prefs.tab.vault.short': 'ボールト',

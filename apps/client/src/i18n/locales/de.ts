@@ -651,7 +651,7 @@ const de: Partial<Record<MessageKey, string>> = {
   'prefs.tab.appearance.short': 'Optik',
   'prefs.tab.writing': 'Schreiben',
   'prefs.tab.writing.short': 'Schreiben',
-  'prefs.tab.assistant': 'Assistent',
+  'prefs.tab.assistant': 'KI-Assistent',
   'prefs.tab.assistant.short': 'Assist',
   'prefs.tab.vault': 'Tresor',
   'prefs.tab.vault.short': 'Tresor',

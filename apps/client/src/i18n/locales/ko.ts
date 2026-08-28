@@ -588,7 +588,7 @@ const ko: Partial<Record<MessageKey, string>> = {
   'prefs.tab.appearance.short': '모양',
   'prefs.tab.writing': '글쓰기',
   'prefs.tab.writing.short': '글쓰기',
-  'prefs.tab.assistant': '어시스턴트',
+  'prefs.tab.assistant': 'AI 어시스턴트',
   'prefs.tab.assistant.short': '보조',
   'prefs.tab.vault': '금고',
   'prefs.tab.vault.short': '금고',

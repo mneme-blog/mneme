@@ -657,7 +657,7 @@ const it: Partial<Record<MessageKey, string>> = {
   'prefs.tab.appearance.short': 'Aspetto',
   'prefs.tab.writing': 'Scrittura',
   'prefs.tab.writing.short': 'Scrittura',
-  'prefs.tab.assistant': 'Assistente',
+  'prefs.tab.assistant': 'Assistente IA',
   'prefs.tab.assistant.short': 'Assist.',
   'prefs.tab.vault': 'Caveau',
   'prefs.tab.vault.short': 'Caveau',
