@@ -639,7 +639,7 @@ const fr: Partial<Record<MessageKey, string>> = {
   'prefs.tab.appearance.short': 'Aspect',
   'prefs.tab.writing': 'Écriture',
   'prefs.tab.writing.short': 'Écriture',
-  'prefs.tab.assistant': 'Assistant',
+  'prefs.tab.assistant': 'Assistant IA',
   'prefs.tab.assistant.short': 'Assist.',
   'prefs.tab.vault': 'Coffre',
   'prefs.tab.vault.short': 'Coffre',

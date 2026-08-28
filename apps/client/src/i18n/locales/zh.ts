@@ -588,7 +588,7 @@ const zh: Partial<Record<MessageKey, string>> = {
   'prefs.tab.appearance.short': '外观',
   'prefs.tab.writing': '写作',
   'prefs.tab.writing.short': '写作',
-  'prefs.tab.assistant': '助手',
+  'prefs.tab.assistant': 'AI 助手',
   'prefs.tab.assistant.short': '助手',
   'prefs.tab.vault': '保险库',
   'prefs.tab.vault.short': '保险库',

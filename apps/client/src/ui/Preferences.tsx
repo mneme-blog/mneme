@@ -1,11 +1,12 @@
-// Preferences overlay — the one settings surface, organized into four tabs:
-// Appearance (language + light/dark/system mode + theme skin + accent),
-// Writing (local stats), Assistant (templates / ask / AI settings), and Vault
-// (identity, lock, phrase rotation, deletion). Desktop shows a left nav rail
-// beside a scrolling content pane; mobile shows a segmented tab bar atop the
-// sheet. Appearance state (language included) is device-local localStorage
-// and never syncs; the vault rows just hand off to their existing sheets
-// (RotatePhrase, DeleteVault…).
+// Preferences overlay — the one settings surface, organized into five tabs, in
+// the order they are shown: Appearance (language + light/dark/system mode +
+// theme skin + accent), AI Assistant (templates / ask / AI settings), Vault
+// (identity, lock, phrase rotation, deletion), Writing (local stats), and Info.
+// TABS is what orders them; the panes below are declared in the order they
+// were written. Desktop shows a left nav rail beside a scrolling content pane;
+// mobile shows a segmented tab bar atop the sheet. Appearance state (language
+// included) is device-local localStorage and never syncs; the vault rows just
+// hand off to their existing sheets (RotatePhrase, DeleteVault…).
 import type { VNode } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
 import { Icon, type IconName } from './Icon';
@@ -38,15 +39,15 @@ const MODES: { id: ThemeMode; icon: IconName }[] = [
   { id: 'system', icon: 'monitor' },
 ];
 
-type TabId = 'appearance' | 'writing' | 'assistant' | 'vault' | 'info';
+type TabId = 'appearance' | 'assistant' | 'vault' | 'writing' | 'info';
 // The `.short` catalog variant is the mobile segmented label — full words
 // don't fit four-across on a phone, so the desktop rail uses the full label
 // and the bottom sheet uses the short one.
 const TABS: { id: TabId; icon: IconName }[] = [
   { id: 'appearance', icon: 'eye' },
-  { id: 'writing', icon: 'book' },
   { id: 'assistant', icon: 'feather' },
   { id: 'vault', icon: 'shield' },
+  { id: 'writing', icon: 'book' },
   { id: 'info', icon: 'info' },
 ];
 
@@ -549,7 +550,7 @@ export function PreferencesSheet({ desk, theme, onClose, ownerId, status, onLock
     </div>
   );
 
-  const panes: Record<TabId, VNode> = { appearance, writing, assistant, vault, info };
+  const panes: Record<TabId, VNode> = { appearance, assistant, vault, writing, info };
 
   // Desktop: a left nav rail beside the content pane. Mobile: a segmented tab
   // bar above it. The header + tabs stay fixed; only the pane scrolls.
@@ -564,8 +565,12 @@ export function PreferencesSheet({ desk, theme, onClose, ownerId, status, onLock
             style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'start', cursor: 'pointer', padding: '10px 12px', borderRadius: 10, border: 'none', background: active ? 'var(--accent-soft)' : 'transparent', color: active ? 'var(--accent-ink)' : 'var(--ink-2)', fontFamily: 'var(--ui)', fontSize: 13, fontWeight: active ? 700 : 600 }}
           >
             <Icon name={tb.icon} size={16} color={active ? 'var(--accent)' : 'var(--ink-3)'} />
-            {/* Ids mirror the 'prefs.tab.*' catalog entries. */}
-            {t(`prefs.tab.${tb.id}` as MessageKey)}
+            {/* Ids mirror the 'prefs.tab.*' catalog entries. The rail is a fixed
+                width, so a long translation truncates rather than wrapping the
+                row to two lines. */}
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {t(`prefs.tab.${tb.id}` as MessageKey)}
+            </span>
           </button>
         );
       })}

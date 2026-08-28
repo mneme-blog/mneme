@@ -637,7 +637,7 @@ const nl: Partial<Record<MessageKey, string>> = {
   'prefs.tab.appearance.short': 'Uiterlijk',
   'prefs.tab.writing': 'Schrijven',
   'prefs.tab.writing.short': 'Schrijven',
-  'prefs.tab.assistant': 'Assistent',
+  'prefs.tab.assistant': 'AI-assistent',
   'prefs.tab.assistant.short': 'Assist',
   'prefs.tab.vault': 'Kluis',
   'prefs.tab.vault.short': 'Kluis',

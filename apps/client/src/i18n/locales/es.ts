@@ -651,7 +651,7 @@ const es: Partial<Record<MessageKey, string>> = {
   'prefs.tab.appearance.short': 'Aspecto',
   'prefs.tab.writing': 'Escritura',
   'prefs.tab.writing.short': 'Escritura',
-  'prefs.tab.assistant': 'Asistente',
+  'prefs.tab.assistant': 'Asistente IA',
   'prefs.tab.assistant.short': 'Asist.',
   'prefs.tab.vault': 'Bóveda',
   'prefs.tab.vault.short': 'Bóveda',

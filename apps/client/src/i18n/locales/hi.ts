@@ -641,7 +641,7 @@ const hi: Partial<Record<MessageKey, string>> = {
   'prefs.tab.appearance.short': 'रूप',
   'prefs.tab.writing': 'लेखन',
   'prefs.tab.writing.short': 'लेखन',
-  'prefs.tab.assistant': 'सहायक',
+  'prefs.tab.assistant': 'AI सहायक',
   'prefs.tab.assistant.short': 'सहायक',
   'prefs.tab.vault': 'तिजोरी',
   'prefs.tab.vault.short': 'तिजोरी',
