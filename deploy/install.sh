@@ -47,14 +47,35 @@ else
 fi
 if [[ ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} == *[Uu][Tt][Ff]* ]]; then
   TICK="✓"; CROSS="✗"; ARROW="▸"; BULLET="•"
+  BOX_TL="┌"; BOX_BL="└"; BOX_BAR="│"; BOX_H="─"
 else
   TICK="OK"; CROSS="!!"; ARROW=">"; BULLET="-"
+  BOX_TL="+"; BOX_BL="+"; BOX_BAR="|"; BOX_H="-"
 fi
 
 # LC_ALL=C so awk treats the input as bytes: a path or a captured log line that
 # is not valid in the caller's locale would otherwise make gawk print a
 # "Invalid multibyte data" warning into the middle of an error message.
 indent() { LC_ALL=C awk '{ if (length($0)) print "    " $0; else print "" }'; }
+
+# A titled block for the closing summary. Only the left edge is drawn: nothing
+# has to be padded to a fixed width, which colour codes and multibyte characters
+# make unreliable to get right. Body comes in on stdin.
+rule() { local n=$1 out=""; while ((n-- > 0)); do out+=$BOX_H; done; printf '%s' "$out"; }
+
+box() { # box "Title" <<EOF … EOF
+  local title=$1 line
+  printf '\n  %s%s%s%s %s%s %s%s%s\n' \
+    "$DIM" "$BOX_TL" "$(rule 2)" "$R" "$B" "$title" "$DIM" "$(rule $((70 - ${#title})))" "$R"
+  while IFS= read -r line; do
+    if [[ -z $line ]]; then
+      printf '  %s%s%s\n' "$DIM" "$BOX_BAR" "$R"
+    else
+      printf '  %s%s%s   %s\n' "$DIM" "$BOX_BAR" "$R" "$line"
+    fi
+  done
+  printf '  %s%s%s%s\n' "$DIM" "$BOX_BL" "$(rule 74)" "$R"
+}
 
 step() { # step "Title" "one line saying why this step exists"
   STEP_NO=$((STEP_NO + 1))
@@ -579,7 +600,8 @@ first_address=$(printf '%s' "${site_address%%,*}" | tr -d '[:space:]')
 
 if ! $START; then
   printf '\n%s%s Configured, not started (--no-start).%s\n\n' "$B" "$TICK" "$R"
-  say "Have a look at $DIR/.env.prod, then bring it up with:"
+  say "Have a look at $DIR/.env.prod — it holds the generated database, media,"
+  say "and dashboard secrets — then bring the stack up with:"
   say ""
   say "    cd $DIR && ./deploy/prod.sh up -d"
   say ""
@@ -688,46 +710,65 @@ fi
 ok "The relay is ready and serving"
 
 # ── Done ────────────────────────────────────────────────────────────────────
-printf '\n%s%s Mneme is running.%s\n\n' "$B$GRN" "$TICK" "$R"
+# Ordered by what the reader has to DO, not by what the installer happens to
+# know: the token first, because it is printed exactly once and is gone the
+# moment this scrollback is; then opening the app; then the recovery phrase,
+# which is the one loss that cannot be undone. Reference material comes last.
+printf '\n%s%s Mneme is running.%s\n' "$B$GRN" "$TICK" "$R"
 
-say "Open it at         ${B}https://$first_address/mneme/${R}"
-say "Operator dashboard https://$first_address/mneme/admin"
+DONE_NO=0
+
 if [[ -n $ADMIN_TOKEN_SHOWN ]]; then
-  say "Dashboard token    ${B}$ADMIN_TOKEN_SHOWN${R}"
-  say "                   (this is the only time it is printed; it is also the"
-  say "                   ADMIN_TOKEN line in $DIR/.env.prod)"
-else
-  say "Dashboard token    the ADMIN_TOKEN line in $DIR/.env.prod"
+  box "$((++DONE_NO)) · Write this token down now" <<EOF
+
+${B}$ADMIN_TOKEN_SHOWN${R}
+
+It signs you in to the operator dashboard, and this is the only time it
+is printed. If you lose it, it is the ADMIN_TOKEN line in
+$DIR/.env.prod — a file only you can read.
+EOF
 fi
-say "Backups            $BACKUPS"
-say "Manage it with     cd $DIR && ./deploy/prod.sh ps | logs -f server | down"
+
+box "$((++DONE_NO)) · Open Mneme" <<EOF
+
+App        ${B}https://$first_address/mneme/${R}
+Dashboard  https://$first_address/mneme/admin
+
+${B}Your browser will warn about the certificate.${R} Expected, and fine:
+Mneme issues its own, because a machine on your LAN has no public name
+to get a real one for. Click through the warning to use the app.
+
+To silence it for good — and you must, to install Mneme as an app on a
+phone — copy its certificate authority out and trust it on each device:
+
+    cd $DIR
+    ./deploy/prod.sh cp web:/data/caddy/pki/authorities/local/root.crt .
+EOF
+
+box "$((++DONE_NO)) · Write down the 12 words Mneme gives you" <<EOF
+
+${YEL}${B}The one rule with no way around it.${R} On first use Mneme hands you a
+12-word recovery phrase. It is your account and the only key to your
+entries: generated in your browser, never sent to this server. Nobody
+here can reset or recover it — not even you, running the machine.
+
+${B}Write it on paper.${R} Lose it and the journal is gone for good.
+EOF
 
 cat <<EOF
 
-$(printf '%s' "${B}Two things will surprise you on first visit, and both are fine.${R}" | indent)
-
-$(printf '%s' "${BULLET} ${B}Your browser will warn about the certificate.${R} Mneme issues its own, because
-  a machine on your LAN has no public name to get a real one for. Click through
-  the warning to use the app. To silence it for good — and it is required if you
-  want to install Mneme as an app on a phone — copy the certificate authority
-  out and trust it on each device:
-
-      cd $DIR && ./deploy/prod.sh cp web:/data/caddy/pki/authorities/local/root.crt .
-
-${BULLET} ${B}Transcription says it has no model for a while.${R} The speech-to-text server is
-  downloading one, about 1.6 GB, once. Everything else works meanwhile.
-
-      cd $DIR && ./deploy/prod.sh logs -f whisper-model" | indent)
-
-$(printf '%s' "${B}${YEL}And the one rule with no way around it:${R} when you open Mneme it gives you a
-12-word recovery phrase. That phrase is your account and the only key to your
-entries. It is generated in your browser and never reaches this server, so
-nobody here — not even you, running the machine — can reset or recover it.
-${B}Write it down on paper.${R} Lose it and the journal is gone for good." | indent)
-
-$(printf '%s' "Where to go next:
-  ${BULLET} $DIR/docs/DEPLOYMENT.md  — what you just installed, and how to change it
-  ${BULLET} $DIR/docs/MAINTENANCE.md — backups, restore, upgrades, troubleshooting" | indent)
+$(printf '%s' "${B}Good to know${R}
+${BULLET} ${B}Transcription will say it has no model for a while.${R} The speech server
+  is fetching one — about 1.6 GB, once. Everything else works meanwhile:
+      cd $DIR && ./deploy/prod.sh logs -f whisper-model
+${BULLET} Backups land in $BACKUPS
+${BULLET} Run the stack from $DIR:
+      ./deploy/prod.sh ps            # what is running
+      ./deploy/prod.sh logs -f server
+      ./deploy/prod.sh down          # stop everything
+${BULLET} docs/DEPLOYMENT.md  — what you just installed, and how to change it
+  docs/MAINTENANCE.md — backups, restore, upgrades, troubleshooting" |
+  LC_ALL=C awk '{ if (length($0)) print "  " $0; else print "" }')
 EOF
 
 if ((ISSUES > 0)); then
