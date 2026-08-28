@@ -60,7 +60,6 @@ export const prefs = {
   'prefs.assistant.section': 'Assistant & journal',
   'prefs.assistant.templates': 'Templates',
   'prefs.assistant.ask': 'Ask my journal',
-  'prefs.assistant.interview': 'Daily interview',
   'prefs.assistant.interviewTypes': 'Interview types',
   'prefs.assistant.ai': 'AI assistant',
 

@@ -1,5 +1,5 @@
 import type { VNode } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon, type IconName } from './ui/Icon';
 import { Wordmark } from './ui/Wordmark';
 import { ConnectionDot, connLabel, SyncProgressBar } from './ui/primitives';
@@ -27,7 +27,7 @@ import { AskJournalSheet } from './ui/AskJournal';
 import { GuidedInterviewSheet } from './ui/GuidedInterview';
 import { InterviewTypesSheet } from './ui/InterviewTypes';
 import { VideoInterviewSheet } from './ui/VideoInterview';
-import { ComposeChooser } from './ui/ComposeChooser';
+import { NewEntryWizard, type NewEntryStart } from './ui/NewEntryWizard';
 import { BadgeCelebration } from './ui/BadgeCelebration';
 import { Z } from './ui/Sheet';
 import { useBadges } from './hooks/useBadges';
@@ -38,13 +38,13 @@ import { t } from './i18n';
 type Flow = 'journals' | 'journal' | 'calendar' | 'editor';
 
 // ── DESKTOP sidebar ─────────────────────────────────────────
-function Sidebar({ flow, setFlow, journals, activeJournalId, onNew, onOpenJournal, status, ownerId, onTemplates, onSearch, onPreferences, onAsk, onInterview }: {
+function Sidebar({ flow, setFlow, journals, activeJournalId, onNew, onOpenJournal, status, ownerId, onTemplates, onSearch, onPreferences, onAsk }: {
   flow: Flow;
   setFlow: (f: Flow) => void;
   journals: Journal[];
   /** Notebook the editor's open entry belongs to — that row lights up instead of "Write". */
   activeJournalId: string | null;
-  /** The primary CTA — start a fresh entry (in the active notebook if there is one). */
+  /** The primary CTA — opens the new-entry wizard (in the active notebook if there is one). */
   onNew: () => void;
   onOpenJournal: (j: Journal) => void;
   status: SyncStatus;
@@ -54,8 +54,6 @@ function Sidebar({ flow, setFlow, journals, activeJournalId, onNew, onOpenJourna
   onPreferences: () => void;
   /** null while the AI assistant is disabled — the row hides itself. */
   onAsk: (() => void) | null;
-  /** null while the AI assistant is disabled — the row hides itself. */
-  onInterview: (() => void) | null;
 }): VNode {
   // Fold the outbox depth into the footer so a sync in progress (e.g. just after
   // a bulk import) is visible from every screen, not only the journals list.
@@ -122,16 +120,6 @@ function Sidebar({ flow, setFlow, journals, activeJournalId, onNew, onOpenJourna
             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
             <Icon name="feather" size={19} /> {t('shell.nav.ask')}
-          </button>
-        )}
-        {onInterview && (
-          <button
-            onClick={onInterview}
-            style={{ display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'start', cursor: 'pointer', padding: '9px 11px', borderRadius: 10, border: 'none', background: 'transparent', color: 'var(--ink-2)', fontFamily: 'var(--ui)', fontSize: 14, fontWeight: 500 }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-          >
-            <Icon name="mic" size={19} /> {t('shell.nav.interview')}
           </button>
         )}
       </div>
@@ -245,19 +233,20 @@ export function App(): VNode {
   // fresh entry from the sidebar or the mobile nav always starts at the top.
   const [prefsReturn, setPrefsReturn] = useState<PrefsTab | null>(null);
   const openPrefs = (): void => { setPrefsReturn(null); setPrefsOpen(true); };
+  /** Preferences opened on a specific tab (the wizard's muted assistant tiles). */
+  const openPrefsAt = (tab: PrefsTab): void => { setPrefsReturn(tab); setPrefsOpen(true); };
   const [searchOpen, setSearchOpen] = useState(false);
   const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
   const [askOpen, setAskOpen] = useState(false);
-  const [interviewOpen, setInterviewOpen] = useState(false);
   const [interviewTypesOpen, setInterviewTypesOpen] = useState(false);
-  // The on-camera interview: same types, answered as video clips. Reached from
-  // the written interview's picker (and the mobile compose chooser), so it
-  // carries the type that was chosen there.
-  const [videoInterview, setVideoInterview] = useState<{ start?: InterviewType; journalId?: string } | null>(null);
-  // Mobile compose chooser (the feather FAB) + the interview it picked (the
-  // preselected start plus the notebook the FAB was in).
-  const [composeOpen, setComposeOpen] = useState(false);
-  const [interviewStart, setInterviewStart] = useState<{ start: InterviewType | 'freeform'; journalId?: string } | null>(null);
+  // The new-entry wizard (ui/NewEntryWizard.tsx) — THE way in, on both form
+  // factors. It carries the notebook in context; it resolves and shows the one
+  // the entry will land in, and hands back a fully-specified start below.
+  const [wizard, setWizard] = useState<{ journalId?: string } | null>(null);
+  // The two interview sheets, opened only by the wizard: everything they used
+  // to pick for themselves (type, notebook, deeper questions) arrives here.
+  const [interview, setInterview] = useState<{ start: InterviewType | 'freeform'; journalId: string; deep: boolean } | null>(null);
+  const [videoInterview, setVideoInterview] = useState<{ start: InterviewType; journalId: string; deep: boolean } | null>(null);
   // Which notebook the typed-"delete" confirmation sheet is for (null → closed).
   const [deleteJournalId, setDeleteJournalId] = useState<string | null>(null);
   const [editJournalId, setEditJournalId] = useState<string | null>(null);
@@ -267,6 +256,9 @@ export function App(): VNode {
   const [openJournalId, setOpenJournalId] = useState<string | null>(null);
   // Where the mobile editor's back button returns to (the flow it was entered from).
   const [editorReturn, setEditorReturn] = useState<Flow>('journals');
+  // The ⌘N handler below is registered once per lock state; a ref keeps it
+  // reading the notebook in context now, not the one from that render.
+  const activeJournalRef = useRef<string | null>(null);
 
   // ⌘/Ctrl+K opens search from anywhere — once unlocked. Not registered while
   // locked: a press on the lock screen would set searchOpen and pop the palette
@@ -277,6 +269,12 @@ export function App(): VNode {
       if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'k') {
         ev.preventDefault();
         setSearchOpen(true);
+      }
+      // ⌘/Ctrl+N keeps the one-keystroke blank entry the sidebar button used to
+      // be before the wizard took its place — same notebook resolution, no steps.
+      if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'n') {
+        ev.preventDefault();
+        newEntry(activeJournalRef.current ?? undefined);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -302,10 +300,10 @@ export function App(): VNode {
     setSearchOpen(false);
     setAiSettingsOpen(false);
     setAskOpen(false);
-    setInterviewOpen(false);
     setInterviewTypesOpen(false);
-    setComposeOpen(false);
-    setInterviewStart(null);
+    setWizard(null);
+    setInterview(null);
+    setVideoInterview(null);
     setDeleteJournalId(null);
     setOpenEntryId(null);
     setOpenJournalId(null);
@@ -350,6 +348,19 @@ export function App(): VNode {
     openEntry(entry.id);
   };
 
+  // The new-entry wizard, carrying whatever notebook is in context.
+  const openNew = (journalId?: string): void => setWizard({ journalId });
+
+  // What the wizard resolved to. Blank and template entries are created here;
+  // the two interview modes hand off to their sheets fully specified, so
+  // neither has to pick a type, a notebook, or a privacy answer of its own.
+  const startNew = (s: NewEntryStart): void => {
+    if (s.mode === 'blank') newEntry(s.journalId);
+    else if (s.mode === 'template') newEntryFromTemplate(s.template, s.journalId);
+    else if (s.mode === 'interview') setInterview({ start: s.start, journalId: s.journalId, deep: s.deep });
+    else setVideoInterview({ start: s.start, journalId: s.journalId, deep: s.deep });
+  };
+
   // Start a new entry pre-filled from a template ("Use" in the templates sheet,
   // or a "Start from" pick when creating a journal).
   const newEntryFromTemplate = (t: TemplateRecord, journalId?: string) => {
@@ -384,10 +395,13 @@ export function App(): VNode {
   // While the editor is open, the active context is the notebook its entry lives
   // in — the sidebar lights that row instead of the redundant "Write" item.
   const activeJournalId =
-    flow === 'editor' ? entries.find((e) => e.id === openEntryId)?.journalId ?? null : null;
+    flow === 'editor' ? entries.find((e) => e.id === openEntryId)?.journalId ?? null
+    : flow === 'journal' ? openJournalId
+    : null;
+  activeJournalRef.current = activeJournalId;
 
   const screen = (() => {
-    if (flow === 'calendar') return <CalendarScreen desk={desk} onOpenEntry={(id) => (id ? openEntry(id) : newEntry())} />;
+    if (flow === 'calendar') return <CalendarScreen desk={desk} onOpenEntry={(id) => (id ? openEntry(id) : openNew())} />;
     if (flow === 'editor') {
       return (
         <EditorScreen
@@ -395,7 +409,7 @@ export function App(): VNode {
           entryId={openEntryId}
           onBack={() => setFlow(editorReturn)}
           onSelectEntry={openEntry}
-          onNew={newEntry}
+          onNew={openNew}
           // Mobile delete: return to the notebook's own entry list, not the
           // library — the journal you were writing in stays the active context.
           onDeleted={(journalId) => {
@@ -416,7 +430,7 @@ export function App(): VNode {
           journal={openJournalObj}
           onBack={() => setFlow('journals')}
           onOpenEntry={openEntry}
-          onNew={() => newEntry(openJournalObj.id)}
+          onNew={() => openNew(openJournalObj.id)}
           onEdit={() => setEditJournalId(openJournalObj.id)}
           onDelete={() => setDeleteJournalId(openJournalObj.id)}
           syncing={bootstrapping}
@@ -492,7 +506,6 @@ export function App(): VNode {
           // Mobile-only rows — the desktop sidebar hosts these entry points.
           onTemplates={desk ? undefined : () => setTemplatesOpen(true)}
           onAsk={desk ? undefined : aiSettings?.enabled ? () => setAskOpen(true) : null}
-          onInterview={desk ? undefined : aiSettings?.enabled ? () => setInterviewOpen(true) : null}
           onInterviewTypes={aiSettings?.enabled ? () => setInterviewTypesOpen(true) : null}
         />
       )}
@@ -503,20 +516,37 @@ export function App(): VNode {
       {importOpen && <ImportDayOneSheet desk={desk} onClose={() => setImportOpen(false)} />}
       {aiSettingsOpen && <AiSettingsSheet desk={desk} onClose={() => { setAiSettingsOpen(false); if (prefsReturn) setPrefsOpen(true); }} />}
       {askOpen && <AskJournalSheet desk={desk} onClose={() => setAskOpen(false)} />}
-      {interviewOpen && (
-        <GuidedInterviewSheet
+      {wizard && (
+        <NewEntryWizard
           desk={desk}
-          // interviewStart is only ever set by the mobile compose chooser; on
-          // desktop it is null and these extra props are no-ops.
-          onClose={() => { setInterviewOpen(false); setInterviewStart(null); }}
-          onOpenEntry={openEntry}
+          journalId={wizard.journalId}
+          onClose={() => setWizard(null)}
+          onStart={startNew}
           onManageTypes={() => setInterviewTypesOpen(true)}
-          initial={interviewStart?.start}
-          journalId={interviewStart?.journalId}
-          onVideo={(it) => setVideoInterview({ start: it, journalId: interviewStart?.journalId })}
+          onManageTemplates={() => setTemplatesOpen(true)}
+          onAiSettings={() => openPrefsAt('assistant')}
         />
       )}
-      {videoInterview && <VideoInterviewSheet desk={desk} onClose={() => setVideoInterview(null)} onOpenEntry={openEntry} onManageTypes={() => setInterviewTypesOpen(true)} initial={videoInterview.start} journalId={videoInterview.journalId} />}
+      {interview && (
+        <GuidedInterviewSheet
+          desk={desk}
+          onClose={() => setInterview(null)}
+          onOpenEntry={openEntry}
+          journalId={interview.journalId}
+          start={interview.start}
+          deep={interview.deep}
+        />
+      )}
+      {videoInterview && (
+        <VideoInterviewSheet
+          desk={desk}
+          onClose={() => setVideoInterview(null)}
+          onOpenEntry={openEntry}
+          journalId={videoInterview.journalId}
+          start={videoInterview.start}
+          deep={videoInterview.deep}
+        />
+      )}
       {interviewTypesOpen && <InterviewTypesSheet desk={desk} onClose={() => setInterviewTypesOpen(false)} />}
       {searchSheet}
       {/* The journal edit/delete sheets were desktop-only render sites before
@@ -532,7 +562,7 @@ export function App(): VNode {
   if (desk) {
     return (
       <div style={{ height: '100%', display: 'flex', background: 'var(--paper)', position: 'relative' }}>
-        <Sidebar flow={flow} setFlow={setFlow} journals={journals} activeJournalId={activeJournalId} onNew={() => newEntry(activeJournalId ?? undefined)} onOpenJournal={openJournal} status={status} ownerId={ownerId} onTemplates={() => setTemplatesOpen(true)} onSearch={() => setSearchOpen(true)} onPreferences={openPrefs} onAsk={aiSettings?.enabled ? () => setAskOpen(true) : null} onInterview={aiSettings?.enabled ? () => setInterviewOpen(true) : null} />
+        <Sidebar flow={flow} setFlow={setFlow} journals={journals} activeJournalId={activeJournalId} onNew={() => openNew(activeJournalId ?? undefined)} onOpenJournal={openJournal} status={status} ownerId={ownerId} onTemplates={() => setTemplatesOpen(true)} onSearch={() => setSearchOpen(true)} onPreferences={openPrefs} onAsk={aiSettings?.enabled ? () => setAskOpen(true) : null} />
         <div style={{ flex: 1, minWidth: 0 }}>{screen}</div>
         {/* Non-modal companions: flex siblings, so the app stays usable beside them. */}
         {appSheets(true)}
@@ -548,19 +578,9 @@ export function App(): VNode {
       {/* Inside a notebook the Journals tab stays lit and compose writes into it. */}
       {/* Settings in the bottom nav goes straight to the preferences sheet —
           it holds the journal/assistant/vault rows the old settings sheet had. */}
-      {showNav && <MobileNav flow={flow === 'journal' ? 'journals' : flow} setFlow={setFlow} onCompose={() => setComposeOpen(true)} onSettings={openPrefs} onSearch={() => setSearchOpen(true)} />}
-      {/* The FAB opens a chooser (empty / interview / template) instead of
-          silently minting a blank entry; inside a notebook every path still
-          writes into that notebook, like the FAB used to. */}
-      {composeOpen && (
-        <ComposeChooser
-          onClose={() => setComposeOpen(false)}
-          onEmpty={() => { setComposeOpen(false); newEntry(flow === 'journal' ? openJournalObj?.id : undefined); }}
-          onInterview={aiSettings?.enabled ? (start) => { setComposeOpen(false); setInterviewStart({ start, journalId: flow === 'journal' ? openJournalObj?.id : undefined }); setInterviewOpen(true); } : null}
-          onVideoInterview={aiSettings?.enabled ? (start) => { setComposeOpen(false); setVideoInterview({ start, journalId: flow === 'journal' ? openJournalObj?.id : undefined }); } : null}
-          onTemplate={(tpl) => { setComposeOpen(false); newEntryFromTemplate(tpl, flow === 'journal' ? openJournalObj?.id : undefined); }}
-        />
-      )}
+      {/* The FAB opens the same wizard the desktop CTA does; inside a notebook
+          it starts there, like the FAB always did. */}
+      {showNav && <MobileNav flow={flow === 'journal' ? 'journals' : flow} setFlow={setFlow} onCompose={() => openNew(openJournalId ?? undefined)} onSettings={openPrefs} onSearch={() => setSearchOpen(true)} />}
       {appSheets(false)}
     </div>
   );

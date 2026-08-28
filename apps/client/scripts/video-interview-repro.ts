@@ -468,11 +468,12 @@ async function main(): Promise<void> {
 
   editor.destroy();
 
-  // ── the one-time consent overlay renders and records a decision ──
-  // A throw in here would block the FIRST AI interview on every device, which
-  // is exactly the path least likely to be exercised in day-to-day use.
+  // ── the deeper-questions control renders and records a decision ──
+  // This is the disclosure that used to be a blocking one-time overlay; it now
+  // sits in the new-entry wizard above the grid it applies to. A throw in here
+  // would break the control that governs what an interview sends out of E2EE.
   const { render, h } = await import('preact');
-  const { ReflectionConsent } = await import('../src/ui/ReflectionConsent');
+  const { DeepQuestions } = await import('../src/ui/NewEntryWizard');
   const { deepReflectionChoice } = await import('../src/ai/reflection');
   type AiProvider = import('../src/ai/types').AiProvider;
   const fakeProvider = (local: boolean): AiProvider => ({
@@ -486,35 +487,45 @@ async function main(): Promise<void> {
   const host = document.getElementById('mount') as HTMLElement;
   localStorage.removeItem('mneme.interview.deepReflection');
   const decided: boolean[] = [];
-  render(h(ReflectionConsent, { provider: fakeProvider(false), onDecide: (on: boolean) => decided.push(on) }), host);
+  render(h(DeepQuestions, { provider: fakeProvider(false), value: false, onChange: (on: boolean) => decided.push(on) }), host);
   await new Promise((r) => setTimeout(r, 0));
-  const dialog = document.querySelector('[role="dialog"]');
-  assert(dialog, 'the consent overlay renders');
-  const cloudText = dialog.textContent ?? '';
+  const sw = host.querySelector('[role="switch"]') as HTMLElement | null;
+  assert(sw, 'the deeper-questions switch renders');
+  assert(sw.getAttribute('aria-checked') === 'false', 'it starts off');
+  // Never answered → the full explanation is shown, exactly as the overlay did.
+  const cloudText = host.textContent ?? '';
   assert(cloudText.includes('Deeper interview questions'), 'it names what is being asked about');
   assert(cloudText.includes('leaves end-to-end encryption'), 'a cloud backend gets the export disclosure');
   assert(!cloudText.includes('never leave it'), 'and not the on-device reassurance');
 
-  // The buttons are the only way out — a decision either way, then recorded.
-  const buttons = [...dialog.querySelectorAll('button')];
-  const accept = buttons.find((b) => b.textContent?.includes('Use deeper questions'));
-  assert(accept, 'the opt-in button is there');
-  accept.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  sw.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   await new Promise((r) => setTimeout(r, 0));
-  assert(decided.length === 1 && decided[0] === true, 'accepting reports the decision to the caller');
-  assert(deepReflectionChoice() === 'on', 'accepting is persisted before the interview starts');
+  assert(decided.length === 1 && decided[0] === true, 'toggling on reports the decision to the caller');
+  assert(deepReflectionChoice() === 'on', 'the choice is persisted before the interview starts');
   render(null, host);
 
-  // Under a local backend the same dialog must NOT claim text leaves the device.
+  // Under a local backend the same copy must NOT claim text leaves the device.
   localStorage.removeItem('mneme.interview.deepReflection');
-  render(h(ReflectionConsent, { provider: fakeProvider(true), onDecide: () => {} }), host);
+  render(h(DeepQuestions, { provider: fakeProvider(true), value: false, onChange: () => {} }), host);
   await new Promise((r) => setTimeout(r, 0));
-  const localText = document.querySelector('[role="dialog"]')?.textContent ?? '';
+  const localText = host.textContent ?? '';
   assert(localText.includes('never leave it'), 'a local backend says the entries stay put');
   assert(!localText.includes('leaves end-to-end encryption'), 'and drops the cloud export line');
   render(null, host);
+
+  // Once answered, the explanation collapses — but comes back whenever the
+  // switch is ON, because that is when entries actually leave E2EE.
+  localStorage.setItem('mneme.interview.deepReflection', 'off');
+  render(h(DeepQuestions, { provider: fakeProvider(false), value: false, onChange: () => {} }), host);
+  await new Promise((r) => setTimeout(r, 0));
+  assert(!(host.textContent ?? '').includes('leaves end-to-end encryption'), 'an answered, off switch collapses the disclosure');
+  render(null, host);
+  render(h(DeepQuestions, { provider: fakeProvider(false), value: true, onChange: () => {} }), host);
+  await new Promise((r) => setTimeout(r, 0));
+  assert((host.textContent ?? '').includes('leaves end-to-end encryption'), 'switching it on shows the disclosure again');
+  render(null, host);
   localStorage.removeItem('mneme.interview.deepReflection');
-  console.log('ok: reflection consent overlay (renders, per-backend copy, records the choice)');
+  console.log('ok: deeper-questions control (renders, per-backend copy, records the choice)');
 
   console.log('\nall video-interview checks passed');
 }

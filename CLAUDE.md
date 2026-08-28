@@ -242,6 +242,24 @@ Ask-my-journal on mobile, where the sidebar isn't there to host them), and the v
 (identity card with connection status, lock, phrase rotation, vault deletion — rows hand off to the
 existing sheets).
 
+**The new-entry wizard** (`ui/NewEntryWizard.tsx`) is the single way into a new entry on both form
+factors — it replaced four surfaces that modelled the same choice four different ways (the desktop
+sidebar CTA, which minted a blank entry into `journals[0]` unasked; the mobile compose chooser's
+accordion carousels; and the long "pick a type" lists that lived inside each interview sheet). Two
+steps, one grid idiom: **how** to begin (blank page / template / chat interview / video interview,
+a 2×2 tile grid) then **which one** (a card grid of templates or interview types, last-used first,
+plus a dashed freeform-brief card and a trailing "manage…" ghost card). Blank commits on step 1;
+everything else commits by picking a card. The **notebook is never guessed silently**: a footer chip
+always names where the entry will land — resolved as *context → last used here → first notebook*,
+device-local `mneme.compose.lastJournal` — and opens the ordinary `JournalSheet` on tap. Desktop
+keeps the one-keystroke path as **⌘/Ctrl+N** (blank entry, same resolution, no wizard). With the
+assistant off the two interview tiles stay visible but muted and hand off to AI settings, rather
+than vanishing as they used to. Consequences worth knowing: `GuidedInterviewSheet` and
+`VideoInterviewSheet` no longer have a `pick` phase and no longer resolve a notebook or read the
+deeper-questions flag — type, `journalId` and `deep` all arrive as required props — and the sidebar's
+"Daily interview" row and its mobile Preferences twin are gone (creating an entry belongs behind
+New entry; "Ask my journal" stays, since it reads rather than writes).
+
 Two more shipped features (previously undocumented here): a **WYSIWYG⇄Markdown source toggle** in
 the editor (`editor/markdown.ts` — `docToMarkdown`/`markdownToDoc`, a lossless round-trip that
 fences custom atoms (media, math, wikilinks, video interviews) so toggling can't destroy them;
@@ -314,9 +332,9 @@ when not running) and `scripts/journal-sync-roundtrip.ts` (journal + aiSettings 
 relay must be running).
 
 **Guided interview + AI entry writing** (extends the opt-in assistant; off unless AI is enabled) is
-in: the AI now *writes* entries, not just reads them. **"Daily interview"** (`ui/GuidedInterview.tsx`,
-desktop sidebar row / mobile Preferences, gated on `aiSettings.enabled` like Ask-my-journal) runs a
-short Q&A — the model asks one question at a time, then **synthesizes a draft entry the user reviews
+in: the AI now *writes* entries, not just reads them. The **chat interview** (`ui/GuidedInterview.tsx`,
+reached only from the new-entry wizard's mode grid, gated on `aiSettings.enabled` like
+Ask-my-journal) runs a short Q&A — the model asks one question at a time, then **synthesizes a draft entry the user reviews
 before saving** (no agentic tool-calling; the text-streaming `AiProvider.chat` is unchanged). A
 **Freeform draft** option in the same sheet turns a one-line brief into an entry through the same
 review→save path. Saved entries are tagged with the interview type's **name as a label**, and
@@ -325,18 +343,23 @@ starting an interview feeds the model the recent same-label entries (`ai/intervi
 **opt-in dynamics** (`ai/reflection.ts`, shared by the written and the video interview) make the
 questions react to the state of the journal itself, both computed over the entries already decrypted
 in memory — no extra request, nothing stored, nothing synced. **Off until the user says otherwise**:
-the first AI interview on a device opens a one-time consent overlay (`ui/ReflectionConsent.tsx`)
-that says what the questions do, that selection happens on-device from already-decrypted entries,
-and — switching on the live provider, like `ProviderBadge` — whether that text leaves E2EE for a
-cloud backend or never leaves the device at all; declining is recorded too, so the overlay is shown
-once either way, and Preferences → Assistant → Interviews carries the same switch with the same
-two-part explanation (`InterviewSection` in `ui/Preferences.tsx`). The flag is **device-local**
+the **`DeepQuestions` strip in `ui/NewEntryWizard.tsx`** carries the switch, sitting directly above
+the interview-type grid it applies to — so it is met before *every* interview instead of once ever
+(it replaced a blocking one-time consent overlay, `ui/ReflectionConsent.tsx`, which is gone). It says
+what the questions do, that selection happens on-device from already-decrypted entries, and —
+switching on the live provider, like `ProviderBadge` — whether that text leaves E2EE for a cloud
+backend or never leaves the device at all. That explanation is **shown expanded until the question
+has been answered once, and again whenever the switch is on**, because that is exactly when entries
+leave E2EE; once answered and off, it collapses to a one-liner. Preferences → Assistant → Interviews
+carries the same switch with the same two-part explanation (`InterviewSection` in
+`ui/Preferences.tsx`). The flag is **device-local**
 localStorage (`mneme.interview.deepReflection`, `'on'|'off'|null`, `deepReflectionChoice()`) rather
 than a synced `AiSettings` field: the consent is *about what leaves this device*, so a laptop with a
 local Ollama must not silently authorize a phone talking to a cloud provider — and `null` (never
-asked) staying distinct from `'off'` is what makes the overlay appear exactly once. The opted-in
-answer rides into the first prompt as an explicit argument (`systemFor(it, on)` /
-`planQuestions(it, on)`), because that prompt is built in the same tick as the overlay's setState. (1) **The gap**: `journalGap` reports how long
+asked) staying distinct from `'off'` is what keeps the full disclosure showing until it is answered.
+The answer rides into the interview as an explicit `deep` prop and into the first prompt as an
+explicit argument (`systemFor(it, on)` / `planQuestions(it, on)`) — neither sheet reads the flag
+itself, so what the wizard showed is what the prompt is built with. (1) **The gap**: `journalGap` reports how long
 the vault has been quiet (≥ `GAP_MIN_DAYS`, measured on the *later* of `createdAt`/`updatedAt` so a
 re-dated or imported entry doesn't read as silence, clamped to now so a forward-dated one can't go
 negative), and the prompt makes the FIRST question about that stretch — including whether something
@@ -379,7 +402,7 @@ device pristine/builtin seeding (`data/interviews.ts`), supersede-on-sync, dirty
 Wire-path check: `pnpm --filter client exec tsx scripts/interview-types-roundtrip.ts` (relay running).
 
 **Guided VIDEO interview** (the same interview types, answered on camera) is in — reached from the
-written interview's picker (a camera button per type) and the mobile compose chooser.
+new-entry wizard's mode grid, on both form factors.
 `ui/VideoInterview.tsx` runs `pick → planning → plan → record → saving`. The shaping constraint: the
 model **cannot hear a recorded answer**, and browser `SpeechRecognition` ships audio to Google/Apple
 servers, which is a non-starter here — so adaptivity moves *before* the session. The whole question

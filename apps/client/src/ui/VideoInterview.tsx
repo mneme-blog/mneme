@@ -1,5 +1,9 @@
 // Guided video interview — the on-camera counterpart of GuidedInterview.tsx.
 //
+// Like its written sibling it picks nothing: the type, the notebook and the
+// deeper-questions answer come from ui/NewEntryWizard.tsx, and this sheet opens
+// straight into planning the questions.
+//
 // The difference that shapes everything: the model never hears a recorded
 // answer, so there is nothing to adapt to mid-session. It therefore plans the
 // WHOLE question list in one call up front (ai/plan.ts + ai/prompts.ts), the
@@ -29,14 +33,7 @@ import { makeProvider } from '../ai/provider';
 import { videoInterviewPlanPrompt, videoInterviewPlanUserMessage } from '../ai/prompts';
 import { toPlan, PLAN_TARGET, PLAN_MAX } from '../ai/plan';
 import { buildInterviewHistory, HISTORY_BUDGET_CHARS } from '../ai/interview';
-import {
-  buildRetrospect,
-  deepReflectionChoice,
-  deepReflectionEnabled,
-  journalGap,
-  RETRO_BUDGET_CHARS,
-} from '../ai/reflection';
-import { ReflectionConsent } from './ReflectionConsent';
+import { buildRetrospect, journalGap, RETRO_BUDGET_CHARS } from '../ai/reflection';
 import { buildVideoInterviewDoc, type VideoInterviewCard } from '../editor/videointerviewData';
 import { docToText } from '../editor/doc';
 import { newMediaId } from '../sync/ids';
@@ -63,7 +60,7 @@ const pStyle: JSX.CSSProperties = { fontFamily: 'var(--ui)', fontSize: 13, lineH
 // silently stripped the moment an older build edits and re-pushes the record
 // (LWW field loss, no conflict, no warning).
 
-type Phase = 'pick' | 'planning' | 'plan' | 'record' | 'saving';
+type Phase = 'planning' | 'plan' | 'record' | 'saving';
 type Stage = 'idle' | 'recording' | 'review';
 
 interface Take {
@@ -75,24 +72,26 @@ export function VideoInterviewSheet({
   desk,
   onClose,
   onOpenEntry,
-  onManageTypes,
   journalId,
-  initial,
+  start,
+  deep,
 }: {
   desk: boolean;
   onClose: () => void;
   /** Open the freshly-saved entry in the editor. */
   onOpenEntry: (id: string) => void;
-  /** Hand off to the interview-types manager (the sheet closes first). */
-  onManageTypes: () => void;
-  /** Notebook a saved interview entry lands in; defaults to the first journal. */
-  journalId?: string;
-  /** Preselected start — skips the pick phase. */
-  initial?: InterviewType;
+  /** Notebook the saved entry lands in. Always explicit — the wizard resolves
+      it and shows it before recording starts. */
+  journalId: string;
+  /** The interview type to film. */
+  start: InterviewType;
+  /** The deeper-questions answer (ai/reflection.ts), decided in the wizard
+      immediately before this sheet opened. */
+  deep: boolean;
 }): VNode | null {
-  const { entries, journals, interviewTypes, aiSettings, createEntry, updateEntry, addMedia, mediaBlob, attachTranscript, transcribeToken } = useAppData();
+  const { entries, aiSettings, createEntry, updateEntry, addMedia, mediaBlob, attachTranscript, transcribeToken } = useAppData();
 
-  const [phase, setPhase] = useState<Phase>('pick');
+  const [phase, setPhase] = useState<Phase>('planning');
   // Opt-in: turn the answers into text right after saving. Off by default; the
   // toggle row itself carries the destination disclosure when the configured
   // transcription server is not on this device (on phones it practically never
@@ -111,7 +110,8 @@ export function VideoInterviewSheet({
     setSpokenLang(code);
     setSpokenLanguage(code);
   };
-  const [type, setType] = useState<InterviewType | null>(null);
+  // Fixed for the life of the sheet.
+  const type = start;
   const [questions, setQuestions] = useState<string[]>([]);
   const [planFallback, setPlanFallback] = useState(false);
   const [index, setIndex] = useState(0);
@@ -121,11 +121,6 @@ export function VideoInterviewSheet({
   const [savedCount, setSavedCount] = useState(0);
   const [error, setError] = useState('');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  // The deeper questions (ai/reflection.ts) are opt-in per device: `deep` is the
-  // recorded answer, `consentFor` holds the type the user picked while the
-  // one-time overlay asks for it.
-  const [deep, setDeep] = useState(deepReflectionEnabled);
-  const [consentFor, setConsentFor] = useState<InterviewType | null>(null);
 
   // Takes are indexed to match `questions`; a hole is a skipped question.
   const takes = useRef<(Take | null)[]>([]);
@@ -138,7 +133,6 @@ export function VideoInterviewSheet({
   const panelRef = useRef<HTMLDivElement>(null);
 
   const provider = useMemo(() => (aiSettings?.enabled ? makeProvider(aiSettings) : null), [aiSettings]);
-  const alive = useMemo(() => interviewTypes.filter((it) => !it.deleted), [interviewTypes]);
   // How long the journal has been quiet (ai/reflection.ts). Only used once the
   // user has opted into the deeper questions; it then shapes the planned
   // questions below and survives an unreachable provider, since the fallback set
@@ -169,12 +163,14 @@ export function VideoInterviewSheet({
   // Review object URLs are revoked when replaced or on unmount.
   useEffect(() => () => { if (reviewUrl) URL.revokeObjectURL(reviewUrl); }, [reviewUrl]);
 
-  // Opened with a preselected type — skip the pick phase once.
+  // Plan the questions, once. Guarded on `provider`: without it the render
+  // below bails before `planQuestions` exists, and the effect must not touch it
+  // then.
   const startedRef = useRef(false);
   useEffect(() => {
-    if (!initial || startedRef.current || !provider) return;
+    if (startedRef.current || !provider) return;
     startedRef.current = true;
-    pickForInterview(initial);
+    void planQuestions(start, deep);
   });
 
   if (!provider || !aiSettings) return null;
@@ -184,21 +180,7 @@ export function VideoInterviewSheet({
   // ── plan phase ──────────────────────────────────────────────
   // One call, then nothing. A failure is not fatal: the fallback set means the
   // session still works with the provider unreachable.
-  // The deeper questions widen what the plan call sends out of E2EE under a
-  // cloud backend, so the first AI interview on this device asks before it
-  // starts. `on` then rides into planQuestions explicitly: the plan is built in
-  // the same tick as the overlay's setState, before `deep` has settled.
-  const pickForInterview = (it: InterviewType): void => {
-    if (deepReflectionChoice() === null) {
-      setConsentFor(it);
-      return;
-    }
-    void planQuestions(it, deep);
-  };
-
   const planQuestions = async (it: InterviewType, on: boolean = deep): Promise<void> => {
-    setConsentFor(null);
-    setType(it);
     setPhase('planning');
     setError('');
     const ac = new AbortController();
@@ -354,14 +336,14 @@ export function VideoInterviewSheet({
   // createEntry is synchronous, so the entry id exists before the clips do —
   // the same create → attach → write-back order import/run.ts uses.
   const save = async (): Promise<void> => {
-    if (!anyTake() || !type) {
+    if (!anyTake()) {
       setError(t('assistant.video.noClips'));
       return;
     }
     setPhase('saving');
     setSavedCount(0);
     const entry = createEntry({
-      journalId: journalId ?? journals[0]?.id ?? 'j-personal',
+      journalId,
       labels: [type.name],
     });
     const cards: VideoInterviewCard[] = [];
@@ -458,7 +440,7 @@ export function VideoInterviewSheet({
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--line)' }}>
         <Icon name="film" size={17} color="var(--accent-ink)" />
         <h3 style={{ flex: 1, minWidth: 0, fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 500, color: 'var(--ink)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {type ? type.name : t('assistant.video.title')}
+          {type.name}
         </h3>
         <ProviderBadge provider={provider} />
         <button onClick={requestClose} title={t('common.close')} style={{ width: 30, height: 30, borderRadius: 9, border: '1px solid var(--line)', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
@@ -467,31 +449,6 @@ export function VideoInterviewSheet({
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16 }}>
-        {/* ── pick ── */}
-        {phase === 'pick' && (
-          <>
-            <p style={{ ...pStyle, marginBottom: 14 }}>{t('assistant.video.pickIntro')}</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {alive.map((it) => (
-                <button
-                  key={it.id}
-                  onClick={() => pickForInterview(it)}
-                  style={{ textAlign: 'start', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 13, padding: '11px 13px', cursor: 'pointer' }}
-                >
-                  <span style={{ display: 'block', fontFamily: 'var(--ui)', fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>{it.name}</span>
-                  <span style={{ display: 'block', fontFamily: 'var(--ui)', fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>{it.intro}</span>
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={onManageTypes}
-              style={{ marginTop: 12, fontFamily: 'var(--ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--accent-ink)', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
-            >
-              {t('assistant.interview.manageTypes')}
-            </button>
-          </>
-        )}
-
         {/* ── planning ── */}
         {phase === 'planning' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, color: 'var(--ink-3)', fontFamily: 'var(--ui)', fontSize: 13, padding: '30px 0' }}>
@@ -705,15 +662,6 @@ export function VideoInterviewSheet({
         </ConfirmDialog>
       )}
 
-      {consentFor && (
-        <ReflectionConsent
-          provider={provider}
-          onDecide={(on) => {
-            setDeep(on);
-            void planQuestions(consentFor, on);
-          }}
-        />
-      )}
     </div>
   );
 }
