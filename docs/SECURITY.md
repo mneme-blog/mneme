@@ -103,12 +103,14 @@ But under the **cloud** backend those excerpts leave E2EE for that request like 
 so the interview exports a wider, older slice of the journal than the label alone would.
 
 Which is why it is **off by default and asked for explicitly**, rather than folded into the
-assistant's own opt-in: the first AI interview on a device shows a consent overlay
-(`ui/ReflectionConsent.tsx`) stating what the questions do, that the selection happens on-device
-from already-decrypted entries, and — driven by the live provider, like `ProviderBadge` — either
-that the entries never leave the device (local backend) or exactly what is sent and to whom (cloud).
-Declining is recorded as a decision, so the overlay appears once either way, and the same switch
-with the same explanation sits in Preferences → Assistant → Interviews. The flag is **device-local**
+assistant's own opt-in: the switch sits in the new-entry wizard (`DeepQuestions` in
+`ui/NewEntryWizard.tsx`), directly above the interview types it applies to, so it is met before
+*every* interview rather than once ever. It states what the questions do, that the selection happens
+on-device from already-decrypted entries, and — driven by the live provider, like `ProviderBadge` —
+either that the entries never leave the device (local backend) or exactly what is sent and to whom
+(cloud). That explanation is shown expanded until the question has been answered once, and again
+whenever the switch is on — which is exactly when entries leave E2EE. The same switch with the same
+explanation also sits in Preferences → Assistant → Interviews. The flag is **device-local**
 (localStorage, never synced): the consent is about what leaves *this* device, and a decision taken
 on a laptop running a local Ollama must not silently authorize a phone configured against a cloud
 provider. On the local backend nothing leaves the device either way, and with the assistant off none

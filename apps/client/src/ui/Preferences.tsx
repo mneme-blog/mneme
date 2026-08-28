@@ -288,7 +288,7 @@ function RelayServerRow(): VNode {
   );
 }
 
-export function PreferencesSheet({ desk, theme, onClose, initialTab, ownerId, status, onLock, onRotate, onDeviceUnlock, onImport, onDeleteVault, onAiSettings, onTemplates, onAsk, onInterview, onInterviewTypes }: {
+export function PreferencesSheet({ desk, theme, onClose, initialTab, ownerId, status, onLock, onRotate, onDeviceUnlock, onImport, onDeleteVault, onAiSettings, onTemplates, onAsk, onInterviewTypes }: {
   desk: boolean;
   theme: ThemeControls;
   onClose: () => void;
@@ -308,7 +308,6 @@ export function PreferencesSheet({ desk, theme, onClose, initialTab, ownerId, st
   /** null hides the row (assistant disabled); undefined = desktop, sidebar has it. */
   onAsk?: (() => void) | null;
   /** Mobile-only (desktop has the sidebar button); null hides it when assistant is off. */
-  onInterview?: (() => void) | null;
   /** Interview-types manager — reached from Preferences on both desktop and mobile; null when assistant is off. */
   onInterviewTypes?: (() => void) | null;
 }): VNode {
@@ -482,7 +481,6 @@ export function PreferencesSheet({ desk, theme, onClose, initialTab, ownerId, st
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {onTemplates && <Row icon="copy" label={t('prefs.assistant.templates')} onClick={handOff(onTemplates)} />}
         {onAsk && <Row icon="feather" label={t('prefs.assistant.ask')} onClick={handOff(onAsk)} />}
-        {onInterview && <Row icon="mic" label={t('prefs.assistant.interview')} onClick={handOff(onInterview)} />}
         {onInterviewTypes && <Row icon="list" label={t('prefs.assistant.interviewTypes')} onClick={handOff(onInterviewTypes)} />}
         <Row icon="feather" label={t('prefs.assistant.ai')} onClick={handOff(onAiSettings)} />
       </div>

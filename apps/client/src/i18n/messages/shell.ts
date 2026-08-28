@@ -8,7 +8,6 @@ export const shell = {
   'shell.nav.calendar': 'Calendar',
   'shell.nav.templates': 'Templates',
   'shell.nav.ask': 'Ask my journal',
-  'shell.nav.interview': 'Daily interview',
   'shell.notebooks': 'Notebooks',
   'shell.preferences': 'Preferences',
   'shell.yourVault': 'Your vault',
@@ -16,15 +15,20 @@ export const shell = {
   'shell.footer.syncing': 'syncing…',
   'shell.footer.syncingCount': 'syncing {count}…',
 
-  // ── Mobile compose chooser (ui/ComposeChooser.tsx) ──
-  'shell.compose.empty': 'Empty entry',
-  'shell.compose.emptyHint': 'Start with a blank page',
-  'shell.compose.interview': 'AI interview',
+  // ── New-entry wizard (ui/NewEntryWizard.tsx) ──
+  'shell.compose.blank': 'Blank page',
+  'shell.compose.blankHint': 'Start writing on an empty page',
+  'shell.compose.interview': 'Chat interview',
   'shell.compose.interviewHint': 'Answer a few questions and get a draft',
   'shell.compose.videoInterview': 'Video interview',
   'shell.compose.videoInterviewHint': 'Answer on camera, one clip per question',
-  'shell.compose.template': 'Use a template',
+  'shell.compose.template': 'From a template',
   'shell.compose.templateHint': 'Start from one of your templates',
+  'shell.compose.aiOff': 'Turn on the assistant to use this',
+  'shell.compose.notebook': 'Notebook',
+  'shell.compose.pickTemplate': 'Pick a template',
+  'shell.compose.manageTemplates': 'Manage templates',
+  'shell.compose.noTypes': 'No interview types yet.',
 
   // ── Connection status (connLabel) ──
   'shell.conn.online': 'Connected',

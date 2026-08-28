@@ -113,8 +113,6 @@ export const assistant = {
   'assistant.interview.title': 'Guided interview',
   'assistant.interview.fallbackTitle': 'Interview',
   'assistant.interview.yourDraft': 'Your draft',
-  'assistant.interview.pickIntro':
-    "Pick an interview. I'll ask a few questions, then write your answers up as a journal entry you can review before saving.",
   'assistant.interview.freeform': 'Freeform draft',
   'assistant.interview.freeformHint': "Describe an entry in a sentence and I'll draft it — no questions.",
   'assistant.interview.manageTypes': 'Manage interview types',
@@ -149,17 +147,11 @@ export const assistant = {
     'Your assistant runs on this device, so the entries it reads for this never leave it.',
   'assistant.reflect.dataCloud':
     'To ask these questions, your assistant is sent your most recent entry and a few older ones from anywhere in your journal — not only the ones from this interview. As with every assistant request, that text leaves end-to-end encryption for the provider you configured.',
-  'assistant.reflect.changeLater': 'You can change this any time under Preferences → Assistant.',
-  'assistant.reflect.decline': 'Keep questions simple',
-  'assistant.reflect.accept': 'Use deeper questions',
 
   // ── guided VIDEO interview (same types, answered on camera) ──
   // The model plans every question up front: it cannot hear a recorded answer,
   // so there is nothing to adapt to mid-session (see ai/prompts.ts).
   'assistant.video.title': 'Video interview',
-  'assistant.video.pickIntro':
-    "Pick an interview. I'll plan the questions, then you answer them on camera — one clip per question.",
-  'assistant.video.recordInstead': 'Record on camera',
   'assistant.video.planning': 'Planning your questions…',
   'assistant.video.planTitle': 'Your questions',
   'assistant.video.planHint': 'Edit, reorder, or remove any question before you start recording.',
