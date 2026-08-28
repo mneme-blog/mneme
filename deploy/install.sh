@@ -61,7 +61,7 @@ indent() { LC_ALL=C awk '{ if (length($0)) print "    " $0; else print "" }'; }
 # A titled block for the closing summary. Only the left edge is drawn: nothing
 # has to be padded to a fixed width, which colour codes and multibyte characters
 # make unreliable to get right. Body comes in on stdin.
-rule() { local n=$1 out=""; while ((n-- > 0)); do out+=$BOX_H; done; printf '%s' "$out"; }
+rule() { local n=$1 out=""; while ((n-- > 0)); do out="$out$BOX_H"; done; printf '%s' "$out"; }
 
 box() { # box "Title" <<EOF … EOF
   local title=$1 line
@@ -79,8 +79,10 @@ box() { # box "Title" <<EOF … EOF
 
 step() { # step "Title" "one line saying why this step exists"
   STEP_NO=$((STEP_NO + 1))
-  printf '\n%s%s Step %d/%d · %s%s\n' "$B" "$ARROW" "$STEP_NO" "$TOTAL_STEPS" "$1" "$R"
-  [[ $# -gt 1 ]] && printf '%s%s%s\n' "$DIM" "$(printf '%s' "$2" | fold -s -w 74 | indent)" "$R"
+  local title="Step $STEP_NO/$TOTAL_STEPS · $1"
+  printf '\n%s%s %s%s %s%s%s\n' "$B" "$ARROW" "$title" "$R" "$DIM" "$(rule $((74 - ${#title})))" "$R"
+  [[ $# -gt 1 ]] && printf '%s%s%s\n' "$DIM" "$(printf '%s' "$2" | fold -s -w 74 |
+    sed 's/[[:space:]]*$//' | indent)" "$R"
   return 0
 }
 
@@ -269,14 +271,17 @@ you and the people you share the machine with can reach from any browser on
 your network. Your entries are encrypted in the browser, so this server —
 even though it is yours — only ever holds unreadable blobs.
 
-It takes a few minutes, most of it downloading. Here is the plan:" | indent)
+It takes a few minutes, most of it downloading." | indent)
+EOF
 
-$(printf '%s' "1. Check this machine has what it needs (Docker, disk, free ports).
+box "The plan" <<EOF
+1. Check this machine has what it needs (Docker, disk, free ports).
 2. Fetch the Mneme source into a directory you choose.
 3. Write a configuration file with freshly generated passwords.
 4. Download the container images.
-5. Start the stack: web server, relay, database, media store, speech-to-text.
-6. Wait until it is genuinely serving, then tell you the address." | indent)
+5. Start the five services: web server, relay, database, media store,
+   and speech-to-text.
+6. Wait until it is genuinely serving, then tell you the address.
 EOF
 if $INTERACTIVE; then echo; fi
 if ! ask "Ready to start?" y; then
@@ -320,14 +325,16 @@ SUDO=""
 if [[ $EUID -ne 0 ]] && command -v sudo >/dev/null; then SUDO=sudo; fi
 
 if ! command -v docker >/dev/null; then
-  say ""
-  say "Docker is not installed. Mneme runs as a handful of containers, so it is required."
-  say ""
-  say "The usual way to install it is Docker's own script, which adds Docker's package"
-  say "repository and installs Docker Engine plus the Compose plugin. It needs root:"
-  say ""
-  say "    curl -fsSL https://get.docker.com | ${SUDO:+sudo }sh"
-  say ""
+  box "Docker is not installed" <<EOF
+Mneme runs as a handful of containers, so Docker is required.
+
+The usual way to install it is Docker's own script: it adds Docker's
+package repository, then installs Docker Engine and the Compose plugin.
+It needs root.
+
+    curl -fsSL https://get.docker.com | ${SUDO:+sudo }sh
+EOF
+  echo
   if $INSTALL_DOCKER || ask "Run that now?" n; then
     curl -fsSL https://get.docker.com | $SUDO sh ||
       fail "Docker's installer did not finish." \
@@ -658,11 +665,13 @@ ok "Images downloaded${PULL_TOTAL:+ ($PULL_TOTAL images)}"
 # ── Step 5: start ───────────────────────────────────────────────────────────
 step "Starting the stack" "Five services: Caddy (HTTPS), the relay, Postgres, MinIO for media, and the speech-to-text server."
 
-if ! ./deploy/prod.sh up -d; then
+if ! spin "Starting containers" ./deploy/prod.sh up -d; then
+  printf '\n'
+  tail -n 20 "$SPIN_LOG" | indent || true
   printf '\n'
   ./deploy/prod.sh ps 2>/dev/null | indent || true
   fail "The stack did not start." \
-    "The output above is Docker's own. Two causes account for most of it:
+    "The lines above are Docker's own. Two causes account for most of it:
 
   ${BULLET} \"port is already allocated\" — something else on this machine holds 80
     or 443. Find it with: ${SUDO:+sudo }ss -ltnp '( sport = :80 or sport = :443 )'
@@ -676,17 +685,23 @@ ok "Containers started"
 # ── Step 6: wait for it to actually serve ───────────────────────────────────
 step "Waiting for Mneme to come up" "The database has to migrate and the relay has to report ready — usually under a minute."
 
-printf '    '
-ready=false
-for _ in $(seq 1 60); do
-  if curl -fsk --max-time 3 "$READY_URL" >/dev/null 2>&1; then
-    ready=true
-    break
-  fi
-  printf '.'
-  sleep 3
-done
-printf '\n'
+# Same spinner as the download and start steps, rather than a row of dots: all
+# three are waits of unknown length, and the elapsed clock is what tells someone
+# whether to keep waiting or start looking for a problem.
+wait_ready() {
+  local _
+  for _ in $(seq 1 60); do
+    curl -fsk --max-time 3 "$READY_URL" >/dev/null 2>&1 && return 0
+    sleep 3
+  done
+  return 1
+}
+
+if spin "Waiting for the app to answer" wait_ready; then
+  ready=true
+else
+  ready=false
+fi
 
 if ! $ready; then
   printf '\n'
@@ -760,7 +775,8 @@ cat <<EOF
 $(printf '%s' "${B}Good to know${R}
 ${BULLET} ${B}Transcription will say it has no model for a while.${R} The speech server
   is fetching one — about 1.6 GB, once. Everything else works meanwhile:
-      cd $DIR && ./deploy/prod.sh logs -f whisper-model
+      cd $DIR
+      ./deploy/prod.sh logs -f whisper-model
 ${BULLET} Backups land in $BACKUPS
 ${BULLET} Run the stack from $DIR:
       ./deploy/prod.sh ps            # what is running
