@@ -153,6 +153,34 @@ on another device — decrypts that stored image and makes **no further third-pa
 no live/streaming map. Both hosts are named explicitly in the shipped CSP (§6.2) — `img-src` for the
 tile CDN, `connect-src` for the geocoder — so this egress is enumerated rather than incidental.
 
+### Journal export — leaving the envelope, on purpose
+
+Preferences → Vault → **Export a journal** writes one `.zip` holding a notebook's entries and media
+**in plaintext** (`apps/client/src/export/`, format specified in [EXPORT-FORMAT.md](./EXPORT-FORMAT.md)).
+State it without hedging: **the archive is not encrypted, not signed, and not authenticated.** Once it
+reaches the downloads folder it has none of the protection the rest of the app provides — no seal, no
+auto-lock, no remote wipe — and it can be read by anything with filesystem access, backed up to a
+cloud drive by the OS, or handed on by accident.
+
+That is not a flaw in the feature; it *is* the feature. An end-to-end-encrypted journal whose data
+cannot be taken out is a trap, and "your data is yours" is only true if there is a door. The design
+therefore spends its effort on making the trade visible and bounded rather than on pretending it is
+not happening:
+
+- The archive is built **entirely on the device**. It never passes through the relay, and no network
+  request is made to produce it. The relay learns nothing — not even that an export happened.
+- Exporting requires an **unlocked vault**, so it is exactly as authorized as reading the journal on
+  screen. It grants no capability an attacker at the keyboard did not already have (§6.11).
+- The picker screen says the archive is unencrypted, and says it **before** the export starts rather
+  than in a footnote afterwards.
+- Nothing is changed or deleted: an export is a pure read.
+- The blob URL backing the download is **revoked** when the sheet closes, so a finished archive is not
+  left pinned in the tab.
+
+The unbuilt half is an **encrypted** export variant (an archive sealed under a passphrase, for backups
+you intend to keep) — tracked in [ROADMAP.md](./ROADMAP.md). Until it exists, an export is for taking
+your journal somewhere, and encrypting the result is the operating system's job, not ours.
+
 ### The guided video interview — no new exception at all
 
 The on-camera interview (`apps/client/src/ui/VideoInterview.tsx`) is worth stating explicitly because
@@ -499,6 +527,21 @@ them at rest (e.g. age/GPG) before moving them somewhere less trusted. `sessions
 resurrect a stale credential. Restore is destructive (it replaces all relay data) and is gated behind
 a typed `{"confirm":"restore"}` on the HTTP path and a stdin prompt on the CLI; archive names on the
 HTTP download/restore/delete paths are validated against a strict regex (the path-traversal boundary).
+
+**Download tickets.** `GET /admin/backups/{name}` is the one admin endpoint not behind the plain token
+gate, because the browser performs that transfer itself and a navigation carries no `Authorization`
+header. It accepts the token *or* a ticket in the query string, minted by
+`POST /admin/backups/{name}/ticket` (which does require the token). The ticket is 256 random bits,
+constant-time compared, **bound to one archive name**, **single use**, and valid for **two minutes**;
+redeeming it authorizes exactly one read of one archive — ciphertext, no keys, no plaintext — and
+nothing else on the admin surface. Failed attempts spend from the same per-IP budget as a failed admin
+authentication. The cost is a bearer credential in a URL, which reaches browser history and any proxy
+log in between; single use is what makes the entry left behind inert, and the relay-wide
+`Referrer-Policy: no-referrer` (§6, `internal/api/headers.go`) stops it travelling onward. The
+alternative — an authenticated `fetch()` that buffers the archive in the tab and hands it to a
+`blob:` anchor — kept the credential out of the URL but could not carry an archive larger than the
+tab's memory and, in practice, sometimes produced no download and no error at all. `ADMIN_TOKEN`
+itself never appears in a URL.
 
 ### 6.17 One-click updates — ⚠️ Accepted (opt-in privilege escalation, deliberately bounded)
 The `/admin` dashboard can apply a release (`UPDATE_SPOOL_DIR` + the host agent in `deploy/updater/`).

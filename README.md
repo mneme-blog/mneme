@@ -141,6 +141,7 @@ design intent, not certification.
 | [`docs/SECURITY.md`](./docs/SECURITY.md) | Threat model, attack vectors, and known weaknesses. It does not flatter the project. |
 | [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) · [`docs/MAINTENANCE.md`](./docs/MAINTENANCE.md) | Self-hosting, and day-two ops: backups, restore, upgrades. |
 | [`docs/API.md`](./docs/API.md) · [`server/README.md`](./server/README.md) | The relay's HTTP surface, and running it. |
+| [`docs/EXPORT-FORMAT.md`](./docs/EXPORT-FORMAT.md) | The journal export format, in full — write your own importer. |
 | [`docs/PWA.md`](./docs/PWA.md) · [`docs/CONTRIBUTING.md`](./docs/CONTRIBUTING.md) | Installing it as an app; dev setup and quality gates. |
 | [`SECURITY-AUDITS.md`](./SECURITY-AUDITS.md) · [`CLAUDE.md`](./CLAUDE.md) | The internal audit record, and the binding decision document. |
 

@@ -109,4 +109,30 @@ export const vault = {
     'Everything is encrypted and syncing now. New notebooks appear on the Journals screen.',
   'vault.import.error': 'The import couldn’t finish — nothing was changed by the failed step.',
   'vault.import.pickAnother': 'Pick another file',
+
+  // — journal export —
+  'vault.export.title': 'Export a journal',
+  'vault.export.pickBody':
+    'Choose a notebook to export. You get one .zip holding every entry and every recording, decrypted, in a documented format anyone can read.',
+  'vault.export.empty': 'There’s nothing to export yet — write an entry first.',
+  'vault.export.entries#one': '{count} entry',
+  'vault.export.entries#other': '{count} entries',
+  'vault.export.readyBody':
+    'The archive is built on this device and never leaves it. Nothing in your journal is changed or removed.',
+  'vault.export.plaintext':
+    'The archive is not encrypted. Once it’s in your downloads it’s as readable as the journal itself — keep it somewhere you trust.',
+  'vault.export.working': 'Building your archive…',
+  'vault.export.writing': 'Adding {name}',
+  'vault.export.progress': '{n} / {count}',
+  'vault.export.done': 'Export complete',
+  'vault.export.sum.entries': 'Entries exported',
+  'vault.export.sum.media': 'Media files included',
+  'vault.export.sum.missing': 'Media not on this device',
+  'vault.export.doneBody':
+    'Saved to your downloads. The archive explains its own format, and the full specification is linked from its README.',
+  'vault.export.missingBody':
+    'Some recordings aren’t on this device and couldn’t be fetched. They’re listed in the archive’s manifest — export again from a device that holds them, or while online, for a complete copy.',
+  'vault.export.manual': 'Download didn’t start? Save it here',
+  'vault.export.error': 'The export couldn’t finish — nothing in your journal was changed.',
+  'vault.export.again': 'Export another',
 } as const;

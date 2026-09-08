@@ -580,6 +580,32 @@ through real wa-sqlite under the worker's serialized dispatch — guards the `sr
 request queue: an unserialized worker interleaves the import's fire-and-forget `putLocal` runs with
 `flush`'s `markSynced` BEGIN/COMMIT batches on the single connection and corrupts/loses rows).
 
+**Journal export** (§10 step 7, the other half of "your data is yours") is in: Preferences → Vault →
+"Export a journal" (`ui/ExportJournal.tsx`) packs ONE notebook into a single `.zip` — every live
+entry plus every media file it references, **decrypted**, built entirely on the device (no relay
+involvement; the relay does not even learn that an export happened). `src/export/` is the work:
+`format.ts` holds the wire types (they ARE the published format — renaming a field is a breaking
+change to somebody else's importer, not a refactor), `journal.ts` orchestrates, `collect.ts` walks a
+document for the attachments it references. Layout: `mneme-export.json` (manifest/table of contents)
++ `entries/<id>.json` (one per entry) + `media/<id>.<ext>` + a `README.md`. Each entry carries the
+ProseMirror `body` as the content of record AND a `markdown` rendering, so a third-party importer
+never has to understand our schema; timestamps are ISO 8601 everywhere *except inside node attrs*,
+which keep their raw epoch-ms so the document round-trips byte-identically.
+**The format is public and specified in `docs/EXPORT-FORMAT.md`** — every field, every custom node
+type, the Markdown token table, compatibility rules (additive within a version; readers must ignore
+unknown fields and tolerate unknown node types), and a complete minimal reader. Three things are
+load-bearing and easy to break: (1) `collect.ts docAttachments` is a SECOND walk over the node types
+`docMediaIds` walks for *deletion* — an id it misses is content silently missing from the user's
+export, so the repro script asserts the two produce the same set over a document holding every node
+type; (2) media is stored (level 0) and JSON deflated through fflate's **streaming** `Zip`, because
+`zipSync` would hold inputs and output at once and a journal with video is gigabytes; (3) media that
+lives only on another device is recorded in `missingMedia` rather than failing the run — an
+importer can tell "not included" from "not referenced". The archive is **plaintext**, which is the
+point of an export and is stated on the picker screen before it starts (docs/SECURITY.md §2 "Journal
+export"); an encrypted archive variant is not built. Regression check:
+`pnpm --filter client exec tsx scripts/export-journal.ts` (no DOM, no relay — it reads the archive
+back with fflate the way a third party would, and pins the spec's Markdown tokens).
+
 **Internationalization** (client UI only) is in: **12 languages** — English (source), German, French,
 Spanish, Italian, Dutch, Finnish, Mandarin Chinese, Japanese, Korean, Hindi, and **Arabic (full RTL)**.
 `src/i18n/`: the English catalog (`en.ts`, composed of per-area fragments under `messages/`) is the
@@ -636,7 +662,8 @@ StarterKit's Link mark config (`editor/doc.ts`: `protocols`, `isAllowedUri`, `va
 check: `pnpm --filter client exec tsx scripts/link-safety.ts`.
 
 Not yet: FTS5 (blocked on a custom wa-sqlite wasm build), push transport + reminders UI (step 6),
-export + non-Day-One import (step 7), Tauri shells (step 8) and their OS-keychain at-rest storage (§6).
+re-import of a Mneme export + an encrypted archive variant + non-Day-One import (step 7), Tauri
+shells (step 8) and their OS-keychain at-rest storage (§6).
 
 ### Frontend design source
 The product visual design is a **handoff bundle from Claude Design** (claude.ai/design), available at:
@@ -721,7 +748,8 @@ Plain-English deep-dives live in [`docs/`](docs/): `ARCHITECTURE.md` (diagrams),
 (E2EE model + attack vectors), `ENCRYPTION.md` (primitives + key hierarchy), `API.md` (relay
 endpoints), `DEPLOYMENT.md` (production stack: Caddy, HTTPS, compose), `MAINTENANCE.md` (backups,
 upgrades, health), `FEATURES.md` (what's built today), `ROADMAP.md` (honest status vs. §10),
-`PWA.md` (phone install recipe), `CONTRIBUTING.md`. This §0 stays the quick operating guide;
+`PWA.md` (phone install recipe), `EXPORT-FORMAT.md` (the published journal-export format — the
+spec third parties write importers against), `CONTRIBUTING.md`. This §0 stays the quick operating guide;
 `docs/` expands on it; §1–§12 below remain the binding decisions.
 
 Both security audits live in **`SECURITY-AUDITS.md`** at the repo root, newest first, kept verbatim

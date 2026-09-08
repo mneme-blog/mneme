@@ -935,6 +935,28 @@ const de: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busyCount': 'Transkribiere Antworten… {done}/{total}',
   'assistant.transcribe.bundledAbsolute': 'Das ist der mitgelieferte Server deines Deployments — als absolute Adresse gespeichert gilt er aber als Fremdserver: deine Anmeldung wird nicht mitgeschickt und jede Anfrage abgelehnt.',
   'assistant.transcribe.bundledFix': 'Stattdessen {path} verwenden',
+
+  // — journal export —
+  'prefs.vault.export': 'Journal exportieren',
+  'vault.export.title': 'Journal exportieren',
+  'vault.export.pickBody': 'Wähle ein Notizbuch zum Exportieren. Du bekommst eine .zip-Datei mit allen Einträgen und allen Aufnahmen, entschlüsselt, in einem dokumentierten Format, das jede und jeder lesen kann.',
+  'vault.export.empty': 'Noch nichts zu exportieren – schreib zuerst einen Eintrag.',
+  'vault.export.entries#one': '{count} Eintrag',
+  'vault.export.entries#other': '{count} Einträge',
+  'vault.export.readyBody': 'Das Archiv entsteht auf diesem Gerät und verlässt es nicht. An deinem Journal wird nichts verändert oder entfernt.',
+  'vault.export.plaintext': 'Das Archiv ist nicht verschlüsselt. Sobald es in deinen Downloads liegt, ist es so lesbar wie das Journal selbst – bewahre es an einem Ort auf, dem du vertraust.',
+  'vault.export.working': 'Archiv wird erstellt…',
+  'vault.export.writing': '{name} wird hinzugefügt',
+  'vault.export.progress': '{n} / {count}',
+  'vault.export.done': 'Export abgeschlossen',
+  'vault.export.sum.entries': 'Exportierte Einträge',
+  'vault.export.sum.media': 'Enthaltene Mediendateien',
+  'vault.export.sum.missing': 'Medien nicht auf diesem Gerät',
+  'vault.export.doneBody': 'In deinen Downloads gespeichert. Das Archiv erklärt sein eigenes Format, die vollständige Spezifikation ist in der README verlinkt.',
+  'vault.export.missingBody': 'Einige Aufnahmen liegen nicht auf diesem Gerät und konnten nicht geladen werden. Sie stehen im Manifest des Archivs – exportiere noch einmal von einem Gerät, das sie hat, oder mit Verbindung, um eine vollständige Kopie zu bekommen.',
+  'vault.export.manual': 'Download nicht gestartet? Hier speichern',
+  'vault.export.error': 'Der Export konnte nicht abgeschlossen werden – an deinem Journal wurde nichts verändert.',
+  'vault.export.again': 'Weiteres exportieren',
 };
 
 export default de;

@@ -870,6 +870,28 @@ const zh: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busyCount': '正在转写回答… {done}/{total}',
   'assistant.transcribe.bundledAbsolute': '这是你部署自带的服务器，但以绝对地址保存时会被视为第三方服务器：不会附加你的登录凭据，每个请求都会被拒绝。',
   'assistant.transcribe.bundledFix': '改用 {path}',
+
+  // — journal export —
+  'prefs.vault.export': '导出日记本',
+  'vault.export.title': '导出日记本',
+  'vault.export.pickBody': '选择要导出的笔记本。你会得到一个 .zip 文件，包含全部条目和全部录音，均已解密，采用任何人都能读取的公开格式。',
+  'vault.export.empty': '暂时没有可导出的内容——先写一条吧。',
+  'vault.export.entries#one': '{count} 条',
+  'vault.export.entries#other': '{count} 条',
+  'vault.export.readyBody': '压缩包在本设备上生成，不会离开设备。你的日记不会被修改或删除。',
+  'vault.export.plaintext': '压缩包没有加密。一旦保存到下载文件夹，它和日记本身一样可读——请放在你信任的地方。',
+  'vault.export.working': '正在生成压缩包…',
+  'vault.export.writing': '正在添加 {name}',
+  'vault.export.progress': '{n} / {count}',
+  'vault.export.done': '导出完成',
+  'vault.export.sum.entries': '已导出条目',
+  'vault.export.sum.media': '已包含的媒体文件',
+  'vault.export.sum.missing': '本设备上缺少的媒体',
+  'vault.export.doneBody': '已保存到下载文件夹。压缩包内附有格式说明，完整规范可从其 README 链接查看。',
+  'vault.export.missingBody': '部分录音不在本设备上，也无法获取。它们已列在压缩包的清单中——请在拥有这些文件的设备上，或在联网时重新导出，以获得完整副本。',
+  'vault.export.manual': '下载没有开始？点此保存',
+  'vault.export.error': '导出未能完成——你的日记没有任何改动。',
+  'vault.export.again': '再导出一个',
 };
 
 export default zh;

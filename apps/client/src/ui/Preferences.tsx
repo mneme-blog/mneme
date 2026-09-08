@@ -288,7 +288,7 @@ function RelayServerRow(): VNode {
   );
 }
 
-export function PreferencesSheet({ desk, theme, onClose, initialTab, ownerId, status, onLock, onRotate, onDeviceUnlock, onImport, onDeleteVault, onAiSettings, onTemplates, onAsk, onInterviewTypes }: {
+export function PreferencesSheet({ desk, theme, onClose, initialTab, ownerId, status, onLock, onRotate, onDeviceUnlock, onImport, onExport, onDeleteVault, onAiSettings, onTemplates, onAsk, onInterviewTypes }: {
   desk: boolean;
   theme: ThemeControls;
   onClose: () => void;
@@ -301,6 +301,7 @@ export function PreferencesSheet({ desk, theme, onClose, initialTab, ownerId, st
   onRotate: () => void;
   onDeviceUnlock: () => void;
   onImport: () => void;
+  onExport: () => void;
   onDeleteVault: () => void;
   onAiSettings: () => void;
   /** Mobile-only journal entry points (desktop reaches these from the sidebar). */
@@ -515,10 +516,11 @@ export function PreferencesSheet({ desk, theme, onClose, initialTab, ownerId, st
         <Row icon="key" label={t('prefs.vault.deviceUnlock')} value={vaultMethod === 'securityKey' ? t('prefs.vault.method.securityKey') : vaultMethod === 'passphrase' ? t('prefs.vault.method.passphrase') : t('common.off')} onClick={handOff(onDeviceUnlock)} />
         <Row icon="shield" label={t('prefs.vault.rotate')} onClick={handOff(onRotate)} />
       </div>
-      {/* Data in/out — its own section (export will join import here). */}
+      {/* Data in/out — its own section. */}
       <SectionLabel>{t('prefs.vault.data')}</SectionLabel>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <Row icon="download" label={t('prefs.vault.import')} onClick={handOff(onImport)} />
+        <Row icon="file" label={t('prefs.vault.export')} onClick={handOff(onExport)} />
       </div>
       {/* Destructive action set apart from the routine vault rows. */}
       <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line)' }}>

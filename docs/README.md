@@ -19,6 +19,7 @@ incident) points you.
 | [ENCRYPTION.md](./ENCRYPTION.md) | The cryptography: primitives, the key hierarchy, the ciphertext envelope, at-rest seals, and rotation. |
 | [SECURITY.md](./SECURITY.md) | The E2EE threat model and a frank list of **attack vectors and known weaknesses** (mitigated / accepted / open), including the folded-in code-review findings. |
 | [API.md](./API.md) | The relay's HTTP API — endpoints, request/response shapes, auth, admin, backups. |
+| [EXPORT-FORMAT.md](./EXPORT-FORMAT.md) | The **journal export format**, specified in full — so anyone can write an importer for a Mneme archive without asking us. |
 
 ## Running it
 

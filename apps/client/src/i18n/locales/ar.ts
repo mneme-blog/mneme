@@ -925,6 +925,28 @@ const ar: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busyCount': 'جارٍ تفريغ الإجابات… {done}/{total}',
   'assistant.transcribe.bundledAbsolute': 'هذا هو الخادم المرفق بنشرك، لكنه محفوظ كعنوان مطلق فيُعامل كخادم جهة خارجية: لا يُرفق تسجيل دخولك ويُرفض كل طلب.',
   'assistant.transcribe.bundledFix': 'استخدم {path} بدلًا من ذلك',
+
+  // — journal export —
+  'prefs.vault.export': 'تصدير دفتر',
+  'vault.export.title': 'تصدير دفتر',
+  'vault.export.pickBody': 'اختر دفترًا لتصديره. ستحصل على ملف ‎.zip‎ واحد يضم كل التدوينات وكل التسجيلات، بعد فك تشفيرها، بصيغة موثّقة يستطيع أي شخص قراءتها.',
+  'vault.export.empty': 'لا شيء لتصديره بعد — اكتب تدوينة أولًا.',
+  'vault.export.entries#one': 'تدوينة واحدة',
+  'vault.export.entries#other': '{count} تدوينة',
+  'vault.export.readyBody': 'يُبنى الأرشيف على هذا الجهاز ولا يغادره. ولا يُغيَّر أو يُحذف أي شيء من دفترك.',
+  'vault.export.plaintext': 'الأرشيف غير مشفَّر. بمجرد وصوله إلى تنزيلاتك يصبح مقروءًا مثل الدفتر نفسه — احتفظ به في مكان تثق به.',
+  'vault.export.working': 'يجري بناء الأرشيف…',
+  'vault.export.writing': 'إضافة {name}',
+  'vault.export.progress': '{n} / {count}',
+  'vault.export.done': 'اكتمل التصدير',
+  'vault.export.sum.entries': 'التدوينات المصدَّرة',
+  'vault.export.sum.media': 'ملفات الوسائط المضمَّنة',
+  'vault.export.sum.missing': 'وسائط غير موجودة على هذا الجهاز',
+  'vault.export.doneBody': 'حُفظ في تنزيلاتك. يشرح الأرشيف صيغته بنفسه، والمواصفة الكاملة مرتبطة من ملف README الخاص به.',
+  'vault.export.missingBody': 'بعض التسجيلات ليست على هذا الجهاز وتعذّر جلبها. وهي مذكورة في بيان الأرشيف — أعد التصدير من جهاز يحتويها، أو أثناء الاتصال، للحصول على نسخة كاملة.',
+  'vault.export.manual': 'لم يبدأ التنزيل؟ احفظه من هنا',
+  'vault.export.error': 'تعذّر إكمال التصدير — لم يتغيّر أي شيء في دفترك.',
+  'vault.export.again': 'تصدير دفتر آخر',
 };
 
 export default ar;

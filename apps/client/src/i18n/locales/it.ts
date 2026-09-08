@@ -941,6 +941,28 @@ const it: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busyCount': 'Trascrizione delle risposte… {done}/{total}',
   'assistant.transcribe.bundledAbsolute': 'Questo è il server incluso nel tuo deployment, ma salvato come indirizzo assoluto conta come server di terze parti: il tuo accesso non viene allegato e ogni richiesta viene rifiutata.',
   'assistant.transcribe.bundledFix': 'Usa invece {path}',
+
+  // — journal export —
+  'prefs.vault.export': 'Esporta un diario',
+  'vault.export.title': 'Esporta un diario',
+  'vault.export.pickBody': 'Scegli un taccuino da esportare. Ottieni un .zip con tutte le voci e tutte le registrazioni, decifrate, in un formato documentato che chiunque può leggere.',
+  'vault.export.empty': 'Non c’è ancora nulla da esportare: scrivi prima una voce.',
+  'vault.export.entries#one': '{count} voce',
+  'vault.export.entries#other': '{count} voci',
+  'vault.export.readyBody': 'L’archivio viene creato su questo dispositivo e non lo lascia. Nel tuo diario non viene modificato né rimosso nulla.',
+  'vault.export.plaintext': 'L’archivio non è cifrato. Una volta nei download è leggibile quanto il diario stesso: tienilo in un posto di cui ti fidi.',
+  'vault.export.working': 'Creazione dell’archivio…',
+  'vault.export.writing': 'Aggiunta di {name}',
+  'vault.export.progress': '{n} / {count}',
+  'vault.export.done': 'Esportazione completata',
+  'vault.export.sum.entries': 'Voci esportate',
+  'vault.export.sum.media': 'File multimediali inclusi',
+  'vault.export.sum.missing': 'Media non presenti su questo dispositivo',
+  'vault.export.doneBody': 'Salvato nei download. L’archivio spiega il proprio formato e la specifica completa è collegata dal suo README.',
+  'vault.export.missingBody': 'Alcune registrazioni non sono su questo dispositivo e non è stato possibile recuperarle. Sono elencate nel manifesto dell’archivio: riesporta da un dispositivo che le contiene, o quando sei online, per una copia completa.',
+  'vault.export.manual': 'Il download non è partito? Salvalo qui',
+  'vault.export.error': 'L’esportazione non è riuscita: nel tuo diario non è stato modificato nulla.',
+  'vault.export.again': 'Esporta un altro',
 };
 
 export default it;

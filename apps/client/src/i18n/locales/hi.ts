@@ -925,6 +925,28 @@ const hi: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busyCount': 'उत्तर ट्रांसक्राइब हो रहे हैं… {done}/{total}',
   'assistant.transcribe.bundledAbsolute': 'यह आपके डिप्लॉयमेंट के साथ आया सर्वर है, लेकिन पूर्ण पते के रूप में सहेजे जाने पर यह तृतीय-पक्ष सर्वर माना जाता है: आपका साइन-इन साथ नहीं भेजा जाता और हर अनुरोध अस्वीकार हो जाता है।',
   'assistant.transcribe.bundledFix': 'इसके बजाय {path} उपयोग करें',
+
+  // — journal export —
+  'prefs.vault.export': 'जर्नल निर्यात करें',
+  'vault.export.title': 'जर्नल निर्यात करें',
+  'vault.export.pickBody': 'निर्यात के लिए एक नोटबुक चुनें। आपको एक .zip मिलेगी जिसमें सभी प्रविष्टियाँ और सभी रिकॉर्डिंग डिक्रिप्ट की हुई होंगी, एक प्रलेखित प्रारूप में जिसे कोई भी पढ़ सकता है।',
+  'vault.export.empty': 'अभी निर्यात करने के लिए कुछ नहीं है — पहले एक प्रविष्टि लिखें।',
+  'vault.export.entries#one': '{count} प्रविष्टि',
+  'vault.export.entries#other': '{count} प्रविष्टियाँ',
+  'vault.export.readyBody': 'संग्रह इसी डिवाइस पर बनता है और इसे छोड़ता नहीं। आपकी जर्नल में कुछ भी बदला या हटाया नहीं जाता।',
+  'vault.export.plaintext': 'संग्रह एन्क्रिप्टेड नहीं है। डाउनलोड में पहुँचते ही यह जर्नल जितना ही पठनीय हो जाता है — इसे किसी भरोसेमंद जगह रखें।',
+  'vault.export.working': 'संग्रह बन रहा है…',
+  'vault.export.writing': '{name} जोड़ा जा रहा है',
+  'vault.export.progress': '{n} / {count}',
+  'vault.export.done': 'निर्यात पूरा हुआ',
+  'vault.export.sum.entries': 'निर्यात की गई प्रविष्टियाँ',
+  'vault.export.sum.media': 'शामिल मीडिया फ़ाइलें',
+  'vault.export.sum.missing': 'इस डिवाइस पर अनुपलब्ध मीडिया',
+  'vault.export.doneBody': 'आपके डाउनलोड में सहेजा गया। संग्रह अपना प्रारूप स्वयं समझाता है, और पूरी विशिष्टि उसकी README से लिंक है।',
+  'vault.export.missingBody': 'कुछ रिकॉर्डिंग इस डिवाइस पर नहीं हैं और लाई नहीं जा सकीं। वे संग्रह के मैनिफ़ेस्ट में सूचीबद्ध हैं — पूरी प्रति के लिए उस डिवाइस से, या ऑनलाइन रहते हुए, फिर से निर्यात करें।',
+  'vault.export.manual': 'डाउनलोड शुरू नहीं हुआ? इसे यहाँ सहेजें',
+  'vault.export.error': 'निर्यात पूरा नहीं हो सका — आपकी जर्नल में कुछ भी नहीं बदला।',
+  'vault.export.again': 'कोई और निर्यात करें',
 };
 
 export default hi;
