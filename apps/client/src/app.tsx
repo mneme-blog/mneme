@@ -17,6 +17,7 @@ import { RotatePhraseSheet } from './ui/RotatePhrase';
 import { DeleteVaultSheet } from './ui/DeleteVault';
 import { DeviceUnlockSheet } from './ui/DeviceUnlock';
 import { ImportDayOneSheet } from './ui/ImportDayOne';
+import { ExportJournalSheet } from './ui/ExportJournal';
 import { TemplatesSheet } from './ui/Templates';
 import { SearchSheet } from './ui/Search';
 import { PreferencesSheet, type TabId as PrefsTab } from './ui/Preferences';
@@ -225,6 +226,7 @@ export function App(): VNode {
   const [deleteVaultOpen, setDeleteVaultOpen] = useState(false);
   const [deviceUnlockOpen, setDeviceUnlockOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
   // Preferences hands off to full-screen sheets by closing itself, so cancelling
@@ -500,6 +502,7 @@ export function App(): VNode {
           onRotate={() => setRotateOpen(true)}
           onDeviceUnlock={() => setDeviceUnlockOpen(true)}
           onImport={() => setImportOpen(true)}
+          onExport={() => setExportOpen(true)}
           onDeleteVault={() => setDeleteVaultOpen(true)}
           // AI settings is only ever reached from here, so cancel/save comes back.
           onAiSettings={() => { setPrefsReturn('assistant'); setAiSettingsOpen(true); }}
@@ -514,6 +517,7 @@ export function App(): VNode {
       {deleteVaultOpen && <DeleteVaultSheet desk={desk} onClose={() => setDeleteVaultOpen(false)} deleteVault={deleteVault} />}
       {deviceUnlockOpen && <DeviceUnlockSheet desk={desk} onClose={() => setDeviceUnlockOpen(false)} method={vaultMethod} apply={setDeviceUnlock} />}
       {importOpen && <ImportDayOneSheet desk={desk} onClose={() => setImportOpen(false)} />}
+      {exportOpen && <ExportJournalSheet desk={desk} onClose={() => setExportOpen(false)} />}
       {aiSettingsOpen && <AiSettingsSheet desk={desk} onClose={() => { setAiSettingsOpen(false); if (prefsReturn) setPrefsOpen(true); }} />}
       {askOpen && <AskJournalSheet desk={desk} onClose={() => setAskOpen(false)} />}
       {wizard && (

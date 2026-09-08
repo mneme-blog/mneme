@@ -24,6 +24,7 @@ const SCRIPTS = [
   'badges-repro',
   'dayone-import',
   'dayone-import-persist',
+  'export-journal', // the published export format + its media walk
   'i18n-dump',
   'interview-dynamics', // gap + older-thought interview dynamics
   'interview-title',

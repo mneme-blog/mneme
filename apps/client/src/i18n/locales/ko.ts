@@ -870,6 +870,28 @@ const ko: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busyCount': '답변 전사 중… {done}/{total}',
   'assistant.transcribe.bundledAbsolute': '이것은 배포에 포함된 서버이지만, 절대 주소로 저장하면 타사 서버로 간주됩니다. 로그인이 첨부되지 않아 모든 요청이 거부됩니다.',
   'assistant.transcribe.bundledFix': '대신 {path} 사용',
+
+  // — journal export —
+  'prefs.vault.export': '저널 내보내기',
+  'vault.export.title': '저널 내보내기',
+  'vault.export.pickBody': '내보낼 노트를 선택하세요. 모든 기록과 모든 녹화·녹음을 복호화한 상태로, 누구나 읽을 수 있는 공개 형식의 .zip 하나로 받게 됩니다.',
+  'vault.export.empty': '아직 내보낼 것이 없습니다 — 먼저 기록을 하나 써 보세요.',
+  'vault.export.entries#one': '{count}개 기록',
+  'vault.export.entries#other': '{count}개 기록',
+  'vault.export.readyBody': '아카이브는 이 기기에서 만들어지며 기기를 떠나지 않습니다. 저널의 내용은 변경되거나 삭제되지 않습니다.',
+  'vault.export.plaintext': '아카이브는 암호화되어 있지 않습니다. 다운로드 폴더에 저장되는 순간 저널 자체만큼 읽기 쉬워지니, 믿을 수 있는 곳에 보관하세요.',
+  'vault.export.working': '아카이브를 만드는 중…',
+  'vault.export.writing': '{name} 추가 중',
+  'vault.export.progress': '{n} / {count}',
+  'vault.export.done': '내보내기 완료',
+  'vault.export.sum.entries': '내보낸 기록',
+  'vault.export.sum.media': '포함된 미디어 파일',
+  'vault.export.sum.missing': '이 기기에 없는 미디어',
+  'vault.export.doneBody': '다운로드 폴더에 저장했습니다. 아카이브 안에 형식 설명이 들어 있고, 전체 명세는 README에서 링크로 연결됩니다.',
+  'vault.export.missingBody': '일부 녹화·녹음이 이 기기에 없어 가져오지 못했습니다. 아카이브의 매니페스트에 목록이 있습니다 — 완전한 사본이 필요하면 해당 파일이 있는 기기에서, 또는 온라인 상태에서 다시 내보내세요.',
+  'vault.export.manual': '다운로드가 시작되지 않았나요? 여기서 저장하세요',
+  'vault.export.error': '내보내기를 마치지 못했습니다 — 저널은 아무것도 바뀌지 않았습니다.',
+  'vault.export.again': '다른 저널 내보내기',
 };
 
 export default ko;

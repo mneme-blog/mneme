@@ -924,6 +924,28 @@ const ja: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busyCount': '回答を文字起こし中… {done}/{total}',
   'assistant.transcribe.bundledAbsolute': 'これはデプロイに同梱されたサーバーですが、絶対アドレスとして保存するとサードパーティのサーバーとして扱われます。サインインが添付されず、すべてのリクエストが拒否されます。',
   'assistant.transcribe.bundledFix': '代わりに {path} を使う',
+
+  // — journal export —
+  'prefs.vault.export': 'ジャーナルを書き出す',
+  'vault.export.title': 'ジャーナルを書き出す',
+  'vault.export.pickBody': '書き出すノートを選んでください。すべての記録とすべての録画・録音を復号した状態で、誰でも読める公開フォーマットの .zip にまとめます。',
+  'vault.export.empty': 'まだ書き出せるものがありません。まず記録を書いてみてください。',
+  'vault.export.entries#one': '{count} 件',
+  'vault.export.entries#other': '{count} 件',
+  'vault.export.readyBody': 'アーカイブはこの端末で作られ、外に出ることはありません。ジャーナルの内容が変更・削除されることもありません。',
+  'vault.export.plaintext': 'アーカイブは暗号化されていません。ダウンロードに保存された時点で、ジャーナル本体と同じように読める状態です。信頼できる場所に保管してください。',
+  'vault.export.working': 'アーカイブを作成中…',
+  'vault.export.writing': '{name} を追加中',
+  'vault.export.progress': '{n} / {count}',
+  'vault.export.done': '書き出しが完了しました',
+  'vault.export.sum.entries': '書き出した記録',
+  'vault.export.sum.media': '含まれたメディア',
+  'vault.export.sum.missing': 'この端末にないメディア',
+  'vault.export.doneBody': 'ダウンロードに保存しました。アーカイブ自体にフォーマットの説明が入っており、完全な仕様は README からリンクされています。',
+  'vault.export.missingBody': '一部の録画・録音はこの端末になく、取得できませんでした。アーカイブのマニフェストに一覧があります。完全なコピーが必要なら、それらを持つ端末から、またはオンラインの状態で書き出し直してください。',
+  'vault.export.manual': 'ダウンロードが始まらない場合はこちら',
+  'vault.export.error': '書き出しを完了できませんでした。ジャーナルには何の変更もありません。',
+  'vault.export.again': '別のものを書き出す',
 };
 
 export default ja;

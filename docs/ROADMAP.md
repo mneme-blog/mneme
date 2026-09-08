@@ -68,8 +68,10 @@ Three columns, three honesties:
   outlive the recording.
 - AI settings (API key included) sealed at rest and synced as an encrypted record.
 
-### Import
+### Import & export
 - **Day One import** (JSON export `.zip` → local encrypted entries; media, dates, tags preserved).
+- **Journal export** — one notebook → one `.zip` of decrypted entries + media, in a published,
+  versioned format anyone can write an importer against ([EXPORT-FORMAT.md](./EXPORT-FORMAT.md)).
 
 ### The relay & operations
 - Go relay `journald`: `/healthz` + `/readyz`, device auth, LWW oplog push/pull, **server-relayed
@@ -113,7 +115,9 @@ Three columns, three honesties:
 ### Client
 - **FTS5 full-text search** — blocked on a custom wa-sqlite wasm build; the migration is sketched in
   `src/db/schema.ts` and waiting.
-- **Export** (encrypted archive + optional plaintext) and **non-Day-One import**.
+- **Re-import of a Mneme export** (the format is specified and written; reading it back in is not
+  built yet), an **encrypted** archive variant, whole-vault export in one pass, and **non-Day-One
+  import**.
 
 ### Security hardening backlog
 (Tracked in full, with severities, in [SECURITY.md](./SECURITY.md); the two internal audit passes and

@@ -96,6 +96,7 @@ export const prefs = {
   'prefs.vault.rotate': 'Replace recovery phrase',
   'prefs.vault.data': 'Data',
   'prefs.vault.import': 'Import from Day One',
+  'prefs.vault.export': 'Export a journal',
   'prefs.vault.delete': 'Delete vault',
 
   'prefs.relay': 'Relay server',

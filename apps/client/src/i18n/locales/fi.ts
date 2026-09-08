@@ -930,6 +930,28 @@ const fi: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busyCount': 'Litteroidaan vastauksia… {done}/{total}',
   'assistant.transcribe.bundledAbsolute': 'Tämä on asennuksesi mukana tuleva palvelin, mutta absoluuttisena osoitteena tallennettuna se lasketaan kolmannen osapuolen palvelimeksi: kirjautumistasi ei liitetä mukaan ja jokainen pyyntö hylätään.',
   'assistant.transcribe.bundledFix': 'Käytä sen sijaan {path}',
+
+  // — journal export —
+  'prefs.vault.export': 'Vie päiväkirja',
+  'vault.export.title': 'Vie päiväkirja',
+  'vault.export.pickBody': 'Valitse vietävä muistikirja. Saat yhden .zip-tiedoston, jossa on kaikki merkinnät ja kaikki tallenteet salaamattomina, dokumentoidussa muodossa, jonka kuka tahansa voi lukea.',
+  'vault.export.empty': 'Vietävää ei ole vielä — kirjoita ensin merkintä.',
+  'vault.export.entries#one': '{count} merkintä',
+  'vault.export.entries#other': '{count} merkintää',
+  'vault.export.readyBody': 'Arkisto rakennetaan tällä laitteella eikä se poistu siitä. Päiväkirjaasi ei muuteta eikä siitä poisteta mitään.',
+  'vault.export.plaintext': 'Arkistoa ei ole salattu. Kun se on latauksissasi, se on yhtä luettava kuin päiväkirja itse — säilytä se paikassa, johon luotat.',
+  'vault.export.working': 'Arkistoa luodaan…',
+  'vault.export.writing': 'Lisätään {name}',
+  'vault.export.progress': '{n} / {count}',
+  'vault.export.done': 'Vienti valmis',
+  'vault.export.sum.entries': 'Vietyjä merkintöjä',
+  'vault.export.sum.media': 'Mukana olevia mediatiedostoja',
+  'vault.export.sum.missing': 'Mediaa ei ole tällä laitteella',
+  'vault.export.doneBody': 'Tallennettu latauksiisi. Arkisto selittää oman muotonsa, ja koko määrittely on linkitetty sen README-tiedostosta.',
+  'vault.export.missingBody': 'Osa tallenteista ei ole tällä laitteella eikä niitä saatu haettua. Ne on lueteltu arkiston manifestissa — vie uudelleen laitteelta, jolla ne ovat, tai verkkoyhteyden kanssa, niin saat täydellisen kopion.',
+  'vault.export.manual': 'Eikö lataus alkanut? Tallenna se tästä',
+  'vault.export.error': 'Vienti ei onnistunut loppuun — päiväkirjaasi ei muutettu mitenkään.',
+  'vault.export.again': 'Vie toinen',
 };
 
 export default fi;

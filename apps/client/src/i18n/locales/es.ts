@@ -935,6 +935,28 @@ const es: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busyCount': 'Transcribiendo respuestas… {done}/{total}',
   'assistant.transcribe.bundledAbsolute': 'Este es el servidor incluido en tu despliegue, pero guardado como dirección absoluta cuenta como servidor de terceros: tu inicio de sesión no se adjunta y cada solicitud se rechaza.',
   'assistant.transcribe.bundledFix': 'Usar {path} en su lugar',
+
+  // — journal export —
+  'prefs.vault.export': 'Exportar un diario',
+  'vault.export.title': 'Exportar un diario',
+  'vault.export.pickBody': 'Elige un cuaderno para exportar. Obtendrás un .zip con todas las entradas y todas las grabaciones, descifradas, en un formato documentado que cualquiera puede leer.',
+  'vault.export.empty': 'Todavía no hay nada que exportar: escribe una entrada primero.',
+  'vault.export.entries#one': '{count} entrada',
+  'vault.export.entries#other': '{count} entradas',
+  'vault.export.readyBody': 'El archivo se crea en este dispositivo y no sale de él. No se cambia ni se elimina nada de tu diario.',
+  'vault.export.plaintext': 'El archivo no está cifrado. Una vez en tus descargas es tan legible como el propio diario: guárdalo en un lugar de confianza.',
+  'vault.export.working': 'Creando el archivo…',
+  'vault.export.writing': 'Añadiendo {name}',
+  'vault.export.progress': '{n} / {count}',
+  'vault.export.done': 'Exportación completada',
+  'vault.export.sum.entries': 'Entradas exportadas',
+  'vault.export.sum.media': 'Archivos multimedia incluidos',
+  'vault.export.sum.missing': 'Medios que no están en este dispositivo',
+  'vault.export.doneBody': 'Guardado en tus descargas. El archivo explica su propio formato y la especificación completa está enlazada desde su README.',
+  'vault.export.missingBody': 'Algunas grabaciones no están en este dispositivo y no se pudieron obtener. Aparecen en el manifiesto del archivo: vuelve a exportar desde un dispositivo que las tenga, o con conexión, para una copia completa.',
+  'vault.export.manual': '¿No empezó la descarga? Guárdalo aquí',
+  'vault.export.error': 'La exportación no pudo terminar: no se cambió nada en tu diario.',
+  'vault.export.again': 'Exportar otro',
 };
 
 export default es;

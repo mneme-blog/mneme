@@ -133,12 +133,19 @@ your recovery phrase, and the AI settings sync to your other devices as an encry
 server still can't read or use the key. Full analysis in
 [SECURITY.md](./SECURITY.md#the-opt-in-ai-assistant--a-deliberate-user-consented-exception).
 
-## Import
+## Import & export
 
 - **Day One import** — feed it a Day One JSON export `.zip` and it rebuilds the whole thing locally as
   encrypted entries: journals become notebooks, media is re-encrypted and attached, original dates and
-  tags are preserved. The zip never leaves your device. (Other formats and a proper export are on the
+  tags are preserved. The zip never leaves your device. (Other import formats are on the
   [roadmap](./ROADMAP.md).)
+- **Journal export** — take a whole notebook with you as one `.zip`: every entry, every recording,
+  every picture, decrypted, built on your device. The format is **public and specified**
+  ([EXPORT-FORMAT.md](./EXPORT-FORMAT.md)) precisely so that somebody else can write an importer for
+  it — an escape hatch is only an escape hatch if it opens onto somewhere. Each entry ships as a
+  ProseMirror document *and* as Markdown, so a simple tool never has to understand our schema.
+  Recordings that live only on another device are reported rather than silently dropped. The archive
+  is plaintext, and the screen says so before it starts.
 
 ## Make it yours
 

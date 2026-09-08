@@ -153,6 +153,34 @@ on another device — decrypts that stored image and makes **no further third-pa
 no live/streaming map. Both hosts are named explicitly in the shipped CSP (§6.2) — `img-src` for the
 tile CDN, `connect-src` for the geocoder — so this egress is enumerated rather than incidental.
 
+### Journal export — leaving the envelope, on purpose
+
+Preferences → Vault → **Export a journal** writes one `.zip` holding a notebook's entries and media
+**in plaintext** (`apps/client/src/export/`, format specified in [EXPORT-FORMAT.md](./EXPORT-FORMAT.md)).
+State it without hedging: **the archive is not encrypted, not signed, and not authenticated.** Once it
+reaches the downloads folder it has none of the protection the rest of the app provides — no seal, no
+auto-lock, no remote wipe — and it can be read by anything with filesystem access, backed up to a
+cloud drive by the OS, or handed on by accident.
+
+That is not a flaw in the feature; it *is* the feature. An end-to-end-encrypted journal whose data
+cannot be taken out is a trap, and "your data is yours" is only true if there is a door. The design
+therefore spends its effort on making the trade visible and bounded rather than on pretending it is
+not happening:
+
+- The archive is built **entirely on the device**. It never passes through the relay, and no network
+  request is made to produce it. The relay learns nothing — not even that an export happened.
+- Exporting requires an **unlocked vault**, so it is exactly as authorized as reading the journal on
+  screen. It grants no capability an attacker at the keyboard did not already have (§6.11).
+- The picker screen says the archive is unencrypted, and says it **before** the export starts rather
+  than in a footnote afterwards.
+- Nothing is changed or deleted: an export is a pure read.
+- The blob URL backing the download is **revoked** when the sheet closes, so a finished archive is not
+  left pinned in the tab.
+
+The unbuilt half is an **encrypted** export variant (an archive sealed under a passphrase, for backups
+you intend to keep) — tracked in [ROADMAP.md](./ROADMAP.md). Until it exists, an export is for taking
+your journal somewhere, and encrypting the result is the operating system's job, not ours.
+
 ### The guided video interview — no new exception at all
 
 The on-camera interview (`apps/client/src/ui/VideoInterview.tsx`) is worth stating explicitly because

@@ -921,6 +921,28 @@ const nl: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busyCount': 'Antwoorden transcriberen… {done}/{total}',
   'assistant.transcribe.bundledAbsolute': 'Dit is de meegeleverde server van je deployment, maar opgeslagen als absoluut adres telt hij als externe server: je aanmelding wordt niet meegestuurd en elk verzoek wordt geweigerd.',
   'assistant.transcribe.bundledFix': 'Gebruik in plaats daarvan {path}',
+
+  // — journal export —
+  'prefs.vault.export': 'Journaal exporteren',
+  'vault.export.title': 'Journaal exporteren',
+  'vault.export.pickBody': 'Kies een notitieboek om te exporteren. Je krijgt één .zip met alle notities en alle opnamen, ontsleuteld, in een gedocumenteerd formaat dat iedereen kan lezen.',
+  'vault.export.empty': 'Er valt nog niets te exporteren — schrijf eerst een notitie.',
+  'vault.export.entries#one': '{count} notitie',
+  'vault.export.entries#other': '{count} notities',
+  'vault.export.readyBody': 'Het archief wordt op dit apparaat gemaakt en verlaat het niet. Er wordt niets in je journaal gewijzigd of verwijderd.',
+  'vault.export.plaintext': 'Het archief is niet versleuteld. Zodra het in je downloads staat, is het net zo leesbaar als het journaal zelf — bewaar het ergens waar je op vertrouwt.',
+  'vault.export.working': 'Archief wordt gemaakt…',
+  'vault.export.writing': '{name} toevoegen',
+  'vault.export.progress': '{n} / {count}',
+  'vault.export.done': 'Export voltooid',
+  'vault.export.sum.entries': 'Geëxporteerde notities',
+  'vault.export.sum.media': 'Opgenomen mediabestanden',
+  'vault.export.sum.missing': 'Media niet op dit apparaat',
+  'vault.export.doneBody': 'Opgeslagen in je downloads. Het archief legt zijn eigen formaat uit; de volledige specificatie staat gelinkt in de README.',
+  'vault.export.missingBody': 'Sommige opnamen staan niet op dit apparaat en konden niet worden opgehaald. Ze staan in het manifest van het archief — exporteer opnieuw vanaf een apparaat dat ze heeft, of terwijl je online bent, voor een volledige kopie.',
+  'vault.export.manual': 'Download niet gestart? Sla het hier op',
+  'vault.export.error': 'De export kon niet worden voltooid — er is niets in je journaal gewijzigd.',
+  'vault.export.again': 'Nog een exporteren',
 };
 
 export default nl;

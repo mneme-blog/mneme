@@ -923,6 +923,28 @@ const fr: Partial<Record<MessageKey, string>> = {
   'media.transcribe.busyCount': 'Transcription des réponses… {done}/{total}',
   'assistant.transcribe.bundledAbsolute': 'C’est le serveur fourni avec votre déploiement, mais enregistré comme adresse absolue il compte comme serveur tiers : votre connexion n’est pas jointe et chaque requête est rejetée.',
   'assistant.transcribe.bundledFix': 'Utiliser {path} à la place',
+
+  // — journal export —
+  'prefs.vault.export': 'Exporter un journal',
+  'vault.export.title': 'Exporter un journal',
+  'vault.export.pickBody': 'Choisis un carnet à exporter. Tu obtiens un .zip contenant toutes les entrées et tous les enregistrements, déchiffrés, dans un format documenté que n’importe qui peut lire.',
+  'vault.export.empty': 'Rien à exporter pour l’instant — écris d’abord une entrée.',
+  'vault.export.entries#one': '{count} entrée',
+  'vault.export.entries#other': '{count} entrées',
+  'vault.export.readyBody': 'L’archive est créée sur cet appareil et ne le quitte pas. Rien n’est modifié ni supprimé dans ton journal.',
+  'vault.export.plaintext': 'L’archive n’est pas chiffrée. Une fois dans tes téléchargements, elle est aussi lisible que le journal lui-même — garde-la dans un endroit de confiance.',
+  'vault.export.working': 'Création de l’archive…',
+  'vault.export.writing': 'Ajout de {name}',
+  'vault.export.progress': '{n} / {count}',
+  'vault.export.done': 'Export terminé',
+  'vault.export.sum.entries': 'Entrées exportées',
+  'vault.export.sum.media': 'Fichiers médias inclus',
+  'vault.export.sum.missing': 'Médias absents de cet appareil',
+  'vault.export.doneBody': 'Enregistrée dans tes téléchargements. L’archive explique son propre format, et la spécification complète est liée depuis son README.',
+  'vault.export.missingBody': 'Certains enregistrements ne sont pas sur cet appareil et n’ont pas pu être récupérés. Ils figurent dans le manifeste de l’archive — refais l’export depuis un appareil qui les contient, ou en ligne, pour une copie complète.',
+  'vault.export.manual': 'Le téléchargement n’a pas démarré ? Enregistre-le ici',
+  'vault.export.error': 'L’export n’a pas pu aboutir — rien n’a été modifié dans ton journal.',
+  'vault.export.again': 'Exporter un autre',
 };
 
 export default fr;
