@@ -39,7 +39,8 @@ the auth model.
 | POST | `/admin/owners/{id}/reject` | 🔑 | reject / revoke a vault (immediate) |
 | GET | `/admin/backups` | 🔑 | backup service status + stored archive listing |
 | POST | `/admin/backups` | 🔑 | trigger a backup now (202, runs detached) |
-| GET | `/admin/backups/{name}` | 🔑 | download one archive (gzip tar) |
+| GET | `/admin/backups/{name}` | 🔑 / ticket | download one archive (gzip tar) |
+| POST | `/admin/backups/{name}/ticket` | 🔑 | mint a single-use download URL for that archive |
 | DELETE | `/admin/backups/{name}` | 🔑 | remove one stored archive |
 | POST | `/admin/backups/{name}/restore` | 🔑 | restore from an archive (requires `{"confirm":"restore"}` body) |
 | GET | `/admin/update` | 🔑 | one-click update state: versions, agent progress, rollback cost |
@@ -455,8 +456,39 @@ on success, so a crash mid-write never leaves a truncated archive that looks com
 
 `GET /admin/backups/{name}` → `200` (`application/gzip`) — download one archive. `{name}` must be a
 literal archive filename (`^mneme-backup-\d{8}T\d{6}Z\.tar\.gz$`); anything else → 400, the security
-boundary against path traversal. The dashboard downloads via an authenticated fetch (never a token in
-the URL — admin paths are logged).
+boundary against path traversal.
+
+This is the one admin endpoint that does **not** sit behind the ordinary token gate, because the
+browser has to fetch it by itself. It accepts either credential:
+
+- `Authorization: Bearer $ADMIN_TOKEN` — the documented path, for curl and scripts.
+- `?ticket=…` — a single-use ticket, for the dashboard's Download button.
+
+`POST /admin/backups/{name}/ticket` → `200` — mint that ticket (🔑 token required):
+
+```json
+{ "ticket": "…", "url": "backups/mneme-backup-20260101T000000Z.tar.gz?ticket=…" }
+```
+
+`url` is relative to the admin base, because the relay does not know the origin or reverse-proxy
+prefix it is served under; the dashboard resolves it against its own URL and follows it as a plain
+navigation. 404 if the archive is not there, so a bad name fails at minting rather than as a download
+that quietly does nothing.
+
+The ticket is 256 random bits, compared in constant time, **bound to one archive name**, **single
+use**, and valid for **two minutes**. It grants exactly one read of one archive — opaque ciphertext,
+no keys, no plaintext — and nothing else. Failed attempts spend from the same per-IP budget as a
+failed admin authentication (`RATE_LIMIT_ADMIN_*`).
+
+Why not an authenticated `fetch()`, which keeps the credential out of the URL entirely? Because a
+header only rides on fetch/XHR, so the page had to buffer the whole archive in the tab and hand the
+bytes to a synthetic `<a download>` on a `blob:` URL: two copies in memory before a byte reaches
+disk, no progress, no resume, and a blob-plus-anchor step that browsers do not reliably honour — the
+button could do nothing at all with no error to show for it. With a ticket the transfer is an
+ordinary download: streamed to disk, visible in the browser's download UI, and unbounded by the tab's
+memory. The URL does reach browser history and any proxy log in between; single use makes the entry
+left behind inert, and `Referrer-Policy: no-referrer` (set relay-wide) keeps it from travelling
+onward. See `server/internal/api/ticket.go`.
 
 `DELETE /admin/backups/{name}` → `204` — remove one archive (does not touch vault data).
 

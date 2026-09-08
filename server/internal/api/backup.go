@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"crypto/subtle"
 	"errors"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -55,9 +57,55 @@ func (s *Server) handleAdminCreateBackup(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusAccepted, map[string]string{"status": "started"})
 }
 
-// GET /admin/backups/{name} — download one archive as an octet-stream.
-func (s *Server) handleAdminDownloadBackup(w http.ResponseWriter, r *http.Request) {
+// POST /admin/backups/{name}/ticket — mint a short-lived, single-use URL the
+// browser can download by itself.
+//
+// The dashboard cannot fetch an archive the way it fetches everything else: an
+// Authorization header only rides on fetch/XHR, which means buffering the whole
+// archive in the tab before a byte reaches disk. See internal/api/ticket.go for
+// why that had to go and what the ticket is worth.
+func (s *Server) handleAdminBackupTicket(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
+	// Confirm the archive exists (and that the name is well-formed) before
+	// handing out a ticket, so a bad name is a clean 404 here rather than a
+	// download that mysteriously fails a moment later.
+	rc, _, err := s.backup.Open(name)
+	if err != nil {
+		writeBackupErr(w, err)
+		return
+	}
+	_ = rc.Close()
+
+	val, err := s.downloadTickets.issue(name, time.Now())
+	if err != nil {
+		writeInternalError(w, r, "could not issue a download ticket", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{
+		"ticket": val,
+		// Relative on purpose: the relay does not know the public origin or the
+		// reverse-proxy prefix it is served under, and the dashboard resolves
+		// this against its own URL.
+		"url": "backups/" + url.PathEscape(name) + "?ticket=" + url.QueryEscape(val),
+	})
+}
+
+// GET /admin/backups/{name} — download one archive as a gzip stream.
+//
+// Authorized EITHER by the admin token (curl, scripts, the documented API) or by
+// a single-use ticket in the query string (the dashboard's own button, which is
+// a plain browser navigation and so cannot send a header). Both paths are
+// checked here rather than in adminAuth, because the route has to be reachable
+// without an Authorization header at all.
+func (s *Server) handleAdminDownloadBackup(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.AdminToken == "" {
+		http.NotFound(w, r) // /admin does not exist without a token — as everywhere else
+		return
+	}
+	name := r.PathValue("name")
+	if !s.authorizeDownload(w, r, name) {
+		return
+	}
 	rc, size, err := s.backup.Open(name)
 	if err != nil {
 		writeBackupErr(w, err)
@@ -68,10 +116,38 @@ func (s *Server) handleAdminDownloadBackup(w http.ResponseWriter, r *http.Reques
 	w.Header().Set("Content-Type", "application/gzip")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`"`)
 	w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
+	// A big archive over a slow link must not trip the server-wide WriteTimeout
+	// mid-stream. Best-effort, like the restore handler's own extension.
+	// (A wrapper that cannot set deadlines just keeps the global one.)
+	if err := http.NewResponseController(w).SetWriteDeadline(time.Time{}); err != nil &&
+		!errors.Is(err, http.ErrNotSupported) {
+		log.Printf("admin: could not lift the download write deadline: %v", err)
+	}
 	if _, err := io.Copy(w, rc); err != nil {
 		// The header is already sent; nothing useful to return to the client.
 		log.Printf("admin: backup download %s interrupted: %v", name, err)
 	}
+}
+
+// authorizeDownload accepts the admin token or a ticket scoped to name, and
+// writes the rejection itself. Failed attempts spend from the same per-IP budget
+// as a failed admin authentication: the ticket is 256 random bits, but it is
+// guessable in principle and lives on an endpoint with no other gate.
+func (s *Server) authorizeDownload(w http.ResponseWriter, r *http.Request, name string) bool {
+	if token, ok := bearerToken(r); ok &&
+		subtle.ConstantTimeCompare([]byte(token), []byte(s.cfg.AdminToken)) == 1 {
+		return true
+	}
+	if s.downloadTickets.redeem(r.URL.Query().Get("ticket"), name, time.Now()) {
+		return true
+	}
+	if !s.adminLimiter.allow(clientIP(r, s.cfg.TrustProxyHeaders), time.Now()) {
+		w.Header().Set("Retry-After", "60")
+		writeError(w, http.StatusTooManyRequests, "too many failed admin authentications")
+		return false
+	}
+	writeError(w, http.StatusUnauthorized, "invalid admin token")
+	return false
 }
 
 // DELETE /admin/backups/{name} — remove one stored archive.

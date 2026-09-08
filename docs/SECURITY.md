@@ -500,6 +500,21 @@ resurrect a stale credential. Restore is destructive (it replaces all relay data
 a typed `{"confirm":"restore"}` on the HTTP path and a stdin prompt on the CLI; archive names on the
 HTTP download/restore/delete paths are validated against a strict regex (the path-traversal boundary).
 
+**Download tickets.** `GET /admin/backups/{name}` is the one admin endpoint not behind the plain token
+gate, because the browser performs that transfer itself and a navigation carries no `Authorization`
+header. It accepts the token *or* a ticket in the query string, minted by
+`POST /admin/backups/{name}/ticket` (which does require the token). The ticket is 256 random bits,
+constant-time compared, **bound to one archive name**, **single use**, and valid for **two minutes**;
+redeeming it authorizes exactly one read of one archive — ciphertext, no keys, no plaintext — and
+nothing else on the admin surface. Failed attempts spend from the same per-IP budget as a failed admin
+authentication. The cost is a bearer credential in a URL, which reaches browser history and any proxy
+log in between; single use is what makes the entry left behind inert, and the relay-wide
+`Referrer-Policy: no-referrer` (§6, `internal/api/headers.go`) stops it travelling onward. The
+alternative — an authenticated `fetch()` that buffers the archive in the tab and hands it to a
+`blob:` anchor — kept the credential out of the URL but could not carry an archive larger than the
+tab's memory and, in practice, sometimes produced no download and no error at all. `ADMIN_TOKEN`
+itself never appears in a URL.
+
 ### 6.17 One-click updates — ⚠️ Accepted (opt-in privilege escalation, deliberately bounded)
 The `/admin` dashboard can apply a release (`UPDATE_SPOOL_DIR` + the host agent in `deploy/updater/`).
 State it plainly: **with this enabled, whoever holds `ADMIN_TOKEN` can cause the host to pull and run

@@ -493,16 +493,34 @@
     }, 1500);
   });
 
+  // Downloading an archive is the one admin request the BROWSER has to make on
+  // its own. Reading it here with fetch() would hold the whole archive in the
+  // tab before a byte reached disk, with no progress and no resume — and the
+  // blob-URL-plus-synthetic-anchor step it ended in is unreliable in the field.
+  //
+  // So: ask for a single-use ticket with the token (a normal fetch, so a failure
+  // is visible), then let the browser fetch the file. It streams to disk, shows
+  // real progress in the download UI, and survives an archive far larger than
+  // the tab's memory.
   async function downloadBackup(name) {
+    $('bkStatus').className = 'bk-status';
+    $('bkStatus').textContent = 'preparing ' + name + '…';
     try {
-      const res = await fetch(API + '/backups/' + encodeURIComponent(name), { headers: authHeaders() });
+      const res = await fetch(API + '/backups/' + encodeURIComponent(name) + '/ticket',
+        { method: 'POST', headers: authHeaders() });
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      const { url } = await res.json();
+      if (!url) throw new Error('no download URL in the response');
+      // The relay answers with a URL relative to the admin base, because only
+      // this page knows the origin and reverse-proxy prefix it is served under.
       const a = document.createElement('a');
-      a.href = url; a.download = name;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      a.href = new URL(API + '/' + url, location.href).toString();
+      a.download = name;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      $('bkStatus').textContent = 'downloading ' + name + ' — see your browser\u2019s downloads';
     } catch (e) {
       $('bkStatus').className = 'bk-status err';
       $('bkStatus').textContent = 'download failed: ' + e.message;

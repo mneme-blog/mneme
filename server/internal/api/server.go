@@ -38,6 +38,9 @@ type Server struct {
 	// bundled speech-to-text server (internal/api/transcribe.go).
 	transcribeLimiter *rateLimiter
 	transcribeQuota   *transcribeQuota
+	// downloadTickets back the one admin transfer the browser has to make on its
+	// own — a backup archive (internal/api/ticket.go).
+	downloadTickets *ticketStore
 }
 
 func New(st *store.Store, bl blobs.Store, cfg config.Config) *Server {
@@ -66,6 +69,7 @@ func New(st *store.Store, bl blobs.Store, cfg config.Config) *Server {
 			cfg.Transcribe.RateRequestsPerMinute, cfg.Transcribe.RateBurstRequests),
 		transcribeQuota: newTranscribeQuota(
 			cfg.Transcribe.QuotaRequestsPerDay, cfg.Transcribe.QuotaMegabytesPerDay),
+		downloadTickets: newTicketStore(2 * time.Minute),
 	}
 }
 
@@ -117,7 +121,11 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("POST /admin/owners/{id}/reject", s.adminAuth(http.HandlerFunc(s.handleAdminRejectOwner)))
 	mux.Handle("GET /admin/backups", s.adminAuth(http.HandlerFunc(s.handleAdminListBackups)))
 	mux.Handle("POST /admin/backups", s.adminAuth(http.HandlerFunc(s.handleAdminCreateBackup)))
-	mux.Handle("GET /admin/backups/{name}", s.adminAuth(http.HandlerFunc(s.handleAdminDownloadBackup)))
+	// Not wrapped in adminAuth: a browser navigation carries no Authorization
+	// header, so this endpoint accepts either the token or a download ticket and
+	// does the check itself (see handleAdminDownloadBackup).
+	mux.HandleFunc("GET /admin/backups/{name}", s.handleAdminDownloadBackup)
+	mux.Handle("POST /admin/backups/{name}/ticket", s.adminAuth(http.HandlerFunc(s.handleAdminBackupTicket)))
 	mux.Handle("DELETE /admin/backups/{name}", s.adminAuth(http.HandlerFunc(s.handleAdminDeleteBackup)))
 	mux.Handle("POST /admin/backups/{name}/restore", s.adminAuth(http.HandlerFunc(s.handleAdminRestoreBackup)))
 	mux.Handle("GET /admin/update", s.adminAuth(http.HandlerFunc(s.handleAdminUpdateStatus)))
